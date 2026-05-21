@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: haxfootball-web
+
+      - name: Checkout SDK
+        uses: actions/checkout@v4
+        with:
+          repository: haxbrasil/haxfootball-api-sdk
+          path: haxfootball-api-sdk
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: haxfootball-web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: haxfootball-web
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Cloudflare types
+        working-directory: haxfootball-web
+        run: pnpm run cf-typegen
+
+      - name: Format check
+        working-directory: haxfootball-web
+        run: pnpm run format:check
+
+      - name: Lint
+        working-directory: haxfootball-web
+        run: pnpm run lint
+
+      - name: Typecheck
+        working-directory: haxfootball-web
+        run: pnpm run typecheck
+
+      - name: Unit tests
+        working-directory: haxfootball-web
+        run: pnpm run test
+
+      - name: Build
+        working-directory: haxfootball-web
+        run: pnpm run build
+
+      - name: Storybook build
+        working-directory: haxfootball-web
+        run: pnpm run storybook:build

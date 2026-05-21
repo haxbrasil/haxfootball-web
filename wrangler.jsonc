@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "haxfootball-web",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-05-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+  "vars": {
+    "API_BASE_URL": "https://api.bfl.haxbrasil.com/api",
+    "APP_BASE_URL": "https://bfl.haxbrasil.com",
+    "STAT_SCHEMA_NAME": "haxfootball",
+    "LANGUAGE": "pt",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "haxfootball-web",
+      "database_id": "2c2d1d10-9a9b-49b9-803d-2ceb020a61cf",
+      "migrations_dir": "drizzle",
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "8ee6a93448fb4a609db3bf8aad832fc0",
+    },
+  ],
+}

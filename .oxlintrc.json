@@ -1,0 +1,8 @@
+{
+  "plugins": ["react", "jsx-a11y", "typescript"],
+  "rules": {
+    "react/jsx-key": "error",
+    "react/button-has-type": "error",
+    "react/no-unknown-property": "error"
+  }
+}
