@@ -13,13 +13,15 @@ async function handleDiscordSignInRequest(request: Request): Promise<Response> {
   const requestUrl = new URL(request.url);
   const appBaseUrl = getServerEnv().APP_BASE_URL ?? requestUrl.origin;
   const signInUrl = new URL("/api/auth/sign-in/social", request.url);
+  const headers = new Headers(request.headers);
+
+  headers.set("accept", "application/json");
+  headers.set("content-type", "application/json");
+
   const signInResponse = await createAuth(database).handler(
     new Request(signInUrl, {
       method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         provider: "discord",
         callbackURL: `${appBaseUrl}/account`,
