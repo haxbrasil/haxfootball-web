@@ -61,7 +61,7 @@ export function createAuth(database: D1Database) {
           ? {
               clientId: env.DISCORD_CLIENT_ID,
               clientSecret: env.DISCORD_CLIENT_SECRET,
-              prompt: "consent",
+              prompt: "none",
             }
           : undefined,
     },
