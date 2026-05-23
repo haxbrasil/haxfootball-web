@@ -68,7 +68,7 @@ export function useUpdateRolePermissionsForm(role: Role) {
       data: {
         uuid: role.uuid,
         name: role.name,
-        title: role.title,
+        title: role.title.value,
         permissions: selectedPermissions,
       },
     });

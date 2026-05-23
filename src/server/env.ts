@@ -10,6 +10,7 @@ const serverEnvSchema = z.object({
   AUTH_SECRET: z.string().min(16).optional(),
   DISCORD_CLIENT_ID: z.string().min(1).optional(),
   DISCORD_CLIENT_SECRET: z.string().min(1).optional(),
+  GAME_MODE_NAME: z.string().min(1).default("haxfootball"),
   STAT_SCHEMA_NAME: z.string().min(1).default("haxfootball"),
   LANGUAGE: z.string().min(2).default("pt"),
 });

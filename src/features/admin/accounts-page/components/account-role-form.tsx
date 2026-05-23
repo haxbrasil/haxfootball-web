@@ -2,6 +2,7 @@ import type { Account, ListRolesResponse } from "@haxbrasil/haxfootball-api-sdk"
 import { FormMessageAlert } from "#/components/ds/forms/form-message";
 import { Button } from "#/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
+import { localizedTextLabel } from "#/lib/localization/localized-text";
 import { useAccountRoleForm } from "../hooks/use-account-role-form";
 
 export function AccountRoleForm({
@@ -24,7 +25,7 @@ export function AccountRoleForm({
         >
           {roles.items.map((role) => (
             <NativeSelectOption key={role.uuid} value={role.uuid}>
-              {role.title}
+              {localizedTextLabel(role.title)}
             </NativeSelectOption>
           ))}
         </NativeSelect>

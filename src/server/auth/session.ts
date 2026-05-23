@@ -298,7 +298,7 @@ function accountSession(source: ApiAccountSession["source"], account: Account): 
       externalId: account.externalId,
       name: account.name,
       role: {
-        title: account.role.title,
+        title: account.role.title.label,
         permissions: account.role.permissions,
         bypassAllPermissions: account.role.bypassAllPermissions,
       },

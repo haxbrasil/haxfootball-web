@@ -7,6 +7,7 @@ const match = (input: Partial<MatchSummary> & Pick<MatchSummary, "id">): MatchSu
   endedAt: input.endedAt ?? null,
   id: input.id,
   initiatedAt: input.initiatedAt ?? null,
+  gameMode: input.gameMode ?? null,
   recording: input.recording ?? null,
   score: input.score ?? null,
   statEventSchema: input.statEventSchema ?? null,

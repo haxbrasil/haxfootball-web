@@ -4,6 +4,7 @@ import { DataCard } from "#/components/ds/app-shell";
 import { InlineFormMessage } from "#/components/ds/forms/form-message";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { localizedTextLabel } from "#/lib/localization/localized-text";
 import { PermissionChecklist } from "./permission-checklist";
 import { useUpdateRolePermissionsForm } from "../hooks/use-role-permissions-form";
 
@@ -18,7 +19,7 @@ export function RolePermissionsCard({
 
   return (
     <DataCard
-      title={role.title}
+      title={localizedTextLabel(role.title)}
       meta={role.bypassAllPermissions ? <Badge>Todas permissões</Badge> : null}
     >
       <form className="space-y-4" onSubmit={form.submit}>

@@ -13,7 +13,10 @@ const accounts: Account[] = [
       isDefault: false,
       name: "admin",
       permissions: ["room:admin"],
-      title: "Admin",
+      title: {
+        label: "Admin",
+        value: "role.admin.title",
+      },
       updatedAt: "2026-01-01T00:00:00.000Z",
       uuid: "role-admin",
     },
@@ -30,7 +33,10 @@ const accounts: Account[] = [
       isDefault: true,
       name: "player",
       permissions: [],
-      title: "Jogador",
+      title: {
+        label: "Jogador",
+        value: "role.player.title",
+      },
       updatedAt: "2026-01-01T00:00:00.000Z",
       uuid: "role-player",
     },

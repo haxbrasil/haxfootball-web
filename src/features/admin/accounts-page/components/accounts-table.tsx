@@ -4,6 +4,7 @@ import type {
   ListRolesResponse,
 } from "@haxbrasil/haxfootball-api-sdk";
 import { ResourceTable } from "#/components/ds/resource-table";
+import { localizedTextLabel } from "#/lib/localization/localized-text";
 import { AccountRoleForm } from "./account-role-form";
 
 export function AccountsTable({
@@ -19,7 +20,11 @@ export function AccountsTable({
       columns={[
         { key: "name", title: "Conta", cell: (account: Account) => account.name },
         { key: "externalId", title: "Discord", cell: (account) => account.externalId },
-        { key: "role", title: "Cargo atual", cell: (account) => account.role.title },
+        {
+          key: "role",
+          title: "Cargo atual",
+          cell: (account) => localizedTextLabel(account.role.title),
+        },
         {
           key: "assign",
           title: "Trocar cargo",

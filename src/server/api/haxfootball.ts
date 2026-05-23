@@ -104,6 +104,7 @@ export type WebStatEventSchema = Omit<StatEventSchema, "definition"> & {
 
 export type StatsQuery = {
   accountIds?: string[];
+  gameModeNames?: string[];
   groupBy?: NonNullable<QueryMatchMetricsInput["group"]>["by"];
   sortKey?: string;
   sortType?: "field" | "metric";
@@ -114,6 +115,10 @@ export type StatsQuery = {
   eventTypes?: string[];
   playerIds?: string[];
   status?: "all" | "completed" | "ongoing";
+};
+
+type GameModeAwareMetricsFilters = NonNullable<QueryMatchMetricsInput["filters"]> & {
+  gameModeNames?: string[];
 };
 
 export type StatsCategoryRanking = {
@@ -209,12 +214,17 @@ export async function getRoom(id: string): Promise<Room | null> {
 
 export async function listMatches(query: PaginationQuery = {}): Promise<ListMatchesResponse> {
   const client = getApiClient();
+  const env = getServerEnv();
+  const apiQuery = {
+    ...query,
+    gameMode: env.GAME_MODE_NAME,
+  };
 
   return client
     ? cachedJson(
-        `public:matches:${JSON.stringify(query)}`,
+        `public:matches:${JSON.stringify(apiQuery)}`,
         30,
-        async () => (await unwrap(client.matches.list(query))) ?? emptyPage(),
+        async () => (await unwrap(client.matches.list(apiQuery))) ?? emptyPage(),
       )
     : emptyPage();
 }
@@ -331,6 +341,7 @@ export async function listAccountLinkedMatches(
   accountUuid: string,
   query: PaginationQuery = {},
 ): Promise<ListMatchesResponse> {
+  const env = getServerEnv();
   const sessionEntries = await listAccountLinkedSessionEntries(accountUuid, { limit: 100 });
 
   if (sessionEntries.items.length === 0) {
@@ -342,7 +353,9 @@ export async function listAccountLinkedMatches(
   );
 
   return createAccountMatchPage(
-    sessionEntryMatchPages.flatMap((page) => page.items),
+    sessionEntryMatchPages
+      .flatMap((page) => page.items)
+      .filter((match) => isGameModeMatch(match, env.GAME_MODE_NAME)),
     query,
   );
 }
@@ -352,6 +365,7 @@ export async function getStats(
 ): Promise<WebQueryMatchMetricsResponse | null> {
   const client = getApiClient();
   const env = getServerEnv();
+  const gameModeNames = query.gameModeNames ?? [env.GAME_MODE_NAME];
   const groupBy = query.groupBy ?? "player";
   const sortKey = query.sortKey ?? "name";
   const sortType = query.sortType ?? (sortKey === "name" ? "field" : "metric");
@@ -372,7 +386,7 @@ export async function getStats(
     body.metrics = query.metrics;
   }
 
-  const filters: NonNullable<QueryMatchMetricsInput["filters"]> = {};
+  const filters: GameModeAwareMetricsFilters = {};
 
   if (query.eventTypes?.length) {
     filters.eventTypes = query.eventTypes;
@@ -380,6 +394,10 @@ export async function getStats(
 
   if (query.accountIds?.length) {
     filters.accountIds = query.accountIds;
+  }
+
+  if (gameModeNames.length > 0) {
+    filters.gameModeNames = gameModeNames;
   }
 
   if (query.playerIds?.length) {
@@ -396,9 +414,20 @@ export async function getStats(
 
   return client
     ? cachedJson(
-        `public:stats:${JSON.stringify({ ...query, groupBy, sortKey, sortType, direction, limit })}`,
+        `public:stats:${JSON.stringify({
+          ...query,
+          gameModeNames,
+          groupBy,
+          sortKey,
+          sortType,
+          direction,
+          limit,
+        })}`,
         30,
-        async () => normalizeQueryMetricsResponse(await unwrap(client.matches.queryMetrics(body))),
+        async () =>
+          normalizeQueryMetricsResponse(
+            await unwrap(client.matches.queryMetrics(body as QueryMatchMetricsInput)),
+          ),
       )
     : null;
 }
@@ -690,6 +719,12 @@ function toPublicAccount(account: Account): PublicAccount {
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
   };
+}
+
+function isGameModeMatch(match: MatchSummary, gameModeName: string): boolean {
+  const matchGameMode = (match as MatchSummary & { gameMode?: { name?: string } | null }).gameMode;
+
+  return matchGameMode?.name === gameModeName;
 }
 
 function normalizeJsonRecord(value: Record<string, unknown>): Record<string, JsonValue> {

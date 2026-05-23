@@ -18,6 +18,7 @@
   "vars": {
     "API_BASE_URL": "https://api.bfl.haxbrasil.com/api",
     "APP_BASE_URL": "https://bfl.haxbrasil.com",
+    "GAME_MODE_NAME": "haxfootball",
     "STAT_SCHEMA_NAME": "haxfootball",
     "LANGUAGE": "pt",
   },
