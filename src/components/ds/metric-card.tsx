@@ -10,8 +10,8 @@ export function MetricCard({
   detail?: string;
 }) {
   return (
-    <DataCard title={label}>
-      <div className="text-2xl font-semibold">{value}</div>
+    <DataCard title={label} className="border-l-4 border-l-primary">
+      <div className="text-3xl font-semibold leading-none">{value}</div>
       {detail ? <p className="mt-1 text-sm text-muted-foreground">{detail}</p> : null}
     </DataCard>
   );

@@ -14,7 +14,7 @@ export function AdminRolesPage({
 }) {
   return (
     <>
-      <PageHeader title="Cargos" description="Gerenciamento de cargos e permissões da API." />
+      <PageHeader title="Cargos" description="Gerenciamento de cargos e permissões." />
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <CreateRoleCard permissions={permissions.items} />

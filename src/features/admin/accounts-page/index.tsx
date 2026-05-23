@@ -18,10 +18,7 @@ export function AdminAccountsPage({
 
   return (
     <>
-      <PageHeader
-        title="Contas"
-        description="Busca, inspeção e troca de cargo das contas da API."
-      />
+      <PageHeader title="Contas" description="Busca, inspeção e troca de cargo das contas." />
 
       <SearchField
         id="accountSearch"

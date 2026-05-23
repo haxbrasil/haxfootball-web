@@ -13,11 +13,11 @@ export function DataCard({
   className?: string;
 }) {
   return (
-    <article
-      className={cn("rounded-lg border bg-card p-4 text-card-foreground shadow-xs", className)}
-    >
+    <article className={cn("bfl-panel rounded-xl border p-4 text-card-foreground", className)}>
       <div className="mb-3 flex items-start justify-between gap-3">
-        <h2 className="text-base font-semibold tracking-normal">{title}</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          {title}
+        </h2>
         {meta}
       </div>
       {children}

@@ -11,14 +11,17 @@ import {
   type ListMatchesResponse,
   type ListPermissionsResponse,
   type ListPlayerMatchesResponse,
+  type ListPlayersQuery,
   type ListPlayersResponse,
   type ListRolesResponse,
   type ListRoomProgramsResponse,
   type ListRoomProxyEndpointsResponse,
   type ListRoomProgramVersionsResponse,
+  type ListRoomsQuery,
   type ListRoomsResponse,
   type Match,
   type MatchMetrics,
+  type MatchSummary,
   type MatchStatEvent,
   type Player,
   type QueryMatchMetricsInput,
@@ -28,8 +31,16 @@ import {
   type StatEventSchema,
   type UpdateRoleInput,
 } from "@haxbrasil/haxfootball-api-sdk";
+import type { PageInfo, PaginationQuery } from "#/lib/pagination/page";
+import { groupMetricsByCategory } from "#/lib/stats-metrics/categories";
+import { createAccountMatchPage } from "#/server/api/utils/create-account-match-page";
 import { cachedJson, deleteCachedJson } from "#/server/cache";
 import { getServerEnv } from "#/server/env";
+
+export type { ListMatchesResponse, MatchSummary };
+
+export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];
+export type ListAccountLinkedSessionEntriesResponse = ListPlayersResponse;
 
 export type JsonValue =
   | string
@@ -41,7 +52,7 @@ export type JsonValue =
 
 type JsonObject = { [key: string]: JsonValue };
 
-type Page<T> = {
+export type Page<T> = {
   items: T[];
   page: {
     limit: number;
@@ -51,7 +62,10 @@ type Page<T> = {
 
 type RoomProgramVersionAlias = components["schemas"]["RoomProgramVersionAlias"];
 
-export type WebQueryMatchMetricsResponse = Omit<QueryMatchMetricsResponse, "items" | "meta"> & {
+export type WebQueryMatchMetricsResponse = Omit<
+  QueryMatchMetricsResponse,
+  "items" | "meta" | "page"
+> & {
   items: Array<
     Omit<QueryMatchMetricsResponse["items"][number], "metrics"> & {
       metrics: Record<string, JsonValue>;
@@ -60,13 +74,12 @@ export type WebQueryMatchMetricsResponse = Omit<QueryMatchMetricsResponse, "item
   meta: Omit<QueryMatchMetricsResponse["meta"], "sort"> & {
     sort: JsonValue[];
   };
+  page: PageInfo;
 };
 
-export type PlayerDetail = {
-  player: Player | null;
-  matches: ListPlayerMatchesResponse;
-  stats: WebQueryMatchMetricsResponse | null;
-};
+export type PublicAccount = Pick<Account, "uuid" | "name" | "createdAt" | "updatedAt">;
+
+export type ListPublicAccountsResponse = Page<PublicAccount>;
 
 export type WebMatchMetrics = Array<
   Omit<MatchMetrics[number], "metrics"> & {
@@ -81,8 +94,8 @@ export type WebMatchStatEvent = Omit<MatchStatEvent, "value"> & {
 export type MatchDetail = {
   match: Match | null;
   metrics: WebMatchMetrics | null;
-  statEvents: Page<WebMatchStatEvent>;
-  canModerateStats: boolean;
+  metricMetadata: WebQueryMatchMetricsResponse["meta"]["availableMetrics"];
+  featuredMetrics: WebQueryMatchMetricsResponse["meta"]["featuredMetrics"];
 };
 
 export type WebStatEventSchema = Omit<StatEventSchema, "definition"> & {
@@ -96,10 +109,24 @@ export type StatsQuery = {
   sortType?: "field" | "metric";
   direction?: "asc" | "desc";
   limit?: number;
+  cursor?: string;
   metrics?: string[];
   eventTypes?: string[];
   playerIds?: string[];
   status?: "all" | "completed" | "ongoing";
+};
+
+export type StatsCategoryRanking = {
+  key: string;
+  title: string;
+  primaryMetricKey: string;
+  metricKeys: string[];
+  metrics: WebQueryMatchMetricsResponse["meta"]["availableMetrics"];
+  stats: WebQueryMatchMetricsResponse;
+};
+
+export type StatsCategoryRankingsResponse = {
+  categories: StatsCategoryRanking[];
 };
 
 export type AdminResources = {
@@ -149,34 +176,45 @@ export async function unwrap<T>(
   return result.ok ? result.data : null;
 }
 
-export async function listRooms(): Promise<ListRoomsResponse> {
+export async function listRooms(query: PaginationQuery = {}): Promise<ListRoomsResponse> {
   const client = getApiClient();
 
   if (!client) {
     return emptyPage<Room>();
   }
 
+  const apiQuery: ListRoomsQuery = {
+    ...query,
+    state: "open",
+  };
+
   return cachedJson(
-    "public:rooms:all",
+    `public:rooms:${JSON.stringify(apiQuery)}`,
     15,
-    async () => (await unwrap(client.rooms.list({ state: "all" }))) ?? emptyPage<Room>(),
+    async () => (await unwrap(client.rooms.list(apiQuery))) ?? emptyPage<Room>(),
   );
 }
 
 export async function getRoom(id: string): Promise<Room | null> {
   const client = getApiClient();
 
-  return client ? cachedJson(`public:rooms:${id}`, 15, () => unwrap(client.rooms.get(id))) : null;
+  return client
+    ? cachedJson(`public:rooms:${id}:open-only`, 15, async () => {
+        const room = await unwrap(client.rooms.get(id));
+
+        return room && room.state !== "closed" && room.state !== "failed" ? room : null;
+      })
+    : null;
 }
 
-export async function listMatches(): Promise<ListMatchesResponse> {
+export async function listMatches(query: PaginationQuery = {}): Promise<ListMatchesResponse> {
   const client = getApiClient();
 
   return client
     ? cachedJson(
-        "public:matches",
+        `public:matches:${JSON.stringify(query)}`,
         30,
-        async () => (await unwrap(client.matches.list())) ?? emptyPage(),
+        async () => (await unwrap(client.matches.list(query))) ?? emptyPage(),
       )
     : emptyPage();
 }
@@ -206,12 +244,15 @@ export async function getMatchMetrics(id: string): Promise<WebMatchMetrics | nul
     : null;
 }
 
-export async function listMatchStatEvents(id: string): Promise<Page<WebMatchStatEvent>> {
+export async function listMatchStatEvents(
+  id: string,
+  query: PaginationQuery = {},
+): Promise<Page<WebMatchStatEvent>> {
   const client = getApiClient();
 
   return client
-    ? cachedJson(`public:matches:${id}:stat-events`, 30, async () => {
-        const response = await unwrap(client.matches.listStatEvents(id));
+    ? cachedJson(`public:matches:${id}:stat-events:${JSON.stringify(query)}`, 30, async () => {
+        const response = await unwrap(client.matches.listStatEvents(id, query));
 
         return response
           ? {
@@ -226,48 +267,84 @@ export async function listMatchStatEvents(id: string): Promise<Page<WebMatchStat
     : emptyPage<WebMatchStatEvent>();
 }
 
-export async function listPlayers(): Promise<ListPlayersResponse> {
+export async function listPublicAccounts(
+  query: PaginationQuery & { search?: string } = {},
+): Promise<ListPublicAccountsResponse> {
+  const client = getApiClient();
+
+  if (!client) {
+    return emptyPage();
+  }
+
+  return cachedJson(`public:accounts:${JSON.stringify(query)}`, 60, async () => {
+    const response = await unwrap(client.accounts.list(query));
+
+    return response
+      ? {
+          items: response.items.map(toPublicAccount),
+          page: response.page,
+        }
+      : emptyPage();
+  });
+}
+
+async function listLinkedSessionEntries(
+  query: ListPlayersQuery = {},
+): Promise<ListPlayersResponse> {
   const client = getApiClient();
 
   return client
     ? cachedJson(
-        "public:players",
+        `linked-session-entries:${JSON.stringify(query)}`,
         60,
-        async () => (await unwrap(client.players.list())) ?? emptyPage(),
+        async () => (await unwrap(client.players.list(query))) ?? emptyPage<Player>(),
+      )
+    : emptyPage<Player>();
+}
+
+export function listAccountLinkedSessionEntries(
+  accountUuid: string,
+  query: PaginationQuery = {},
+): Promise<ListAccountLinkedSessionEntriesResponse> {
+  return listLinkedSessionEntries({
+    ...query,
+    accountUuid,
+  });
+}
+
+async function listSessionEntryMatches(
+  externalId: string,
+  query: PaginationQuery = {},
+): Promise<ListPlayerMatchesResponse> {
+  const client = getApiClient();
+
+  return client
+    ? cachedJson(
+        `session-entry-matches:${externalId}:${JSON.stringify(query)}`,
+        60,
+        async () => (await unwrap(client.players.listMatches(externalId, query))) ?? emptyPage(),
       )
     : emptyPage();
 }
 
-export async function getPlayer(externalId: string): Promise<PlayerDetail> {
-  const client = getApiClient();
+export async function listAccountLinkedMatches(
+  accountUuid: string,
+  query: PaginationQuery = {},
+): Promise<ListMatchesResponse> {
+  const sessionEntries = await listAccountLinkedSessionEntries(accountUuid, { limit: 100 });
 
-  if (!client) {
-    return {
-      player: null,
-      matches: emptyPage(),
-      stats: null,
-    };
+  if (sessionEntries.items.length === 0) {
+    return createAccountMatchPage([], query);
   }
 
-  return cachedJson(`public:players:${externalId}`, 60, async () => {
-    const [player, matches, stats] = await Promise.all([
-      unwrap(client.players.get(externalId)),
-      unwrap(client.players.listMatches(externalId)),
-      getStats({
-        groupBy: "player",
-        playerIds: [externalId],
-        limit: 1,
-        sortKey: "name",
-        sortType: "field",
-      }),
-    ]);
+  const sessionEntryMatchPages = await Promise.all(
+    sessionEntries.items.map((entry) => listSessionEntryMatches(entry.id, { limit: 100 })),
+  );
 
-    return {
-      player,
-      matches: matches ?? emptyPage(),
-      stats,
-    };
-  });
+  return createAccountMatchPage(
+    sessionEntryMatchPages.flatMap((page) => page.items),
+    query,
+  );
 }
 
 export async function getStats(
@@ -284,7 +361,7 @@ export async function getStats(
     schema: { name: env.STAT_SCHEMA_NAME },
     group: { by: groupBy },
     language: env.LANGUAGE,
-    page: { limit },
+    page: { cursor: query.cursor, limit },
     sort:
       sortType === "field"
         ? [{ type: "field", key: "name", direction }]
@@ -321,10 +398,72 @@ export async function getStats(
     ? cachedJson(
         `public:stats:${JSON.stringify({ ...query, groupBy, sortKey, sortType, direction, limit })}`,
         30,
-        () =>
-          unwrap(client.matches.queryMetrics(body)) as Promise<WebQueryMatchMetricsResponse | null>,
+        async () => normalizeQueryMetricsResponse(await unwrap(client.matches.queryMetrics(body))),
       )
     : null;
+}
+
+export async function getStatsCategoryRankings(
+  query: StatsQuery = {},
+): Promise<StatsCategoryRankingsResponse> {
+  const groupBy = query.groupBy ?? "account";
+  const limit = query.limit ?? 10;
+  const metadata = await getStats({
+    ...query,
+    groupBy,
+    limit: 1,
+    sortKey: "name",
+    sortType: "field",
+    direction: "asc",
+    cursor: undefined,
+    metrics: undefined,
+  });
+
+  if (!metadata) {
+    return { categories: [] };
+  }
+
+  const groups = groupMetricsByCategory(
+    metadata.meta.availableMetrics.filter((metric) => !metric.hidden),
+    { featuredMetricKey: metadata.meta.featuredMetrics?.points },
+  ).filter((group) => group.primaryMetricKey);
+  const categories = await Promise.all(
+    groups.map(async (group) => {
+      const primaryMetricKey = group.primaryMetricKey;
+
+      if (!primaryMetricKey) {
+        return null;
+      }
+
+      const stats = await getStats({
+        ...query,
+        groupBy,
+        limit,
+        cursor: undefined,
+        direction: "desc",
+        metrics: group.metrics.map((metric) => metric.key),
+        sortKey: primaryMetricKey,
+        sortType: "metric",
+      });
+
+      if (!stats) {
+        return null;
+      }
+
+      return {
+        key: group.key,
+        title: group.title,
+        primaryMetricKey,
+        metricKeys: group.metrics.map((metric) => metric.key),
+        metrics: group.metrics,
+        stats,
+      } satisfies StatsCategoryRanking;
+    }),
+  );
+
+  return {
+    categories: categories.filter((category): category is StatsCategoryRanking => !!category),
+  };
 }
 
 export async function listAdminResources(): Promise<AdminResources> {
@@ -462,7 +601,6 @@ export async function disableMatchStatEvent(input: {
     await Promise.all([
       deleteCachedJson(`public:matches:${input.matchId}:stat-events`),
       deleteCachedJson(`public:matches:${input.matchId}:metrics`),
-      deleteCachedJson(`public:players:${event.player.id}`),
       deleteCachedJson("public:stats:player:top"),
     ]);
   }
@@ -521,6 +659,37 @@ export async function getAccountByUuid(uuid: string): Promise<Account | null> {
   const client = getApiClient();
 
   return client ? unwrap(client.accounts.get(uuid)) : null;
+}
+
+function normalizeQueryMetricsResponse(
+  response: QueryMatchMetricsResponse | null,
+): WebQueryMatchMetricsResponse | null {
+  return response
+    ? {
+        ...response,
+        items: response.items.map((item) => ({
+          ...item,
+          metrics: normalizeJsonRecord(item.metrics),
+        })),
+        meta: {
+          ...response.meta,
+          sort: response.meta.sort.map((entry) => normalizeJsonValue(entry)),
+        },
+        page: {
+          limit: Number(response.page.limit),
+          nextCursor: response.page.nextCursor,
+        },
+      }
+    : null;
+}
+
+function toPublicAccount(account: Account): PublicAccount {
+  return {
+    uuid: account.uuid,
+    name: account.name,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  };
 }
 
 function normalizeJsonRecord(value: Record<string, unknown>): Record<string, JsonValue> {

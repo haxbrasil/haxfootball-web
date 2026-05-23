@@ -8,10 +8,21 @@ describe("formatStatValue", () => {
     expect(formatStatValue(3)).toBe("3");
     expect(formatStatValue(3.14159)).toBe("3.14");
     expect(formatStatValue("touchdown")).toBe("touchdown");
-    expect(formatStatValue(true)).toBe("true");
+    expect(formatStatValue(true)).toBe("Sim");
   });
 
-  it("serializes structured stat values", () => {
-    expect(formatStatValue({ yards: 12 })).toBe('{"yards":12}');
+  it("formats structured stat values without leaking JSON", () => {
+    expect(formatStatValue({ source: "KICKOFF_RETURN", team: 2, yards: 12 })).toBe(
+      "12 jardas · time: azul",
+    );
+  });
+
+  it("formats nested field positions", () => {
+    expect(
+      formatStatValue({
+        endFieldPosition: { side: 1, yards: 26 },
+        startFieldPosition: { side: 2, yards: 1 },
+      }),
+    ).toBe("início: lado 2, 1 jarda · fim: lado 1, 26 jardas");
   });
 });

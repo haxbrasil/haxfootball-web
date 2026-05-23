@@ -1,8 +1,13 @@
+export type NavigationItem = {
+  label: string;
+  to: "/" | "/admin" | "/matches" | "/pubs" | "/rooms";
+};
+
 export const navigation = [
   { to: "/", label: "Início" },
-  { to: "/rooms", label: "Salas" },
+  { to: "/pubs", label: "Pubs" },
   { to: "/matches", label: "Partidas" },
-  { to: "/players", label: "Jogadores" },
-  { to: "/stats", label: "Stats" },
-  { to: "/admin", label: "Admin" },
-];
+  { to: "/rooms", label: "Salas" },
+] satisfies NavigationItem[];
+
+export const adminNavigationItem = { to: "/admin", label: "Admin" } satisfies NavigationItem;

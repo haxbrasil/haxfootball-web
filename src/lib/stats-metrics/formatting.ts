@@ -7,6 +7,17 @@ export function visibleMetricColumns(stats: WebQueryMatchMetricsResponse | null)
   return stats?.meta.availableMetrics.filter((metric) => !metric.hidden) ?? [];
 }
 
+export function featuredMetricColumns(stats: WebQueryMatchMetricsResponse | null, limit: number) {
+  const metrics = visibleMetricColumns(stats);
+  const pointsMetricKey = stats?.meta.featuredMetrics?.points;
+  const pointsMetric = metrics.find((metric) => metric.key === pointsMetricKey);
+  const remainingMetrics = pointsMetric
+    ? metrics.filter((metric) => metric.key !== pointsMetric.key)
+    : metrics;
+
+  return [...(pointsMetric ? [pointsMetric] : []), ...remainingMetrics].slice(0, limit);
+}
+
 export function formatMetricValue(value: StatsMetricValue, metric: StatsMetric): string {
   if (value === null || value === undefined) {
     return "-";

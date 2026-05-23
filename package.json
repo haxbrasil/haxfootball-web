@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build && tsc --noEmit",
+    "build": "vite build && pnpm run clean:build-secrets && tsc --noEmit",
+    "clean:build-secrets": "find dist \\( -name '.dev.vars' -o -name '.dev.vars.*' \\) -delete",
     "preview": "vite preview",
     "deploy": "pnpm run build && wrangler deploy",
     "cf-typegen": "wrangler types",

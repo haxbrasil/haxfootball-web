@@ -1,7 +1,9 @@
 import type { Room } from "@haxbrasil/haxfootball-api-sdk";
-import { DataCard, EmptyState, PageHeader } from "#/components/ds/app-shell";
+import { DataCard, EmptyState } from "#/components/ds/app-shell";
+import { LeagueHeader } from "#/components/ds/league-header";
 import { StatusBadge } from "#/components/ds/status-badge";
 import { Button } from "#/components/ui/button";
+import { formatDateTime } from "#/lib/date/format-date-time";
 
 export function RoomDetailPage({ room }: { room: Room | null }) {
   if (!room) {
@@ -10,9 +12,11 @@ export function RoomDetailPage({ room }: { room: Room | null }) {
 
   return (
     <>
-      <PageHeader
+      <LeagueHeader
         title={room.program?.name ?? room.id}
-        description="Detalhes da sala gerenciada."
+        eyebrow={null}
+        showBrand={false}
+        description="Estado público, versão e link da sala."
         action={
           room.roomLink ? (
             <Button asChild>
@@ -33,7 +37,7 @@ export function RoomDetailPage({ room }: { room: Room | null }) {
           </div>
           <div>
             <dt className="text-muted-foreground">Criada em</dt>
-            <dd>{room.createdAt}</dd>
+            <dd>{formatDateTime(room.createdAt)}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Falha</dt>

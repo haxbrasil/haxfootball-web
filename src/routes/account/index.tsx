@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AccountPage } from "#/features/account/account-page";
-import { getCurrentSessionFn } from "#/server/auth/functions";
+import { getAccountPageDataFn } from "#/server/api/functions";
 
 export const Route = createFileRoute("/account/")({
-  loader: () => getCurrentSessionFn(),
-  component: () => <AccountPage session={Route.useLoaderData()} />,
+  loader: () => getAccountPageDataFn(),
+  component: () => <AccountPage data={Route.useLoaderData()} />,
 });

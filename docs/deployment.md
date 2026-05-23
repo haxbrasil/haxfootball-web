@@ -66,9 +66,9 @@ After deploy, smoke test:
 - `/api/auth/sign-in/discord`
 - `/rooms`
 - `/matches`
-- `/players`
-- `/stats`
+- `/pubs`
 - `/admin` as an unauthenticated user, expecting redirect to login
+- `/api/auth/sign-in/discord`, expecting a redirect to Discord OAuth when secrets are configured
 - an admin mutation with an authorized API account, expecting the BFF permission gate to allow it
 
 ## Operational Rules

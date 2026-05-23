@@ -5,6 +5,7 @@ test("renders the public dashboard", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "BFL" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Salas", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
 });
 
 test("renders the login methods", async ({ page }) => {

@@ -6,15 +6,16 @@ import { Button } from "#/components/ui/button";
 
 export function RoomCard({ room }: { room: Room }) {
   return (
-    <DataCard title={room.program?.name ?? room.id} meta={<StatusBadge value={room.state} />}>
+    <DataCard
+      title="Sala"
+      meta={<StatusBadge value={room.state} />}
+      className="border-t-4 border-t-primary"
+    >
+      <h2 className="mb-3 truncate text-lg font-semibold">{room.program?.name ?? room.id}</h2>
       <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-3">
           <dt className="text-muted-foreground">Versão</dt>
           <dd>{room.version?.version ?? "-"}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-muted-foreground">Proxy</dt>
-          <dd>{room.proxyEndpoint?.key ?? "-"}</dd>
         </div>
       </dl>
       <div className="mt-4 flex gap-2">

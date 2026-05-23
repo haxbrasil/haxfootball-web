@@ -1,3 +1,4 @@
+import type { ChangeEvent } from "react";
 import { Search } from "lucide-react";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
@@ -15,6 +16,10 @@ export function SearchField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    onChange(event.currentTarget.value);
+  }
+
   return (
     <div className="mb-4 grid max-w-md gap-2">
       <Label htmlFor={id}>{label}</Label>
@@ -23,7 +28,7 @@ export function SearchField({
         <Input
           id={id}
           value={value}
-          onChange={(event) => onChange(event.currentTarget.value)}
+          onChange={handleChange}
           className="pl-9"
           placeholder={placeholder}
         />

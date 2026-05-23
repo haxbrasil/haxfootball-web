@@ -246,13 +246,17 @@ async function recordCredentialLoginAttempt(
     return;
   }
 
-  await db.insert(credentialLoginAttempts).values({
-    id: crypto.randomUUID(),
-    accountName,
-    ipHash: await hashToken(`${getRequestHeader("x-forwarded-for") ?? "local"}:${accountName}`),
-    attemptedAt: new Date(),
-    succeeded,
-  });
+  try {
+    await db.insert(credentialLoginAttempts).values({
+      id: crypto.randomUUID(),
+      accountName,
+      ipHash: await hashToken(`${getRequestHeader("x-forwarded-for") ?? "local"}:${accountName}`),
+      attemptedAt: new Date(),
+      succeeded,
+    });
+  } catch (error) {
+    console.warn("Failed to record credential login attempt.", error);
+  }
 }
 
 function accountSession(source: ApiAccountSession["source"], account: Account): ApiAccountSession {

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { loginWithCredentialsFn } from "#/server/auth/functions";
+import { notifyAccountSessionChanged } from "#/features/account/utils/session-events";
+import { getCredentialsLoginErrorMessage } from "../utils/get-credentials-login-error-message";
 
 export function useCredentialsLoginForm() {
   const navigate = useNavigate();
@@ -15,23 +17,30 @@ export function useCredentialsLoginForm() {
     setMessage(null);
     setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
-    const result = await loginWithCredentials({
-      data: {
-        name: String(formData.get("name") ?? ""),
-        password: String(formData.get("password") ?? ""),
-      },
-    });
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await loginWithCredentials({
+        data: {
+          name: String(formData.get("name") ?? ""),
+          password: String(formData.get("password") ?? ""),
+        },
+      });
 
-    setIsSubmitting(false);
+      if (!result.ok) {
+        setMessage(result.message);
+        setIsSubmitting(false);
 
-    if (!result.ok) {
-      setMessage(result.message);
+        return;
+      }
 
-      return;
+      setIsSubmitting(false);
+      notifyAccountSessionChanged();
+      await navigate({ to: "/account" });
+    } catch (error) {
+      console.error(error);
+      setMessage(getCredentialsLoginErrorMessage(error));
+      setIsSubmitting(false);
     }
-
-    await navigate({ to: "/account" });
   }
 
   return { isSubmitting, message, submit };

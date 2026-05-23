@@ -1,17 +1,20 @@
 import { ExternalLink } from "lucide-react";
-import { EmptyState, PageHeader } from "#/components/ds/app-shell";
+import { EmptyState } from "#/components/ds/app-shell";
+import { LeagueHeader } from "#/components/ds/league-header";
 import { Button } from "#/components/ui/button";
+import { formatMatchCode } from "#/lib/matches/format-match-code";
 import type { MatchDetail } from "#/server/api/haxfootball";
-import { MatchEventsTable } from "./components/match-events-table";
 import { MatchMetricsTable } from "./components/match-metrics-table";
+import { MatchPointsPanel } from "./components/match-points-panel";
 import { MatchSummaryCards } from "./components/match-summary-cards";
-import { ParticipationsTable } from "./components/participations-table";
-import { StatEventsTable } from "./components/stat-events-table";
+import { MatchTeamsPanel } from "./components/match-teams-panel";
+import { getMatchPointsMetric } from "./utils/match-points";
 
 export { formatStatValue } from "./utils/stat-formatting";
 
 export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
-  const { match, metrics, statEvents, canModerateStats } = detail;
+  const { match, metrics, metricMetadata } = detail;
+  const pointsMetric = getMatchPointsMetric(detail);
 
   if (!match) {
     return <EmptyState title="Partida não encontrada" />;
@@ -19,9 +22,11 @@ export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
 
   return (
     <>
-      <PageHeader
-        title={`Partida ${match.id}`}
-        description="Eventos, participações, gravação, métricas e eventos de stats."
+      <LeagueHeader
+        title={`Partida ${formatMatchCode(match.id)}`}
+        eyebrow={null}
+        showBrand={false}
+        description="Placar, participação e desempenho registrado para a partida."
         action={
           match.recording ? (
             <Button asChild variant="outline">
@@ -37,14 +42,13 @@ export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
       <MatchSummaryCards detail={detail} />
 
       <section className="mt-6 grid gap-6">
-        <MatchMetricsTable metrics={metrics ?? []} />
-        <StatEventsTable
-          matchId={match.id}
-          statEvents={statEvents.items}
-          canModerateStats={canModerateStats}
+        <MatchPointsPanel detail={detail} />
+        <MatchTeamsPanel participations={match.participations} />
+        <MatchMetricsTable
+          metrics={metrics ?? []}
+          metricMetadata={metricMetadata}
+          omittedMetricKeys={pointsMetric ? [pointsMetric.key] : []}
         />
-        <ParticipationsTable participations={match.participations} />
-        <MatchEventsTable events={match.events} />
       </section>
     </>
   );

@@ -20,12 +20,14 @@ export function ResourceTable<T>({
   }>;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="bfl-panel overflow-hidden rounded-xl border shadow-xs">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted/70">
           <TableRow>
             {columns.map((column) => (
-              <TableHead key={column.key}>{column.title}</TableHead>
+              <TableHead key={column.key} className="text-xs uppercase tracking-[0.12em]">
+                {column.title}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>

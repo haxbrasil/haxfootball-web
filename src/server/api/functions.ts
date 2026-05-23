@@ -1,29 +1,48 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { emptyPage } from "#/lib/pagination/page";
 import {
   closeRoom,
   createRole,
   disableMatchStatEvent,
   getMatch,
   getMatchMetrics,
-  getPlayer,
   getRoom,
   getStats,
+  getStatsCategoryRankings,
+  listAccountLinkedMatches,
+  listAccountLinkedSessionEntries,
   listMatchStatEvents,
   launchRoom,
   listAdminRoomManagementResources,
   listAdminResources,
   listMatches,
-  listPlayers,
+  listPublicAccounts,
   listRooms,
   updateAccountRole,
   updateRole,
 } from "#/server/api/haxfootball";
-import { getCurrentSession, hasApiPermission, requireApiPermission } from "#/server/auth/session";
+import { getCurrentSession, requireApiPermission } from "#/server/auth/session";
+import type { AccountLinkedSessionEntry, ListMatchesResponse } from "./haxfootball";
 
 const idInput = z.object({
   id: z.string().min(1),
 });
+
+const paginationInput = z
+  .object({
+    cursor: z.string().min(1).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  })
+  .optional();
+
+const publicAccountListInput = z
+  .object({
+    cursor: z.string().min(1).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    search: z.string().min(1).optional(),
+  })
+  .optional();
 
 const launchConfigValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
@@ -44,6 +63,12 @@ const disableMatchStatEventInput = z.object({
   eventId: z.string().min(1),
 });
 
+const matchIdPaginationInput = z.object({
+  matchId: z.string().min(1),
+  cursor: z.string().min(1).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
 const statsQueryInput = z.object({
   accountIds: z.array(z.string().min(1)).optional(),
   groupBy: z.enum(["account", "player", "account-or-player"]).optional(),
@@ -51,6 +76,7 @@ const statsQueryInput = z.object({
   sortType: z.enum(["field", "metric"]).optional(),
   direction: z.enum(["asc", "desc"]).optional(),
   limit: z.number().int().min(1).max(100).optional(),
+  cursor: z.string().min(1).optional(),
   metrics: z.array(z.string().min(1)).optional(),
   eventTypes: z.array(z.string().min(1)).optional(),
   playerIds: z.array(z.string().min(1)).optional(),
@@ -72,13 +98,17 @@ const updateRoleInput = z.object({
   permissions: rolePermissionKeys,
 });
 
-export const listRoomsFn = createServerFn({ method: "GET" }).handler(() => listRooms());
+export const listRoomsFn = createServerFn({ method: "GET" })
+  .inputValidator(paginationInput)
+  .handler(({ data }) => listRooms(data ?? {}));
 
 export const getRoomFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(({ data }) => getRoom(data.id));
 
-export const listMatchesFn = createServerFn({ method: "GET" }).handler(() => listMatches());
+export const listMatchesFn = createServerFn({ method: "GET" })
+  .inputValidator(paginationInput)
+  .handler(({ data }) => listMatches(data ?? {}));
 
 export const getMatchFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
@@ -87,28 +117,92 @@ export const getMatchFn = createServerFn({ method: "GET" })
 export const getMatchDetailFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data }) => {
-    const [match, metrics, statEvents, session] = await Promise.all([
+    const [match, metrics, stats] = await Promise.all([
       getMatch(data.id),
       getMatchMetrics(data.id),
-      listMatchStatEvents(data.id),
-      getCurrentSession(),
+      getStats({ limit: 1 }),
     ]);
 
     return {
       match,
       metrics,
-      statEvents,
-      canModerateStats: session ? hasApiPermission(session, "room:admin") : false,
+      metricMetadata: stats?.meta.availableMetrics ?? [],
+      featuredMetrics: stats?.meta.featuredMetrics ?? {},
     };
   });
 
-export const listPlayersFn = createServerFn({ method: "GET" }).handler(() => listPlayers());
+export const listMatchStatEventsFn = createServerFn({ method: "GET" })
+  .inputValidator(matchIdPaginationInput)
+  .handler(({ data }) => {
+    const { matchId, ...query } = data;
 
-export const getPlayerFn = createServerFn({ method: "GET" })
-  .inputValidator(idInput)
-  .handler(({ data }) => getPlayer(data.id));
+    return listMatchStatEvents(matchId, query);
+  });
+
+export const listPublicAccountsFn = createServerFn({ method: "GET" })
+  .inputValidator(publicAccountListInput)
+  .handler(({ data }) => listPublicAccounts(data ?? {}));
+
+export const getAccountPageDataFn = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getCurrentSession();
+
+  if (!session) {
+    return {
+      session,
+      sessionEntries: null,
+      matches: null,
+    };
+  }
+
+  const [sessionEntries, matches] = await Promise.all([
+    listAccountLinkedSessionEntries(session.account.uuid, {
+      limit: 8,
+    }),
+    listAccountLinkedMatches(session.account.uuid, { limit: 3 }),
+  ]);
+
+  return {
+    session,
+    sessionEntries,
+    matches,
+  };
+});
+
+export const listAccountLinkedSessionEntriesFn = createServerFn({ method: "GET" })
+  .inputValidator(paginationInput)
+  .handler(async ({ data }) => {
+    const session = await getCurrentSession();
+
+    if (!session) {
+      return emptyPage<AccountLinkedSessionEntry>(data?.limit);
+    }
+
+    return listAccountLinkedSessionEntries(session.account.uuid, {
+      cursor: data?.cursor,
+      limit: data?.limit,
+    });
+  });
+
+export const listAccountMatchesFn = createServerFn({ method: "GET" })
+  .inputValidator(paginationInput)
+  .handler(async ({ data }) => {
+    const session = await getCurrentSession();
+
+    if (!session) {
+      return emptyPage<ListMatchesResponse["items"][number]>(data?.limit);
+    }
+
+    return listAccountLinkedMatches(session.account.uuid, {
+      cursor: data?.cursor,
+      limit: data?.limit,
+    });
+  });
 
 export const getStatsFn = createServerFn({ method: "GET" }).handler(() => getStats());
+
+export const getStatsCategoryRankingsFn = createServerFn({ method: "GET" })
+  .inputValidator(statsQueryInput.optional())
+  .handler(({ data }) => getStatsCategoryRankings(data ?? {}));
 
 export const queryStatsFn = createServerFn({ method: "GET" })
   .inputValidator(statsQueryInput)

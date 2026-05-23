@@ -1,16 +1,23 @@
 import type { ListRoomsResponse } from "@haxbrasil/haxfootball-api-sdk";
-import { DataGrid, EmptyState, PageHeader } from "#/components/ds/app-shell";
+import { DataGrid } from "#/components/ds/app-shell";
+import { EmptyLeagueState } from "#/components/ds/empty-league-state";
+import { LeagueHeader } from "#/components/ds/league-header";
 import { RoomCard } from "./components/room-card";
 
 export function RoomsPage({ rooms }: { rooms: ListRoomsResponse }) {
   return (
     <>
-      <PageHeader
+      <LeagueHeader
         title="Salas"
-        description="Salas gerenciadas pela API. O companion usa apenas o estado e link disponíveis hoje."
+        eyebrow={null}
+        showBrand={false}
+        description="Salas públicas disponíveis para acompanhar ou entrar."
       />
       {rooms.items.length === 0 ? (
-        <EmptyState title="Nenhuma sala encontrada" />
+        <EmptyLeagueState
+          title="Nenhuma sala encontrada"
+          body="Quando uma sala estiver disponível, o status e o link aparecem aqui."
+        />
       ) : (
         <DataGrid>
           {rooms.items.map((room) => (

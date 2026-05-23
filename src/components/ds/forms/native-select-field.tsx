@@ -1,3 +1,4 @@
+import type { ChangeEvent } from "react";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 
@@ -27,6 +28,10 @@ export function NativeSelectField<TValue extends string>({
   emptyOption?: NativeSelectFieldOption<TValue>;
   onChange?: (value: TValue) => void;
 }) {
+  function handleChange(event: ChangeEvent<HTMLSelectElement>) {
+    onChange?.(event.currentTarget.value as TValue);
+  }
+
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
@@ -37,7 +42,7 @@ export function NativeSelectField<TValue extends string>({
         value={value}
         defaultValue={defaultValue}
         required={required}
-        onChange={(event) => onChange?.(event.currentTarget.value as TValue)}
+        onChange={handleChange}
       >
         {emptyOption ? (
           <NativeSelectOption value={emptyOption.value}>{emptyOption.label}</NativeSelectOption>

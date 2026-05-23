@@ -13,18 +13,21 @@ export function RoomActions({
   onClose: (roomId: string) => void;
   onOpenDetails: (roomId: string) => void;
 }) {
+  function handleOpenDetails() {
+    onOpenDetails(room.id);
+  }
+
+  function handleClose() {
+    onClose(room.id);
+  }
+
   return (
     <div className="flex justify-end gap-2">
-      <Button size="sm" variant="outline" onClick={() => onOpenDetails(room.id)}>
+      <Button size="sm" variant="outline" onClick={handleOpenDetails}>
         Detalhes
       </Button>
       {room.state !== "closed" ? (
-        <Button
-          size="sm"
-          variant="destructive"
-          disabled={isClosing}
-          onClick={() => onClose(room.id)}
-        >
+        <Button size="sm" variant="destructive" disabled={isClosing} onClick={handleClose}>
           <Power className="size-4" />
           Fechar
         </Button>

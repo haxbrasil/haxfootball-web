@@ -2,6 +2,8 @@ import "@tanstack/react-start/server-only";
 
 import { getCloudflareEnv } from "#/server/cloudflare";
 
+const minimumKvExpirationTtl = 60;
+
 export async function cachedJson<T>(
   key: string,
   expirationTtl: number,
@@ -20,7 +22,9 @@ export async function cachedJson<T>(
   }
 
   const value = await load();
-  await cache.put(key, JSON.stringify(value), { expirationTtl });
+  await cache.put(key, JSON.stringify(value), {
+    expirationTtl: Math.max(expirationTtl, minimumKvExpirationTtl),
+  });
 
   return value;
 }

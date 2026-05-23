@@ -1,19 +1,30 @@
 import { describe, expect, it } from "vitest";
 import type { WebQueryMatchMetricsResponse } from "#/server/api/haxfootball";
-import { formatMetricValue, visibleMetricColumns } from "./formatting";
+import { featuredMetricColumns, formatMetricValue, visibleMetricColumns } from "./formatting";
 
 const stats = {
   meta: {
     availableMetrics: [
       { key: "yards", label: "Jardas", description: null, precision: 1 },
+      { key: "points", label: "Pontos", description: null },
       { key: "internal", label: "Interno", description: null, hidden: true },
     ],
+    featuredMetrics: {
+      points: "points",
+    },
   },
-} as WebQueryMatchMetricsResponse;
+} as unknown as WebQueryMatchMetricsResponse;
 
 describe("visibleMetricColumns", () => {
   it("filters hidden metrics", () => {
-    expect(visibleMetricColumns(stats).map((metric) => metric.key)).toEqual(["yards"]);
+    expect(visibleMetricColumns(stats).map((metric) => metric.key)).toEqual(["yards", "points"]);
+  });
+
+  it("moves the schema points metric first for featured metric cards", () => {
+    expect(featuredMetricColumns(stats, 2).map((metric) => metric.key)).toEqual([
+      "points",
+      "yards",
+    ]);
   });
 });
 

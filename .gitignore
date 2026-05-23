@@ -6,6 +6,8 @@ storybook-static
 test-results
 *.local
 .env
+.dev.vars
+.dev.vars.*
 .nitro
 .tanstack
 .wrangler

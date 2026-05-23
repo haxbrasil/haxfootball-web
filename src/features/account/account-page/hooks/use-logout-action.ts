@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { notifyAccountSessionChanged } from "#/features/account/utils/session-events";
 import { logoutFn } from "#/server/auth/functions";
 
 export function useLogoutAction() {
@@ -8,6 +9,7 @@ export function useLogoutAction() {
 
   async function submit() {
     await logout();
+    notifyAccountSessionChanged();
     await navigate({ to: "/account/login" });
   }
 
