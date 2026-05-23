@@ -31,6 +31,14 @@ export { hasApiPermission } from "#/server/auth/permissions";
 
 const sessionCookieName = "bfl_session";
 const sessionTtlSeconds = 60 * 60 * 24 * 7;
+const betterAuthCookieNames = [
+  "better-auth.session_token",
+  "__Secure-better-auth.session_token",
+  "better-auth.session_data",
+  "__Secure-better-auth.session_data",
+  "better-auth.dont_remember",
+  "__Secure-better-auth.dont_remember",
+];
 
 export type ApiAccountSession = {
   source: "credentials" | "discord";
@@ -90,6 +98,8 @@ export async function loginWithCredentials(input: {
 
 export async function logoutCurrentSession(): Promise<void> {
   const token = getCookie(sessionCookieName);
+
+  await logoutDiscordSession();
 
   if (token) {
     const db = optionalDb();
@@ -234,6 +244,27 @@ async function getDiscordSession(): Promise<ApiAccountSession | null> {
   const account = await getAccountByExternalId(discordAccount.accountId);
 
   return account ? accountSession("discord", account) : null;
+}
+
+async function logoutDiscordSession(): Promise<void> {
+  const env = getCloudflareEnv();
+
+  if (!env?.DB) {
+    return;
+  }
+
+  const auth = createAuth(env.DB);
+
+  await auth.api.signOut({
+    headers: getRequest().headers,
+  });
+
+  for (const cookieName of betterAuthCookieNames) {
+    deleteCookie(cookieName, {
+      path: "/",
+      secure: cookieName.startsWith("__Secure-"),
+    });
+  }
 }
 
 async function recordCredentialLoginAttempt(
