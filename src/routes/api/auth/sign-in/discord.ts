@@ -37,7 +37,12 @@ async function handleDiscordSignInRequest(request: Request): Promise<Response> {
     return Response.json({ error: "Login com Discord indisponível." }, { status: 503 });
   }
 
-  const redirectResponse = Response.redirect(signInResult.url, 302);
+  const redirectResponse = new Response(null, {
+    status: 302,
+    headers: {
+      location: signInResult.url,
+    },
+  });
 
   copyAuthCookies(signInResponse.headers, redirectResponse.headers);
 
