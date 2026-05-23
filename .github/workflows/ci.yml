@@ -44,6 +44,10 @@ jobs:
         working-directory: haxfootball-web
         run: pnpm run cf-typegen
 
+      - name: Format generated Cloudflare types
+        working-directory: haxfootball-web
+        run: pnpm exec oxfmt worker-configuration.d.ts --write
+
       - name: Format check
         working-directory: haxfootball-web
         run: pnpm run format:check
