@@ -8,6 +8,7 @@ import { MatchMetricsTable } from "./components/match-metrics-table";
 import { MatchPointsPanel } from "./components/match-points-panel";
 import { MatchSummaryCards } from "./components/match-summary-cards";
 import { MatchTeamsPanel } from "./components/match-teams-panel";
+import { createHaxBallReplayUrl } from "./utils/haxball-replay-url";
 import { getMatchPointsMetric } from "./utils/match-points";
 
 export { formatStatValue } from "./utils/stat-formatting";
@@ -30,7 +31,7 @@ export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
         action={
           match.recording ? (
             <Button asChild variant="outline">
-              <a href={match.recording.url}>
+              <a href={createHaxBallReplayUrl(match.recording.url)}>
                 <ExternalLink className="size-4" />
                 Gravação
               </a>
