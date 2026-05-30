@@ -1,4 +1,4 @@
-import { formatMetricValue } from "#/lib/stats-metrics/formatting";
+import { formatPointsMetricValue } from "#/lib/stats-metrics/formatting";
 import { cn } from "#/lib/utils";
 import type { StatsCategoryRanking, WebQueryMatchMetricsResponse } from "#/server/api/haxfootball";
 import { getPubPointsMetric } from "../utils/pub-points-ranking";
@@ -49,7 +49,7 @@ export function PubPointsRankingList({
 
             <span className="text-right">
               <span className={cn("block font-semibold text-foreground", isLeader && "text-xl")}>
-                {formatMetricValue(item.metrics[pointsMetric.key], pointsMetric)}
+                {formatPointsMetricValue(item.metrics[pointsMetric.key], pointsMetric)}
               </span>
               <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Pontos

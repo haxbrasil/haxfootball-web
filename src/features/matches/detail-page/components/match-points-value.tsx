@@ -1,4 +1,4 @@
-import { formatMetricValue, type StatsMetric } from "#/lib/stats-metrics/formatting";
+import { formatPointsMetricValue, type StatsMetric } from "#/lib/stats-metrics/formatting";
 
 export function MatchPointsValue({
   points,
@@ -8,6 +8,8 @@ export function MatchPointsValue({
   pointsMetric: StatsMetric;
 }) {
   return (
-    <span className="font-semibold tabular-nums">{formatMetricValue(points, pointsMetric)}</span>
+    <span className="font-semibold tabular-nums">
+      {formatPointsMetricValue(points, pointsMetric)}
+    </span>
   );
 }

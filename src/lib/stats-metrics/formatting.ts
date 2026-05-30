@@ -33,3 +33,31 @@ export function formatMetricValue(value: StatsMetricValue, metric: StatsMetric):
 
   return JSON.stringify(value);
 }
+
+export function formatPointsMetricValue(value: StatsMetricValue, metric: StatsMetric): string {
+  return formatMetricValueWithPrecision(value, metric, 1);
+}
+
+function formatMetricValueWithPrecision(
+  value: StatsMetricValue,
+  metric: StatsMetric,
+  precision: number,
+) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+
+  if (typeof value === "number") {
+    return value.toFixed(precision);
+  }
+
+  if (typeof value === "string") {
+    const numericValue = Number(value);
+
+    if (Number.isFinite(numericValue)) {
+      return numericValue.toFixed(precision);
+    }
+  }
+
+  return formatMetricValue(value, metric);
+}

@@ -1,5 +1,5 @@
 import { RankingTable } from "#/components/ds/ranking-table";
-import { formatMetricValue } from "#/lib/stats-metrics/formatting";
+import { formatMetricValue, formatPointsMetricValue } from "#/lib/stats-metrics/formatting";
 import { formatMetricLabel } from "#/lib/stats-metrics/labels";
 import type { StatsCategoryRanking, WebQueryMatchMetricsResponse } from "#/server/api/haxfootball";
 
@@ -10,6 +10,8 @@ export function PubCategoryRankingTable({
   category: StatsCategoryRanking;
   rows: WebQueryMatchMetricsResponse["items"];
 }) {
+  const pointsMetricKey = category.stats.meta.featuredMetrics?.points;
+
   return (
     <RankingTable
       rows={rows}
@@ -34,7 +36,9 @@ export function PubCategoryRankingTable({
           key: metric.key,
           title: formatMetricLabel(metric.key, metric.label),
           cell: (item: WebQueryMatchMetricsResponse["items"][number]) =>
-            formatMetricValue(item.metrics[metric.key], metric),
+            metric.key === pointsMetricKey
+              ? formatPointsMetricValue(item.metrics[metric.key], metric)
+              : formatMetricValue(item.metrics[metric.key], metric),
         })),
       ]}
     />
