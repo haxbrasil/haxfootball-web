@@ -6,7 +6,6 @@ import { formatMatchCode } from "#/lib/matches/format-match-code";
 import type { MatchDetail } from "#/server/api/haxfootball";
 import { MatchMetricsTable } from "./components/match-metrics-table";
 import { MatchPointsPanel } from "./components/match-points-panel";
-import { MatchSummaryCards } from "./components/match-summary-cards";
 import { MatchTeamsPanel } from "./components/match-teams-panel";
 import { createHaxBallReplayUrl } from "./utils/haxball-replay-url";
 import { getMatchPointsMetric } from "./utils/match-points";
@@ -40,11 +39,9 @@ export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
         }
       />
 
-      <MatchSummaryCards detail={detail} />
-
       <section className="mt-6 grid gap-6">
+        <MatchTeamsPanel detail={detail} />
         <MatchPointsPanel detail={detail} />
-        <MatchTeamsPanel participations={match.participations} />
         <MatchMetricsTable
           metrics={metrics ?? []}
           metricMetadata={metricMetadata}

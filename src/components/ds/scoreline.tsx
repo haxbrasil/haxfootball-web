@@ -1,3 +1,4 @@
+import { Swords } from "lucide-react";
 import { cn } from "#/lib/utils";
 
 export function Scoreline({
@@ -30,7 +31,7 @@ export function Scoreline({
         {!compact ? (
           <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <span className="size-2 rounded-full bg-red-500" />
-            Vermelho
+            RED
           </span>
         ) : null}
         <span className={cn("text-foreground", compact ? "text-base" : "text-5xl")}>
@@ -39,7 +40,7 @@ export function Scoreline({
       </span>
 
       <span className="grid place-items-center border-x px-3 text-xs font-medium uppercase text-muted-foreground">
-        x
+        <Swords className={cn(compact ? "size-3.5" : "size-4")} />
       </span>
 
       <span
@@ -51,7 +52,7 @@ export function Scoreline({
         {!compact ? (
           <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <span className="size-2 rounded-full bg-blue-500" />
-            Azul
+            BLUE
           </span>
         ) : null}
         <span className={cn("text-foreground", compact ? "text-base" : "text-5xl")}>

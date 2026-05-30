@@ -1,4 +1,4 @@
-import { Trophy } from "lucide-react";
+import { Crown } from "lucide-react";
 import type { StatsMetric } from "#/lib/stats-metrics/formatting";
 import type { MatchPointsRow } from "../utils/match-points";
 import { MatchPointsValue } from "./match-points-value";
@@ -11,19 +11,28 @@ export function SingleScorerPointsCard({
   pointsMetric: StatsMetric;
 }) {
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-primary/35 bg-primary/10 p-3">
-      <span className="grid size-10 place-items-center rounded-lg border border-primary/40 bg-primary/15 text-primary">
-        <Trophy className="size-5" />
-      </span>
+    <div className="relative overflow-hidden rounded-xl border border-accent/45 bg-[linear-gradient(135deg,color-mix(in_oklch,var(--accent)_20%,transparent),color-mix(in_oklch,var(--card)_94%,black)_48%,color-mix(in_oklch,var(--primary)_18%,transparent))] p-4">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_oklch,var(--accent)_84%,white),transparent)]" />
 
-      <span className="min-w-0">
-        <span className="block truncate font-semibold">{row.player.name}</span>
-        <span className="block text-xs text-muted-foreground">Pontuador da partida</span>
-      </span>
+      <div className="relative grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+        <span className="grid size-14 place-items-center rounded-xl border border-accent/50 bg-accent/20 text-accent shadow-xs">
+          <Crown className="size-7" />
+        </span>
 
-      <span className="text-right text-2xl">
-        <MatchPointsValue points={row.points} pointsMetric={pointsMetric} />
-      </span>
+        <span className="min-w-0">
+          <span className="block truncate text-xl font-semibold">{row.player.name}</span>
+          <span className="mt-1 block text-sm text-muted-foreground">Pontuador da partida</span>
+        </span>
+
+        <span className="text-left sm:text-right">
+          <span className="block text-4xl font-semibold leading-none tabular-nums">
+            <MatchPointsValue points={row.points} pointsMetric={pointsMetric} />
+          </span>
+          <span className="mt-1 block text-[0.68rem] font-semibold uppercase tracking-normal text-accent">
+            Pontos
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
