@@ -11,7 +11,7 @@ export type CloudflareBindings = {
   AUTH_SECRET?: string;
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
-  STAT_SCHEMA_NAME?: string;
+  EVENT_SCHEMA_NAME?: string;
   LANGUAGE?: string;
 };
 

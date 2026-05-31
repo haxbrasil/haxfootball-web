@@ -4,7 +4,7 @@ import { emptyPage } from "#/lib/pagination/page";
 import {
   closeRoom,
   createRole,
-  disableMatchStatEvent,
+  disableMatchEvent,
   getMatch,
   getMatchMetrics,
   getRoom,
@@ -12,7 +12,7 @@ import {
   getStatsCategoryRankings,
   listAccountLinkedMatches,
   listAccountLinkedSessionEntries,
-  listMatchStatEvents,
+  listMatchEvents,
   launchRoom,
   listAdminRoomManagementResources,
   listAdminResources,
@@ -58,7 +58,7 @@ const updateAccountRoleInput = z.object({
   roleUuid: z.string().min(1),
 });
 
-const disableMatchStatEventInput = z.object({
+const disableMatchEventInput = z.object({
   matchId: z.string().min(1),
   eventId: z.string().min(1),
 });
@@ -131,12 +131,12 @@ export const getMatchDetailFn = createServerFn({ method: "GET" })
     };
   });
 
-export const listMatchStatEventsFn = createServerFn({ method: "GET" })
+export const listMatchEventsFn = createServerFn({ method: "GET" })
   .inputValidator(matchIdPaginationInput)
   .handler(({ data }) => {
     const { matchId, ...query } = data;
 
-    return listMatchStatEvents(matchId, query);
+    return listMatchEvents(matchId, query);
   });
 
 export const listPublicAccountsFn = createServerFn({ method: "GET" })
@@ -289,12 +289,12 @@ export const updateRoleFn = createServerFn({ method: "POST" })
       : ({ ok: false, message: "Não foi possível atualizar o cargo." } as const);
   });
 
-export const disableMatchStatEventFn = createServerFn({ method: "POST" })
-  .inputValidator(disableMatchStatEventInput)
+export const disableMatchEventFn = createServerFn({ method: "POST" })
+  .inputValidator(disableMatchEventInput)
   .handler(async ({ data }) => {
     await requireApiPermission("room:admin");
 
-    const disabled = await disableMatchStatEvent(data);
+    const disabled = await disableMatchEvent(data);
 
     return disabled
       ? ({ ok: true } as const)

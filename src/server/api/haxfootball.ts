@@ -20,15 +20,15 @@ import {
   type ListRoomsQuery,
   type ListRoomsResponse,
   type Match,
+  type MatchEvent,
   type MatchMetrics,
   type MatchSummary,
-  type MatchStatEvent,
   type Player,
   type QueryMatchMetricsInput,
   type QueryMatchMetricsResponse,
   type Role,
   type Room,
-  type StatEventSchema,
+  type EventSchema,
   type UpdateRoleInput,
 } from "@haxbrasil/haxfootball-api-sdk";
 import type { PageInfo, PaginationQuery } from "#/lib/pagination/page";
@@ -87,18 +87,22 @@ export type WebMatchMetrics = Array<
   }
 >;
 
-export type WebMatchStatEvent = Omit<MatchStatEvent, "value"> & {
+export type WebMatchEvent = Omit<MatchEvent, "value"> & {
   value: JsonValue;
 };
 
+export type WebMatch = Omit<Match, "events"> & {
+  events: WebMatchEvent[];
+};
+
 export type MatchDetail = {
-  match: Match | null;
+  match: WebMatch | null;
   metrics: WebMatchMetrics | null;
   metricMetadata: WebQueryMatchMetricsResponse["meta"]["availableMetrics"];
   featuredMetrics: WebQueryMatchMetricsResponse["meta"]["featuredMetrics"];
 };
 
-export type WebStatEventSchema = Omit<StatEventSchema, "definition"> & {
+export type WebEventSchema = Omit<EventSchema, "definition"> & {
   definition: JsonValue;
 };
 
@@ -141,7 +145,7 @@ export type AdminResources = {
   roomPrograms: ListRoomProgramsResponse;
   proxyEndpoints: ListRoomProxyEndpointsResponse;
   jobs: Page<JsonObject>;
-  statSchemas: Page<WebStatEventSchema>;
+  eventSchemas: Page<WebEventSchema>;
 };
 
 export type AdminRoomManagementResources = {
@@ -229,11 +233,13 @@ export async function listMatches(query: PaginationQuery = {}): Promise<ListMatc
     : emptyPage();
 }
 
-export async function getMatch(id: string): Promise<Match | null> {
+export async function getMatch(id: string): Promise<WebMatch | null> {
   const client = getApiClient();
 
   return client
-    ? cachedJson(`public:matches:${id}`, 30, () => unwrap(client.matches.get(id)))
+    ? cachedJson(`public:matches:${id}`, 30, async () =>
+        normalizeMatch(await unwrap(client.matches.get(id))),
+      )
     : null;
 }
 
@@ -254,15 +260,15 @@ export async function getMatchMetrics(id: string): Promise<WebMatchMetrics | nul
     : null;
 }
 
-export async function listMatchStatEvents(
+export async function listMatchEvents(
   id: string,
   query: PaginationQuery = {},
-): Promise<Page<WebMatchStatEvent>> {
+): Promise<Page<WebMatchEvent>> {
   const client = getApiClient();
 
   return client
-    ? cachedJson(`public:matches:${id}:stat-events:${JSON.stringify(query)}`, 30, async () => {
-        const response = await unwrap(client.matches.listStatEvents(id, query));
+    ? cachedJson(`public:matches:${id}:events:${JSON.stringify(query)}`, 30, async () => {
+        const response = await unwrap(client.matches.listEvents(id, query));
 
         return response
           ? {
@@ -272,9 +278,9 @@ export async function listMatchStatEvents(
                 value: normalizeJsonValue(event.value),
               })),
             }
-          : emptyPage<WebMatchStatEvent>();
+          : emptyPage<WebMatchEvent>();
       })
-    : emptyPage<WebMatchStatEvent>();
+    : emptyPage<WebMatchEvent>();
 }
 
 export async function listPublicAccounts(
@@ -372,7 +378,7 @@ export async function getStats(
   const direction = query.direction ?? "asc";
   const limit = query.limit ?? 25;
   const body: QueryMatchMetricsInput = {
-    schema: { name: env.STAT_SCHEMA_NAME },
+    schema: { name: env.EVENT_SCHEMA_NAME },
     group: { by: groupBy },
     language: env.LANGUAGE,
     page: { cursor: query.cursor, limit },
@@ -506,11 +512,11 @@ export async function listAdminResources(): Promise<AdminResources> {
       roomPrograms: emptyPage(),
       proxyEndpoints: emptyPage(),
       jobs: emptyPage(),
-      statSchemas: emptyPage(),
+      eventSchemas: emptyPage(),
     };
   }
 
-  const [accounts, roles, permissions, roomPrograms, proxyEndpoints, jobs, statSchemas] =
+  const [accounts, roles, permissions, roomPrograms, proxyEndpoints, jobs, eventSchemas] =
     await Promise.all([
       unwrap(client.accounts.list()),
       unwrap(client.roles.list()),
@@ -518,7 +524,7 @@ export async function listAdminResources(): Promise<AdminResources> {
       unwrap(client.rooms.programs.list()),
       unwrap(client.rooms.proxyEndpoints.list()),
       unwrap(client.request<Page<JsonObject>>({ path: "/jobs" })),
-      unwrap(client.statEventSchemas.list()) as Promise<Page<WebStatEventSchema> | null>,
+      unwrap(client.eventSchemas.list()) as Promise<Page<WebEventSchema> | null>,
     ]);
 
   return {
@@ -528,7 +534,7 @@ export async function listAdminResources(): Promise<AdminResources> {
     roomPrograms: roomPrograms ?? emptyPage(),
     proxyEndpoints: proxyEndpoints ?? emptyPage(),
     jobs: jobs ?? emptyPage(),
-    statSchemas: statSchemas ?? emptyPage<WebStatEventSchema>(),
+    eventSchemas: eventSchemas ?? emptyPage<WebEventSchema>(),
   };
 }
 
@@ -614,7 +620,7 @@ export async function closeRoom(id: string): Promise<Room | null> {
   return room;
 }
 
-export async function disableMatchStatEvent(input: {
+export async function disableMatchEvent(input: {
   matchId: string;
   eventId: string;
 }): Promise<boolean> {
@@ -624,11 +630,11 @@ export async function disableMatchStatEvent(input: {
     return false;
   }
 
-  const event = await unwrap(client.matches.disableStatEvent(input.matchId, input.eventId));
+  const event = await unwrap(client.matches.disableEvent(input.matchId, input.eventId));
 
   if (event) {
     await Promise.all([
-      deleteCachedJson(`public:matches:${input.matchId}:stat-events`),
+      deleteCachedJson(`public:matches:${input.matchId}:events`),
       deleteCachedJson(`public:matches:${input.matchId}:metrics`),
       deleteCachedJson("public:stats:player:top"),
     ]);
@@ -708,6 +714,18 @@ function normalizeQueryMetricsResponse(
           limit: Number(response.page.limit),
           nextCursor: response.page.nextCursor,
         },
+      }
+    : null;
+}
+
+function normalizeMatch(match: Match | null): WebMatch | null {
+  return match
+    ? {
+        ...match,
+        events: match.events.map((event) => ({
+          ...event,
+          value: normalizeJsonValue(event.value),
+        })),
       }
     : null;
 }

@@ -10,7 +10,7 @@ const match = (input: Partial<MatchSummary> & Pick<MatchSummary, "id">): MatchSu
   gameMode: input.gameMode ?? null,
   recording: input.recording ?? null,
   score: input.score ?? null,
-  statEventSchema: input.statEventSchema ?? null,
+  eventSchema: input.eventSchema ?? null,
   status: input.status ?? "completed",
   updatedAt: input.updatedAt ?? "2026-01-01T00:00:00.000Z",
 });
