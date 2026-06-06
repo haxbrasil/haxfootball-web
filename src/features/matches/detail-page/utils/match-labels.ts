@@ -7,9 +7,8 @@ const teamLabels: Record<string, string> = {
 };
 
 const roomEventLabels: Record<string, string> = {
-  player_join: "Entrou na sala",
-  player_leave: "Saiu da sala",
-  player_team_change: "Mudou de time",
+  "player-leave": "Saiu da partida",
+  "player-team-change": "Mudou de time",
 };
 
 export function formatTeam(value: string | number | null | undefined) {

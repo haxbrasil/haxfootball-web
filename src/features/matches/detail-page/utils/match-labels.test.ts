@@ -12,6 +12,7 @@ describe("match labels", () => {
   });
 
   it("formats room event labels", () => {
-    expect(formatRoomEventLabel("player_join")).toBe("Entrou na sala");
+    expect(formatRoomEventLabel("player-team-change")).toBe("Mudou de time");
+    expect(formatRoomEventLabel("player-leave")).toBe("Saiu da partida");
   });
 });
