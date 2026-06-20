@@ -8,7 +8,11 @@ export function DesktopNavigation({ items }: { items: NavigationItem[] }) {
   return (
     <nav className="ml-2 hidden items-center gap-1 md:flex">
       {items.map((item) => (
-        <NavigationLink key={item.to} item={item} className={desktopNavigationLinkClassName} />
+        <NavigationLink
+          key={"href" in item ? item.href : item.to}
+          item={item}
+          className={desktopNavigationLinkClassName}
+        />
       ))}
     </nav>
   );

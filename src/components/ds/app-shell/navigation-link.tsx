@@ -2,6 +2,14 @@ import { Link } from "@tanstack/react-router";
 import type { NavigationItem } from "./navigation";
 
 export function NavigationLink({ item, className }: { item: NavigationItem; className: string }) {
+  if ("href" in item) {
+    return (
+      <a href={item.href} target="_blank" rel="noreferrer" className={className}>
+        {item.label}
+      </a>
+    );
+  }
+
   return (
     <Link
       to={item.to}

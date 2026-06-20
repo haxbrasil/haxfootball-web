@@ -8,15 +8,31 @@ export function MobileNavigation({ items }: { items: NavigationItem[] }) {
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          className="flex h-12 items-center justify-center text-xs font-medium text-muted-foreground"
-          activeProps={{ className: "bg-primary text-primary-foreground" }}
-        >
-          {item.label}
-        </Link>
+        <MobileNavigationItem key={"href" in item ? item.href : item.to} item={item} />
       ))}
     </nav>
+  );
+}
+
+function MobileNavigationItem({ item }: { item: NavigationItem }) {
+  const className =
+    "flex h-12 items-center justify-center text-xs font-medium text-muted-foreground";
+
+  if ("href" in item) {
+    return (
+      <a href={item.href} target="_blank" rel="noreferrer" className={className}>
+        {item.label}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      to={item.to}
+      className={className}
+      activeProps={{ className: "bg-primary text-primary-foreground" }}
+    >
+      {item.label}
+    </Link>
   );
 }
