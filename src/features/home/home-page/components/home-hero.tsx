@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, BarChart3, DoorOpen, MessageCircle, Youtube } from "lucide-react";
+import { Activity, BarChart3, DoorOpen, MessageCircle, Video } from "lucide-react";
 import { ActionButton } from "#/components/ds/action-button";
 import { BrandLogo } from "#/components/ds/brand-logo";
 import { HomeSocialLink } from "./home-social-link";
@@ -58,10 +58,10 @@ export function HomeHero() {
             emphasis="primary"
           />
           <HomeSocialLink
-            href="https://www.youtube.com/@brazilianhaxfootballleague"
-            icon={Youtube}
-            label="YouTube"
-            description="Assista vídeos, partidas e conteúdos da comunidade."
+            href="https://videos.bfl.haxbrasil.com/video-channels/bflvideos"
+            icon={Video}
+            label="BFL Videos"
+            description="Assista tutoriais, partidas e conteúdos da comunidade."
             emphasis="danger"
           />
         </div>
