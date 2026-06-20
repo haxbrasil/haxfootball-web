@@ -60,7 +60,7 @@ export function HomeHero() {
           <HomeSocialLink
             href="https://videos.bfl.haxbrasil.com/video-channels/bflvideos"
             icon={Video}
-            label="BFL Videos"
+            label="Vídeos"
             description="Assista tutoriais, partidas e conteúdos da comunidade."
             emphasis="danger"
           />
