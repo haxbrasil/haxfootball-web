@@ -22,8 +22,18 @@ import {
   updateAccountRole,
   updateRole,
 } from "#/server/api/haxfootball";
-import { getCurrentSession, requireApiPermission } from "#/server/auth/session";
+import {
+  getCurrentSession,
+  hasApiPermission,
+  requireApiPermission,
+  type ApiAccountSession,
+} from "#/server/auth/session";
 import type { AccountLinkedSessionEntry, ListMatchesResponse } from "./haxfootball";
+
+type PermissionedLaunchConfigField = {
+  key: string;
+  requiredPermission?: string;
+};
 
 const idInput = z.object({
   id: z.string().min(1),
@@ -216,16 +226,31 @@ export const listAdminResourcesFn = createServerFn({ method: "GET" }).handler(as
 
 export const listAdminRoomManagementResourcesFn = createServerFn({ method: "GET" }).handler(
   async () => {
-    await requireApiPermission("room:admin");
+    const session = await requireApiPermission("room-launch:operate");
 
-    return listAdminRoomManagementResources();
+    return filterLaunchConfigFields(await listAdminRoomManagementResources(), session);
   },
 );
 
 export const launchRoomFn = createServerFn({ method: "POST" })
   .inputValidator(launchRoomInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("room:admin");
+    const session = await requireApiPermission("room-launch:operate");
+    const resources = filterLaunchConfigFields(await listAdminRoomManagementResources(), session);
+    const selectedProgram = resources.roomPrograms.items.find(
+      (program) => program.id === data.programId,
+    );
+
+    if (!selectedProgram) {
+      return { ok: false, message: "Programa de sala inválido." } as const;
+    }
+
+    const allowedKeys = new Set(selectedProgram.launchConfigFields.map((field) => field.key));
+    const submittedKeys = Object.keys(data.launchConfig ?? {});
+
+    if (submittedKeys.some((key) => !allowedKeys.has(key))) {
+      return { ok: false, message: "Configuração de sala não autorizada." } as const;
+    }
 
     const room = await launchRoom(data);
 
@@ -234,10 +259,33 @@ export const launchRoomFn = createServerFn({ method: "POST" })
       : ({ ok: false, message: "Não foi possível lançar a sala." } as const);
   });
 
+function filterLaunchConfigFields(
+  resources: Awaited<ReturnType<typeof listAdminRoomManagementResources>>,
+  session: ApiAccountSession,
+): Awaited<ReturnType<typeof listAdminRoomManagementResources>> {
+  return {
+    ...resources,
+    roomPrograms: {
+      ...resources.roomPrograms,
+      items: resources.roomPrograms.items.map((program) => ({
+        ...program,
+        launchConfigFields: program.launchConfigFields.filter((field) => {
+          const launchField = field as PermissionedLaunchConfigField;
+
+          return (
+            !launchField.requiredPermission ||
+            hasApiPermission(session, launchField.requiredPermission)
+          );
+        }),
+      })),
+    },
+  };
+}
+
 export const closeRoomFn = createServerFn({ method: "POST" })
   .inputValidator(idInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("room:admin");
+    await requireApiPermission("room-launch:operate");
 
     const room = await closeRoom(data.id);
 

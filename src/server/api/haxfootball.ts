@@ -503,6 +503,7 @@ export async function getStatsCategoryRankings(
 
 export async function listAdminResources(): Promise<AdminResources> {
   const client = getApiClient();
+  const env = getServerEnv();
 
   if (!client) {
     return {
@@ -521,7 +522,7 @@ export async function listAdminResources(): Promise<AdminResources> {
       unwrap(client.accounts.list()),
       unwrap(client.roles.list()),
       unwrap(client.permissions.list()),
-      unwrap(client.rooms.programs.list()),
+      unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
       unwrap(client.rooms.proxyEndpoints.list()),
       unwrap(client.request<Page<JsonObject>>({ path: "/jobs" })),
       unwrap(client.eventSchemas.list()) as Promise<Page<WebEventSchema> | null>,
@@ -540,6 +541,7 @@ export async function listAdminResources(): Promise<AdminResources> {
 
 export async function listAdminRoomManagementResources(): Promise<AdminRoomManagementResources> {
   const client = getApiClient();
+  const env = getServerEnv();
 
   if (!client) {
     return {
@@ -553,7 +555,7 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
 
   const [rooms, roomPrograms, proxyEndpoints] = await Promise.all([
     unwrap(client.rooms.list({ state: "all" })),
-    unwrap(client.rooms.programs.list()),
+    unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
     unwrap(client.rooms.proxyEndpoints.list()),
   ]);
 

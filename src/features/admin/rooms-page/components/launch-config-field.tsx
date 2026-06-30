@@ -1,24 +1,26 @@
-import type { RoomLaunchConfigField } from "@haxbrasil/haxfootball-api-sdk";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
+import { localizedTextLabel } from "#/lib/localization/localized-text";
+import type { WebRoomLaunchConfigField } from "../utils/launch-config";
 
-export function LaunchConfigField({ field }: { field: RoomLaunchConfigField }) {
+export function LaunchConfigField({ field }: { field: WebRoomLaunchConfigField }) {
   const id = `launchConfig.${field.key}`;
+  const label = localizedTextLabel(field.label);
 
   if (field.valueType === "boolean") {
     return (
       <div className="flex items-center gap-2">
         <Checkbox id={id} name={id} defaultChecked={field.defaultValue === true} value="true" />
-        <Label htmlFor={id}>{field.displayName}</Label>
+        <Label htmlFor={id}>{label}</Label>
       </div>
     );
   }
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={id}>{field.displayName}</Label>
+      <Label htmlFor={id}>{label}</Label>
       {field.enumValues?.length ? (
         <NativeSelect
           id={id}
@@ -47,7 +49,7 @@ export function LaunchConfigField({ field }: { field: RoomLaunchConfigField }) {
         />
       )}
       {field.description ? (
-        <p className="text-xs text-muted-foreground">{field.description}</p>
+        <p className="text-xs text-muted-foreground">{localizedTextLabel(field.description)}</p>
       ) : null}
     </div>
   );

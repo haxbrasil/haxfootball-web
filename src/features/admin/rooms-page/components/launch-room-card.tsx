@@ -64,10 +64,15 @@ export function LaunchRoomCard({ resources }: { resources: AdminRoomManagementRe
               />
             </div>
 
-            {form.selectedProgram?.launchConfigFields.length ? (
-              <div className="space-y-3 border-t pt-4">
-                {form.selectedProgram.launchConfigFields.map((field) => (
-                  <LaunchConfigField key={field.key} field={field} />
+            {form.launchConfigGroups.length ? (
+              <div className="space-y-5 border-t pt-4">
+                {form.launchConfigGroups.map((group) => (
+                  <fieldset key={group.category} className="space-y-3">
+                    <legend className="text-sm font-medium text-foreground">{group.label}</legend>
+                    {group.fields.map((field) => (
+                      <LaunchConfigField key={field.key} field={field} />
+                    ))}
+                  </fieldset>
                 ))}
               </div>
             ) : null}

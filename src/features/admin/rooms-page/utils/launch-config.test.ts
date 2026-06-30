@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { RoomLaunchConfigField } from "@haxbrasil/haxfootball-api-sdk";
-import { readLaunchConfig } from "./launch-config";
+import { readLaunchConfig, type WebRoomLaunchConfigField } from "./launch-config";
 
-const fields: RoomLaunchConfigField[] = [
+const fields: WebRoomLaunchConfigField[] = [
   {
-    displayName: "Nome",
+    label: { value: "room.launch.field.room-name", label: "Nome" },
+    category: "room",
     envVar: "ROOM_NAME",
     key: "roomName",
     required: true,
@@ -12,7 +12,8 @@ const fields: RoomLaunchConfigField[] = [
     valueType: "string",
   },
   {
-    displayName: "Jogadores",
+    label: { value: "room.launch.field.max-players", label: "Jogadores" },
+    category: "room",
     envVar: "MAX_PLAYERS",
     key: "maxPlayers",
     required: true,
@@ -20,7 +21,8 @@ const fields: RoomLaunchConfigField[] = [
     valueType: "number",
   },
   {
-    displayName: "Pública",
+    label: { value: "room.launch.field.public-room", label: "Pública" },
+    category: "room",
     envVar: "PUBLIC_ROOM",
     key: "publicRoom",
     required: false,
@@ -28,7 +30,8 @@ const fields: RoomLaunchConfigField[] = [
     valueType: "boolean",
   },
   {
-    displayName: "Senha",
+    label: { value: "room.launch.field.password", label: "Senha" },
+    category: "room",
     envVar: "ROOM_PASSWORD",
     key: "password",
     required: false,

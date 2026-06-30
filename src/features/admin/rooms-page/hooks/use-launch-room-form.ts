@@ -5,7 +5,12 @@ import { useServerFn } from "@tanstack/react-start";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 import { launchRoomFn } from "#/server/api/functions";
-import { getVersionOptions, readLaunchConfig } from "../utils/launch-config";
+import {
+  getVersionOptions,
+  groupedLaunchConfigFields,
+  readLaunchConfig,
+  type WebRoomLaunchConfigField,
+} from "../utils/launch-config";
 
 export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
   const router = useRouter();
@@ -18,6 +23,14 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
   const versionOptions = useMemo(
     () => getVersionOptions(resources, programId),
     [programId, resources],
+  );
+  const launchConfigFields = useMemo(
+    () => (selectedProgram?.launchConfigFields ?? []) as unknown as WebRoomLaunchConfigField[],
+    [selectedProgram],
+  );
+  const launchConfigGroups = useMemo(
+    () => groupedLaunchConfigFields(launchConfigFields),
+    [launchConfigFields],
   );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -32,7 +45,7 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
         programId: String(formData.get("programId") ?? ""),
         version: String(formData.get("version") ?? ""),
         haxballToken: String(formData.get("haxballToken") ?? ""),
-        launchConfig: readLaunchConfig(formData, selectedProgram?.launchConfigFields ?? []),
+        launchConfig: readLaunchConfig(formData, launchConfigFields),
       },
     });
 
@@ -53,6 +66,7 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
     isSubmitting,
     message,
     programId,
+    launchConfigGroups,
     selectedProgram,
     setProgramId,
     submit,
