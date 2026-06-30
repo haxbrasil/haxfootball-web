@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminRolesPage } from "#/features/admin/roles-page";
-import { listAdminResourcesFn } from "#/server/api/functions";
+import { listAdminRoleResourcesFn } from "#/server/api/functions";
 
 export const Route = createFileRoute("/admin/roles")({
-  loader: () => listAdminResourcesFn(),
+  loader: () => listAdminRoleResourcesFn(),
   component: () => {
     const { roles, permissions } = Route.useLoaderData();
 

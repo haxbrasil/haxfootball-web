@@ -37,7 +37,7 @@ import { createAccountMatchPage } from "#/server/api/utils/create-account-match-
 import { cachedJson, deleteCachedJson } from "#/server/cache";
 import { getServerEnv } from "#/server/env";
 
-export type { ListMatchesResponse, MatchSummary };
+export type { ListMatchesResponse, ListRoomsResponse, MatchSummary };
 
 export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];
 export type ListAccountLinkedSessionEntriesResponse = ListPlayersResponse;
@@ -50,8 +50,6 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-type JsonObject = { [key: string]: JsonValue };
-
 export type Page<T> = {
   items: T[];
   page: {
@@ -61,6 +59,7 @@ export type Page<T> = {
 };
 
 type RoomProgramVersionAlias = components["schemas"]["RoomProgramVersionAlias"];
+type HaxFootballClient = NonNullable<ReturnType<typeof getApiClient>>;
 
 export type WebQueryMatchMetricsResponse = Omit<
   QueryMatchMetricsResponse,
@@ -144,12 +143,28 @@ export type AdminResources = {
   permissions: ListPermissionsResponse;
   roomPrograms: ListRoomProgramsResponse;
   proxyEndpoints: ListRoomProxyEndpointsResponse;
-  jobs: Page<JsonObject>;
   eventSchemas: Page<WebEventSchema>;
+};
+
+export type AdminAccountResources = {
+  accounts: ListAccountsResponse;
+  roles: ListRolesResponse;
+};
+
+export type AdminRoleResources = {
+  roles: ListRolesResponse;
+  permissions: ListPermissionsResponse;
+};
+
+export type AdminOverviewResources = {
+  accounts?: ListAccountsResponse;
+  roles?: ListRolesResponse;
+  rooms?: ListRoomsResponse;
 };
 
 export type AdminRoomManagementResources = {
   rooms: ListRoomsResponse;
+  roomHistory: ListRoomsResponse;
   roomPrograms: ListRoomProgramsResponse;
   proxyEndpoints: ListRoomProxyEndpointsResponse;
   versionsByProgramId: Record<string, ListRoomProgramVersionsResponse>;
@@ -214,6 +229,12 @@ export async function getRoom(id: string): Promise<Room | null> {
         return room && room.state !== "closed" && room.state !== "failed" ? room : null;
       })
     : null;
+}
+
+export async function getAdminRoom(id: string): Promise<Room | null> {
+  const client = getApiClient();
+
+  return client ? await unwrap(client.rooms.get(id)) : null;
 }
 
 export async function listMatches(query: PaginationQuery = {}): Promise<ListMatchesResponse> {
@@ -512,19 +533,17 @@ export async function listAdminResources(): Promise<AdminResources> {
       permissions: emptyPage(),
       roomPrograms: emptyPage(),
       proxyEndpoints: emptyPage(),
-      jobs: emptyPage(),
       eventSchemas: emptyPage(),
     };
   }
 
-  const [accounts, roles, permissions, roomPrograms, proxyEndpoints, jobs, eventSchemas] =
+  const [accounts, roles, permissions, roomPrograms, proxyEndpoints, eventSchemas] =
     await Promise.all([
       unwrap(client.accounts.list()),
       unwrap(client.roles.list()),
       unwrap(client.permissions.list()),
       unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
       unwrap(client.rooms.proxyEndpoints.list()),
-      unwrap(client.request<Page<JsonObject>>({ path: "/jobs" })),
       unwrap(client.eventSchemas.list()) as Promise<Page<WebEventSchema> | null>,
     ]);
 
@@ -534,8 +553,77 @@ export async function listAdminResources(): Promise<AdminResources> {
     permissions: permissions ?? emptyPage(),
     roomPrograms: roomPrograms ?? emptyPage(),
     proxyEndpoints: proxyEndpoints ?? emptyPage(),
-    jobs: jobs ?? emptyPage(),
     eventSchemas: eventSchemas ?? emptyPage<WebEventSchema>(),
+  };
+}
+
+export async function listAdminAccountResources(): Promise<AdminAccountResources> {
+  const client = getApiClient();
+
+  if (!client) {
+    return {
+      accounts: emptyPage<Account>(),
+      roles: emptyPage(),
+    };
+  }
+
+  const [accounts, roles] = await Promise.all([
+    unwrap(client.accounts.list()),
+    unwrap(client.roles.list()),
+  ]);
+
+  return {
+    accounts: accounts ?? emptyPage<Account>(),
+    roles: roles ?? emptyPage(),
+  };
+}
+
+export async function listAdminRoleResources(): Promise<AdminRoleResources> {
+  const client = getApiClient();
+
+  if (!client) {
+    return {
+      roles: emptyPage(),
+      permissions: emptyPage(),
+    };
+  }
+
+  const [roles, permissions] = await Promise.all([
+    unwrap(client.roles.list()),
+    unwrap(client.permissions.list()),
+  ]);
+
+  return {
+    roles: roles ?? emptyPage(),
+    permissions: permissions ?? emptyPage(),
+  };
+}
+
+export async function listAdminOverviewResources(input: {
+  accounts: boolean;
+  roles: boolean;
+  rooms: boolean;
+}): Promise<AdminOverviewResources> {
+  const client = getApiClient();
+
+  if (!client) {
+    return {
+      accounts: input.accounts ? emptyPage<Account>() : undefined,
+      roles: input.roles ? emptyPage() : undefined,
+      rooms: input.rooms ? emptyPage<Room>() : undefined,
+    };
+  }
+
+  const [accounts, roles, rooms] = await Promise.all([
+    input.accounts ? unwrap(client.accounts.list({ limit: 100 })) : Promise.resolve(null),
+    input.roles ? unwrap(client.roles.list({ limit: 100 })) : Promise.resolve(null),
+    input.rooms ? unwrap(client.rooms.list({ state: "open", limit: 100 })) : Promise.resolve(null),
+  ]);
+
+  return {
+    accounts: input.accounts ? (accounts ?? emptyPage<Account>()) : undefined,
+    roles: input.roles ? (roles ?? emptyPage()) : undefined,
+    rooms: input.rooms ? (rooms ?? emptyPage<Room>()) : undefined,
   };
 }
 
@@ -546,6 +634,7 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
   if (!client) {
     return {
       rooms: emptyPage<Room>(),
+      roomHistory: emptyPage<Room>(),
       roomPrograms: emptyPage(),
       proxyEndpoints: emptyPage(),
       versionsByProgramId: {},
@@ -553,7 +642,8 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
     };
   }
 
-  const [rooms, roomPrograms, proxyEndpoints] = await Promise.all([
+  const [rooms, roomHistory, roomPrograms, proxyEndpoints] = await Promise.all([
+    unwrap(client.rooms.list({ state: "open" })),
     unwrap(client.rooms.list({ state: "all" })),
     unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
     unwrap(client.rooms.proxyEndpoints.list()),
@@ -563,24 +653,17 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
   const programEntries = await Promise.all(
     programs.items.map(async (program) => {
       const [versions, aliases] = await Promise.all([
-        unwrap(client.rooms.programs.listVersions(program.id)),
-        unwrap(
-          client.request<Page<RoomProgramVersionAlias>>({
-            path: `/room-programs/${encodeURIComponent(program.id)}/version-aliases`,
-          }),
-        ),
+        listAllRoomProgramVersions(client, program.id),
+        listAllRoomProgramVersionAliases(client, program.id),
       ]);
 
-      return [
-        program.id,
-        versions ?? emptyPage(),
-        aliases ?? emptyPage<RoomProgramVersionAlias>(),
-      ] as const;
+      return [program.id, versions, aliases] as const;
     }),
   );
 
   return {
     rooms: rooms ?? emptyPage<Room>(),
+    roomHistory: roomHistory ?? emptyPage<Room>(),
     roomPrograms: programs,
     proxyEndpoints: proxyEndpoints ?? emptyPage(),
     versionsByProgramId: Object.fromEntries(
@@ -589,6 +672,79 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
     aliasesByProgramId: Object.fromEntries(
       programEntries.map(([programId, _versions, aliases]) => [programId, aliases]),
     ),
+  };
+}
+
+export async function listAdminRoomHistory(
+  query: PaginationQuery = {},
+): Promise<ListRoomsResponse> {
+  const client = getApiClient();
+
+  if (!client) {
+    return emptyPage<Room>();
+  }
+
+  return (await unwrap(client.rooms.list({ ...query, state: "all" }))) ?? emptyPage<Room>();
+}
+
+async function listAllRoomProgramVersions(
+  client: HaxFootballClient,
+  programId: string,
+): Promise<ListRoomProgramVersionsResponse> {
+  const items: ListRoomProgramVersionsResponse["items"] = [];
+  const limit = 100;
+  let cursor: string | undefined;
+
+  do {
+    const page = await unwrap(client.rooms.programs.listVersions(programId, { cursor, limit }));
+
+    if (!page) {
+      return emptyPage();
+    }
+
+    items.push(...page.items);
+    cursor = page.page.nextCursor ?? undefined;
+  } while (cursor);
+
+  return {
+    items,
+    page: {
+      limit,
+      nextCursor: null,
+    },
+  };
+}
+
+async function listAllRoomProgramVersionAliases(
+  client: HaxFootballClient,
+  programId: string,
+): Promise<Page<RoomProgramVersionAlias>> {
+  const items: RoomProgramVersionAlias[] = [];
+  const limit = 100;
+  let cursor: string | undefined;
+
+  do {
+    const page = await unwrap(
+      client.request<Page<RoomProgramVersionAlias>>({
+        path: `/room-programs/${encodeURIComponent(programId)}/version-aliases`,
+        query: { cursor, limit },
+      }),
+    );
+
+    if (!page) {
+      return emptyPage<RoomProgramVersionAlias>();
+    }
+
+    items.push(...page.items);
+    cursor = page.page.nextCursor ?? undefined;
+  } while (cursor);
+
+  return {
+    items,
+    page: {
+      limit,
+      nextCursor: null,
+    },
   };
 }
 

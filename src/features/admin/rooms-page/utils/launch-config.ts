@@ -59,10 +59,12 @@ export function getVersionOptions(
   programId: string,
 ): Array<{ label: string; value: string }> {
   const versions =
-    resources.versionsByProgramId[programId]?.items.map((version) => ({
-      label: version.version,
-      value: version.version,
-    })) ?? [];
+    resources.versionsByProgramId[programId]?.items
+      .map((version) => ({
+        label: version.version,
+        value: version.version,
+      }))
+      .sort((left, right) => compareVersionLabels(left.value, right.value)) ?? [];
   const aliases =
     resources.aliasesByProgramId[programId]?.items.map((alias) => ({
       label: `${alias.alias} -> ${alias.version.version}`,
@@ -70,6 +72,27 @@ export function getVersionOptions(
     })) ?? [];
 
   return [...aliases, ...versions];
+}
+
+function compareVersionLabels(left: string, right: string) {
+  const leftParts = parseVersionLabel(left);
+  const rightParts = parseVersionLabel(right);
+
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+
+  return left.localeCompare(right);
+}
+
+function parseVersionLabel(version: string) {
+  const normalizedVersion = version.startsWith("v") ? version.slice(1) : version;
+
+  return normalizedVersion.split(".").map((part) => Number.parseInt(part, 10) || 0);
 }
 
 export function groupedLaunchConfigFields(fields: WebRoomLaunchConfigField[]) {

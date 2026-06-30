@@ -1,11 +1,12 @@
 import { DoorOpen, Rocket } from "lucide-react";
-import { EmptyState } from "#/components/ds/app-shell";
-import { FormMessageAlert } from "#/components/ds/forms/form-message";
+import { EmptyState } from "#/components/ds/app-shell/empty-state";
+import { FormMessageAlert } from "#/components/ds/forms/form-message-alert";
 import { NativeSelectField } from "#/components/ds/forms/native-select-field";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
+import { localizedTextLabel } from "#/lib/localization/localized-text";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 import { LaunchConfigField } from "./launch-config-field";
 import { useLaunchRoomForm } from "../hooks/use-launch-room-form";
@@ -35,7 +36,7 @@ export function LaunchRoomCard({ resources }: { resources: AdminRoomManagementRe
               value={form.programId}
               onChange={form.setProgramId}
               options={resources.roomPrograms.items.map((program) => ({
-                label: program.title ?? program.name,
+                label: program.title ? localizedTextLabel(program.title) : program.name,
                 value: program.id,
               }))}
             />
@@ -45,6 +46,8 @@ export function LaunchRoomCard({ resources }: { resources: AdminRoomManagementRe
               name="version"
               label="Versão"
               required
+              value={form.version}
+              onChange={form.setVersion}
               options={form.versionOptions}
               emptyOption={
                 form.versionOptions.length === 0

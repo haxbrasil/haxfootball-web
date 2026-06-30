@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { TooltipProvider } from "#/components/ui/tooltip";
-import { hasApiPermission } from "#/server/auth/permissions";
+import { canAccessImplementedAdmin } from "#/features/admin/admin-sections";
 import type { ApiAccountSession } from "#/server/auth/session";
 import { AccountNavLink } from "./account-nav-link";
 import { AdminNavigationLink } from "./admin-navigation-link";
@@ -16,7 +16,7 @@ export function AppShell({
   children: ReactNode;
   session?: ApiAccountSession | null;
 }) {
-  const canAccessAdmin = session ? canAccessAdminPortal(session) : false;
+  const canAccessAdmin = canAccessImplementedAdmin(session);
   const visibleNavigation = navigation;
   const mobileNavigationItems = canAccessAdmin ? [...navigation, adminNavigationItem] : navigation;
 
@@ -42,14 +42,4 @@ export function AppShell({
       </div>
     </TooltipProvider>
   );
-}
-
-function canAccessAdminPortal(session: ApiAccountSession): boolean {
-  return [
-    "room-launch:operate",
-    "room-program:admin",
-    "account:admin",
-    "role:admin",
-    "event-schema:admin",
-  ].some((permission) => hasApiPermission(session, permission));
 }

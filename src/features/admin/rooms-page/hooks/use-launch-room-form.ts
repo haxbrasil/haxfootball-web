@@ -1,10 +1,8 @@
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
-import { launchRoomFn } from "#/server/api/functions";
 import {
   getVersionOptions,
   groupedLaunchConfigFields,
@@ -14,8 +12,11 @@ import {
 
 export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
   const router = useRouter();
-  const launchRoom = useServerFn(launchRoomFn);
-  const [programId, setProgramId] = useState(resources.roomPrograms.items[0]?.id ?? "");
+  const initialProgramId = resources.roomPrograms.items[0]?.id ?? "";
+  const [programId, setProgramIdState] = useState(initialProgramId);
+  const [version, setVersion] = useState(
+    () => getVersionOptions(resources, initialProgramId).at(-1)?.value ?? "",
+  );
   const [message, setMessage] = useState<FormMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,6 +34,15 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
     [launchConfigFields],
   );
 
+  useEffect(() => {
+    setVersion(versionOptions.at(-1)?.value ?? "");
+  }, [versionOptions]);
+
+  function setProgramId(nextProgramId: string) {
+    setProgramIdState(nextProgramId);
+    setVersion(getVersionOptions(resources, nextProgramId).at(-1)?.value ?? "");
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
@@ -40,10 +50,11 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const result = await launchRoom({
+    const { launchRoomFn } = await import("#/server/api/admin-room-action-functions");
+    const result = await launchRoomFn({
       data: {
         programId: String(formData.get("programId") ?? ""),
-        version: String(formData.get("version") ?? ""),
+        version,
         haxballToken: String(formData.get("haxballToken") ?? ""),
         launchConfig: readLaunchConfig(formData, launchConfigFields),
       },
@@ -66,9 +77,11 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
     isSubmitting,
     message,
     programId,
+    version,
     launchConfigGroups,
     selectedProgram,
     setProgramId,
+    setVersion,
     submit,
     versionOptions,
   };

@@ -29,7 +29,6 @@ import { authAccounts, credentialLoginAttempts, webSessions } from "#/server/db/
 
 export { hasApiPermission } from "#/server/auth/permissions";
 
-const sessionCookieName = "bfl_session";
 const sessionTtlSeconds = 60 * 60 * 24 * 7;
 const betterAuthCookieNames = [
   "better-auth.session_token",
@@ -97,7 +96,7 @@ export async function loginWithCredentials(input: {
 }
 
 export async function logoutCurrentSession(): Promise<void> {
-  const token = getCookie(sessionCookieName);
+  const token = getCookie("bfl_session");
 
   await logoutDiscordSession();
 
@@ -109,7 +108,7 @@ export async function logoutCurrentSession(): Promise<void> {
     }
   }
 
-  deleteCookie(sessionCookieName, { path: "/" });
+  deleteCookie("bfl_session", { path: "/" });
 }
 
 export async function getCurrentSession(): Promise<ApiAccountSession | null> {
@@ -124,6 +123,20 @@ export async function requireApiPermission(permission: string): Promise<ApiAccou
   }
 
   if (!hasApiPermission(session, permission)) {
+    throw new Response("Não autorizado.", { status: 403 });
+  }
+
+  return session;
+}
+
+export async function requireAnyApiPermission(permissions: string[]): Promise<ApiAccountSession> {
+  const session = await getCurrentSession();
+
+  if (!session) {
+    throw redirect({ to: "/account/login" });
+  }
+
+  if (!permissions.some((permission) => hasApiPermission(session, permission))) {
     throw new Response("Não autorizado.", { status: 403 });
   }
 
@@ -148,7 +161,7 @@ async function createCredentialSession(account: Account): Promise<void> {
     updatedAt: now,
   });
 
-  setCookie(sessionCookieName, token, {
+  setCookie("bfl_session", token, {
     httpOnly: true,
     maxAge: sessionTtlSeconds,
     path: "/",
@@ -158,7 +171,7 @@ async function createCredentialSession(account: Account): Promise<void> {
 }
 
 async function getCredentialSession(): Promise<ApiAccountSession | null> {
-  const token = getCookie(sessionCookieName);
+  const token = getCookie("bfl_session");
   const db = optionalDb();
 
   if (!token || !db) {
@@ -177,7 +190,7 @@ async function getCredentialSession(): Promise<ApiAccountSession | null> {
 
   if (isSessionExpired(session.expiresAt)) {
     await db.delete(webSessions).where(eq(webSessions.id, session.id));
-    deleteCookie(sessionCookieName, { path: "/" });
+    deleteCookie("bfl_session", { path: "/" });
 
     return null;
   }

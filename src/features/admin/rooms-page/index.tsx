@@ -1,4 +1,4 @@
-import { PageHeader } from "#/components/ds/app-shell";
+import { PageHeader } from "#/components/ds/app-shell/page-header";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 import { AdminRoomsTable } from "./components/admin-rooms-table";
 import { LaunchRoomCard } from "./components/launch-room-card";
@@ -13,9 +13,9 @@ export function AdminRoomsPage({ resources }: { resources: AdminRoomManagementRe
         description="Lançamento, fechamento e acompanhamento operacional das salas."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
         <LaunchRoomCard resources={resources} />
-        <AdminRoomsTable rooms={resources.rooms.items} />
+        <AdminRoomsTable rooms={resources.rooms.items} history={resources.roomHistory} />
       </div>
     </>
   );

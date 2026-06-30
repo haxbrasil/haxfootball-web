@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { emptyPage } from "#/lib/pagination/page";
+import { implementedAdminPermissions, visibleAdminSections } from "#/features/admin/admin-sections";
 import {
-  closeRoom,
   createRole,
   disableMatchEvent,
   getMatch,
@@ -12,10 +12,10 @@ import {
   getStatsCategoryRankings,
   listAccountLinkedMatches,
   listAccountLinkedSessionEntries,
+  listAdminAccountResources,
+  listAdminOverviewResources,
+  listAdminRoleResources,
   listMatchEvents,
-  launchRoom,
-  listAdminRoomManagementResources,
-  listAdminResources,
   listMatches,
   listPublicAccounts,
   listRooms,
@@ -24,16 +24,10 @@ import {
 } from "#/server/api/haxfootball";
 import {
   getCurrentSession,
-  hasApiPermission,
+  requireAnyApiPermission,
   requireApiPermission,
-  type ApiAccountSession,
 } from "#/server/auth/session";
 import type { AccountLinkedSessionEntry, ListMatchesResponse } from "./haxfootball";
-
-type PermissionedLaunchConfigField = {
-  key: string;
-  requiredPermission?: string;
-};
 
 const idInput = z.object({
   id: z.string().min(1),
@@ -53,15 +47,6 @@ const publicAccountListInput = z
     search: z.string().min(1).optional(),
   })
   .optional();
-
-const launchConfigValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-
-const launchRoomInput = z.object({
-  programId: z.string().min(1),
-  version: z.string().min(1),
-  haxballToken: z.string().min(1),
-  launchConfig: z.record(z.string(), launchConfigValue).optional(),
-});
 
 const updateAccountRoleInput = z.object({
   accountUuid: z.string().min(1),
@@ -218,86 +203,34 @@ export const queryStatsFn = createServerFn({ method: "GET" })
   .inputValidator(statsQueryInput)
   .handler(({ data }) => getStats(data));
 
-export const listAdminResourcesFn = createServerFn({ method: "GET" }).handler(async () => {
-  await requireApiPermission("room:admin");
+export const getAdminOverviewFn = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await requireAnyApiPermission(implementedAdminPermissions);
+  const sections = visibleAdminSections(session);
+  const resources = await listAdminOverviewResources({
+    accounts: sections.some((section) => section.key === "accounts"),
+    roles: sections.some((section) => section.key === "roles"),
+    rooms: sections.some((section) => section.key === "rooms"),
+  });
 
-  return listAdminResources();
+  return { sections, resources };
 });
 
-export const listAdminRoomManagementResourcesFn = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const session = await requireApiPermission("room-launch:operate");
+export const listAdminAccountResourcesFn = createServerFn({ method: "GET" }).handler(async () => {
+  await requireApiPermission("account:admin");
 
-    return filterLaunchConfigFields(await listAdminRoomManagementResources(), session);
-  },
-);
+  return listAdminAccountResources();
+});
 
-export const launchRoomFn = createServerFn({ method: "POST" })
-  .inputValidator(launchRoomInput)
-  .handler(async ({ data }) => {
-    const session = await requireApiPermission("room-launch:operate");
-    const resources = filterLaunchConfigFields(await listAdminRoomManagementResources(), session);
-    const selectedProgram = resources.roomPrograms.items.find(
-      (program) => program.id === data.programId,
-    );
+export const listAdminRoleResourcesFn = createServerFn({ method: "GET" }).handler(async () => {
+  await requireApiPermission("role:admin");
 
-    if (!selectedProgram) {
-      return { ok: false, message: "Programa de sala inválido." } as const;
-    }
-
-    const allowedKeys = new Set(selectedProgram.launchConfigFields.map((field) => field.key));
-    const submittedKeys = Object.keys(data.launchConfig ?? {});
-
-    if (submittedKeys.some((key) => !allowedKeys.has(key))) {
-      return { ok: false, message: "Configuração de sala não autorizada." } as const;
-    }
-
-    const room = await launchRoom(data);
-
-    return room
-      ? ({ ok: true, room } as const)
-      : ({ ok: false, message: "Não foi possível lançar a sala." } as const);
-  });
-
-function filterLaunchConfigFields(
-  resources: Awaited<ReturnType<typeof listAdminRoomManagementResources>>,
-  session: ApiAccountSession,
-): Awaited<ReturnType<typeof listAdminRoomManagementResources>> {
-  return {
-    ...resources,
-    roomPrograms: {
-      ...resources.roomPrograms,
-      items: resources.roomPrograms.items.map((program) => ({
-        ...program,
-        launchConfigFields: program.launchConfigFields.filter((field) => {
-          const launchField = field as PermissionedLaunchConfigField;
-
-          return (
-            !launchField.requiredPermission ||
-            hasApiPermission(session, launchField.requiredPermission)
-          );
-        }),
-      })),
-    },
-  };
-}
-
-export const closeRoomFn = createServerFn({ method: "POST" })
-  .inputValidator(idInput)
-  .handler(async ({ data }) => {
-    await requireApiPermission("room-launch:operate");
-
-    const room = await closeRoom(data.id);
-
-    return room
-      ? ({ ok: true, room } as const)
-      : ({ ok: false, message: "Não foi possível fechar a sala." } as const);
-  });
+  return listAdminRoleResources();
+});
 
 export const updateAccountRoleFn = createServerFn({ method: "POST" })
   .inputValidator(updateAccountRoleInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("room:admin");
+    await requireApiPermission("account:admin");
 
     const account = await updateAccountRole(data);
 
@@ -309,7 +242,7 @@ export const updateAccountRoleFn = createServerFn({ method: "POST" })
 export const createRoleFn = createServerFn({ method: "POST" })
   .inputValidator(createRoleInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("room:admin");
+    await requireApiPermission("role:admin");
 
     const role = await createRole(data);
 
@@ -321,7 +254,7 @@ export const createRoleFn = createServerFn({ method: "POST" })
 export const updateRoleFn = createServerFn({ method: "POST" })
   .inputValidator(updateRoleInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("room:admin");
+    await requireApiPermission("role:admin");
 
     const role = await updateRole({
       uuid: data.uuid,
@@ -340,7 +273,7 @@ export const updateRoleFn = createServerFn({ method: "POST" })
 export const disableMatchEventFn = createServerFn({ method: "POST" })
   .inputValidator(disableMatchEventInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("room:admin");
+    await requireApiPermission("stat:event:disable");
 
     const disabled = await disableMatchEvent(data);
 

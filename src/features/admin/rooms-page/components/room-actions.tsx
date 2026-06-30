@@ -13,6 +13,8 @@ export function RoomActions({
   onClose: (roomId: string) => void;
   onOpenDetails: (roomId: string) => void;
 }) {
+  const canClose = room.state !== "closed" && room.state !== "failed";
+
   function handleOpenDetails() {
     onOpenDetails(room.id);
   }
@@ -26,7 +28,7 @@ export function RoomActions({
       <Button size="sm" variant="outline" onClick={handleOpenDetails}>
         Detalhes
       </Button>
-      {room.state !== "closed" ? (
+      {canClose ? (
         <Button size="sm" variant="destructive" disabled={isClosing} onClick={handleClose}>
           <Power className="size-4" />
           Fechar

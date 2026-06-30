@@ -3,6 +3,6 @@ export type LocalizedText = {
   value: string;
 };
 
-export function localizedTextLabel(text: LocalizedText): string {
-  return text.label;
+export function localizedTextLabel(text: LocalizedText | string): string {
+  return typeof text === "string" ? text : text.label;
 }

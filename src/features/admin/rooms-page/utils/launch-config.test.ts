@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readLaunchConfig, type WebRoomLaunchConfigField } from "./launch-config";
+import {
+  getVersionOptions,
+  readLaunchConfig,
+  type WebRoomLaunchConfigField,
+} from "./launch-config";
 
 const fields: WebRoomLaunchConfigField[] = [
   {
@@ -66,5 +70,23 @@ describe("readLaunchConfig", () => {
       roomName: null,
       publicRoom: false,
     });
+  });
+});
+
+describe("getVersionOptions", () => {
+  it("orders concrete versions semantically so the last option is the latest version", () => {
+    const options = getVersionOptions(
+      {
+        versionsByProgramId: {
+          program: {
+            items: [{ version: "v1.0.72" }, { version: "v1.0.54" }, { version: "v1.0.9" }],
+          },
+        },
+        aliasesByProgramId: {},
+      } as never,
+      "program",
+    );
+
+    expect(options.at(-1)).toEqual({ label: "v1.0.72", value: "v1.0.72" });
   });
 });

@@ -10,6 +10,8 @@ export function PermissionChecklist({
   selected: string[];
   onChange: (permissions: string[]) => void;
 }) {
+  const hasAllPermissions = selected.includes("*");
+
   return (
     <div className="grid gap-3">
       <PermissionCheckbox
@@ -17,14 +19,16 @@ export function PermissionChecklist({
         selected={selected}
         onChange={onChange}
       />
-      {permissions.map((permission) => (
-        <PermissionCheckbox
-          key={permission.uuid}
-          permission={permission}
-          selected={selected}
-          onChange={onChange}
-        />
-      ))}
+      {hasAllPermissions
+        ? null
+        : permissions.map((permission) => (
+            <PermissionCheckbox
+              key={permission.uuid}
+              permission={permission}
+              selected={selected}
+              onChange={onChange}
+            />
+          ))}
     </div>
   );
 }

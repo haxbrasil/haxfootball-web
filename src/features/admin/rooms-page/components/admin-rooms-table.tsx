@@ -1,53 +1,22 @@
 import type { Room } from "@haxbrasil/haxfootball-api-sdk";
-import { useNavigate } from "@tanstack/react-router";
-import { DataCard, EmptyState } from "#/components/ds/app-shell";
-import { ResourceTable } from "#/components/ds/resource-table";
-import { StatusBadge } from "#/components/ds/status-badge";
-import { useCloseRoomAction } from "../hooks/use-close-room-action";
-import { RoomActions } from "./room-actions";
+import { DataCard } from "#/components/ds/app-shell/data-card";
+import { EmptyState } from "#/components/ds/app-shell/empty-state";
+import type { ListRoomsResponse } from "#/server/api/haxfootball";
+import { AdminRoomsTableContent } from "./admin-rooms-table-content";
+import { RoomHistoryDialog } from "./room-history-dialog";
 
-export function AdminRoomsTable({ rooms }: { rooms: Room[] }) {
-  const navigate = useNavigate();
-  const { close, closingId } = useCloseRoomAction();
-
+export function AdminRoomsTable({ rooms, history }: { rooms: Room[]; history: ListRoomsResponse }) {
   if (rooms.length === 0) {
-    return <EmptyState title="Nenhuma sala encontrada" />;
+    return (
+      <DataCard title="Salas abertas" meta={<RoomHistoryDialog rooms={history} />}>
+        <EmptyState title="Nenhuma sala aberta" />
+      </DataCard>
+    );
   }
 
   return (
-    <DataCard title="Salas atuais">
-      <ResourceTable
-        rows={rooms}
-        columns={[
-          {
-            key: "program",
-            title: "Programa",
-            cell: (room) => room.program?.title ?? room.program?.name ?? room.id,
-          },
-          {
-            key: "state",
-            title: "Estado",
-            cell: (room) => <StatusBadge value={room.state} />,
-          },
-          {
-            key: "version",
-            title: "Versão",
-            cell: (room) => room.version?.version ?? "-",
-          },
-          {
-            key: "actions",
-            title: "",
-            cell: (room) => (
-              <RoomActions
-                room={room}
-                isClosing={closingId === room.id}
-                onClose={close}
-                onOpenDetails={(roomId) => navigate({ to: "/rooms/$roomId", params: { roomId } })}
-              />
-            ),
-          },
-        ]}
-      />
+    <DataCard title="Salas abertas" meta={<RoomHistoryDialog rooms={history} />}>
+      <AdminRoomsTableContent rooms={rooms} />
     </DataCard>
   );
 }

@@ -11,9 +11,16 @@ export function LaunchConfigField({ field }: { field: WebRoomLaunchConfigField }
 
   if (field.valueType === "boolean") {
     return (
-      <div className="flex items-center gap-2">
-        <Checkbox id={id} name={id} defaultChecked={field.defaultValue === true} value="true" />
-        <Label htmlFor={id}>{label}</Label>
+      <div className="grid gap-2 py-2">
+        <div className="flex min-h-9 items-center gap-3">
+          <Checkbox id={id} name={id} defaultChecked={field.defaultValue === true} value="true" />
+          <Label htmlFor={id}>{label}</Label>
+        </div>
+        {field.description ? (
+          <p className="pl-7 text-xs text-muted-foreground">
+            {localizedTextLabel(field.description)}
+          </p>
+        ) : null}
       </div>
     );
   }

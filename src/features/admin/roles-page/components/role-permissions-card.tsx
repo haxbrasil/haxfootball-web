@@ -34,7 +34,6 @@ export function RolePermissionsCard({
             <Save className="size-4" />
             Salvar permissões
           </Button>
-          <span className="text-xs text-muted-foreground">{role.name}</span>
         </div>
 
         {form.message ? <InlineFormMessage message={form.message} /> : null}

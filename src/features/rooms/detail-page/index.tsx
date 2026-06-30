@@ -5,7 +5,13 @@ import { StatusBadge } from "#/components/ds/status-badge";
 import { Button } from "#/components/ui/button";
 import { formatDateTime } from "#/lib/date/format-date-time";
 
-export function RoomDetailPage({ room }: { room: Room | null }) {
+export function RoomDetailPage({
+  room,
+  description = "Estado público, versão e link da sala.",
+}: {
+  room: Room | null;
+  description?: string;
+}) {
   if (!room) {
     return <EmptyState title="Sala não encontrada" />;
   }
@@ -16,7 +22,7 @@ export function RoomDetailPage({ room }: { room: Room | null }) {
         title={room.program?.name ?? room.id}
         eyebrow={null}
         showBrand={false}
-        description="Estado público, versão e link da sala."
+        description={description}
         action={
           room.roomLink ? (
             <Button asChild>

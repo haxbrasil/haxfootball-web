@@ -18,14 +18,12 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as RoomsRoomIdRouteImport } from './routes/rooms/$roomId'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
-import { Route as AdminStatSchemasRouteImport } from './routes/admin/stat-schemas'
 import { Route as AdminRoomsRouteImport } from './routes/admin/rooms'
-import { Route as AdminRoomProgramsRouteImport } from './routes/admin/room-programs'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
-import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AccountLoginRouteImport } from './routes/account/login'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminRoomsRoomIdRouteImport } from './routes/admin.rooms_.$roomId'
 import { Route as ApiAuthSignInDiscordRouteImport } from './routes/api/auth/sign-in/discord'
 
 const IndexRoute = IndexRouteImport.update({
@@ -73,29 +71,14 @@ const MatchesMatchIdRoute = MatchesMatchIdRouteImport.update({
   path: '/matches/$matchId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminStatSchemasRoute = AdminStatSchemasRouteImport.update({
-  id: '/admin/stat-schemas',
-  path: '/admin/stat-schemas',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoomsRoute = AdminRoomsRouteImport.update({
   id: '/admin/rooms',
   path: '/admin/rooms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoomProgramsRoute = AdminRoomProgramsRouteImport.update({
-  id: '/admin/room-programs',
-  path: '/admin/room-programs',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRolesRoute = AdminRolesRouteImport.update({
   id: '/admin/roles',
   path: '/admin/roles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminJobsRoute = AdminJobsRouteImport.update({
-  id: '/admin/jobs',
-  path: '/admin/jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAccountsRoute = AdminAccountsRouteImport.update({
@@ -113,6 +96,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoomsRoomIdRoute = AdminRoomsRoomIdRouteImport.update({
+  id: '/admin/rooms_/$roomId',
+  path: '/admin/rooms/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSignInDiscordRoute = ApiAuthSignInDiscordRouteImport.update({
   id: '/api/auth/sign-in/discord',
   path: '/api/auth/sign-in/discord',
@@ -123,11 +111,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
-  '/admin/jobs': typeof AdminJobsRoute
   '/admin/roles': typeof AdminRolesRoute
-  '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/admin/stat-schemas': typeof AdminStatSchemasRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account/': typeof AccountIndexRoute
@@ -136,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/pubs/': typeof PubsIndexRoute
   '/rooms/': typeof RoomsIndexRoute
   '/stats/': typeof StatsIndexRoute
+  '/admin/rooms/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
 }
@@ -143,11 +129,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
-  '/admin/jobs': typeof AdminJobsRoute
   '/admin/roles': typeof AdminRolesRoute
-  '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/admin/stat-schemas': typeof AdminStatSchemasRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account': typeof AccountIndexRoute
@@ -156,6 +139,7 @@ export interface FileRoutesByTo {
   '/pubs': typeof PubsIndexRoute
   '/rooms': typeof RoomsIndexRoute
   '/stats': typeof StatsIndexRoute
+  '/admin/rooms/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
 }
@@ -164,11 +148,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
-  '/admin/jobs': typeof AdminJobsRoute
   '/admin/roles': typeof AdminRolesRoute
-  '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/admin/stat-schemas': typeof AdminStatSchemasRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account/': typeof AccountIndexRoute
@@ -177,6 +158,7 @@ export interface FileRoutesById {
   '/pubs/': typeof PubsIndexRoute
   '/rooms/': typeof RoomsIndexRoute
   '/stats/': typeof StatsIndexRoute
+  '/admin/rooms_/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
 }
@@ -186,11 +168,8 @@ export interface FileRouteTypes {
     | '/'
     | '/account/login'
     | '/admin/accounts'
-    | '/admin/jobs'
     | '/admin/roles'
-    | '/admin/room-programs'
     | '/admin/rooms'
-    | '/admin/stat-schemas'
     | '/matches/$matchId'
     | '/rooms/$roomId'
     | '/account/'
@@ -199,6 +178,7 @@ export interface FileRouteTypes {
     | '/pubs/'
     | '/rooms/'
     | '/stats/'
+    | '/admin/rooms/$roomId'
     | '/api/auth/$'
     | '/api/auth/sign-in/discord'
   fileRoutesByTo: FileRoutesByTo
@@ -206,11 +186,8 @@ export interface FileRouteTypes {
     | '/'
     | '/account/login'
     | '/admin/accounts'
-    | '/admin/jobs'
     | '/admin/roles'
-    | '/admin/room-programs'
     | '/admin/rooms'
-    | '/admin/stat-schemas'
     | '/matches/$matchId'
     | '/rooms/$roomId'
     | '/account'
@@ -219,6 +196,7 @@ export interface FileRouteTypes {
     | '/pubs'
     | '/rooms'
     | '/stats'
+    | '/admin/rooms/$roomId'
     | '/api/auth/$'
     | '/api/auth/sign-in/discord'
   id:
@@ -226,11 +204,8 @@ export interface FileRouteTypes {
     | '/'
     | '/account/login'
     | '/admin/accounts'
-    | '/admin/jobs'
     | '/admin/roles'
-    | '/admin/room-programs'
     | '/admin/rooms'
-    | '/admin/stat-schemas'
     | '/matches/$matchId'
     | '/rooms/$roomId'
     | '/account/'
@@ -239,6 +214,7 @@ export interface FileRouteTypes {
     | '/pubs/'
     | '/rooms/'
     | '/stats/'
+    | '/admin/rooms_/$roomId'
     | '/api/auth/$'
     | '/api/auth/sign-in/discord'
   fileRoutesById: FileRoutesById
@@ -247,11 +223,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountLoginRoute: typeof AccountLoginRoute
   AdminAccountsRoute: typeof AdminAccountsRoute
-  AdminJobsRoute: typeof AdminJobsRoute
   AdminRolesRoute: typeof AdminRolesRoute
-  AdminRoomProgramsRoute: typeof AdminRoomProgramsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
-  AdminStatSchemasRoute: typeof AdminStatSchemasRoute
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
   RoomsRoomIdRoute: typeof RoomsRoomIdRoute
   AccountIndexRoute: typeof AccountIndexRoute
@@ -260,6 +233,7 @@ export interface RootRouteChildren {
   PubsIndexRoute: typeof PubsIndexRoute
   RoomsIndexRoute: typeof RoomsIndexRoute
   StatsIndexRoute: typeof StatsIndexRoute
+  AdminRoomsRoomIdRoute: typeof AdminRoomsRoomIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthSignInDiscordRoute: typeof ApiAuthSignInDiscordRoute
 }
@@ -329,13 +303,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MatchesMatchIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/stat-schemas': {
-      id: '/admin/stat-schemas'
-      path: '/admin/stat-schemas'
-      fullPath: '/admin/stat-schemas'
-      preLoaderRoute: typeof AdminStatSchemasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/rooms': {
       id: '/admin/rooms'
       path: '/admin/rooms'
@@ -343,25 +310,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRoomsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/room-programs': {
-      id: '/admin/room-programs'
-      path: '/admin/room-programs'
-      fullPath: '/admin/room-programs'
-      preLoaderRoute: typeof AdminRoomProgramsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/roles': {
       id: '/admin/roles'
       path: '/admin/roles'
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AdminRolesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/jobs': {
-      id: '/admin/jobs'
-      path: '/admin/jobs'
-      fullPath: '/admin/jobs'
-      preLoaderRoute: typeof AdminJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/accounts': {
@@ -385,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/rooms_/$roomId': {
+      id: '/admin/rooms_/$roomId'
+      path: '/admin/rooms/$roomId'
+      fullPath: '/admin/rooms/$roomId'
+      preLoaderRoute: typeof AdminRoomsRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/sign-in/discord': {
       id: '/api/auth/sign-in/discord'
       path: '/api/auth/sign-in/discord'
@@ -399,11 +359,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountLoginRoute: AccountLoginRoute,
   AdminAccountsRoute: AdminAccountsRoute,
-  AdminJobsRoute: AdminJobsRoute,
   AdminRolesRoute: AdminRolesRoute,
-  AdminRoomProgramsRoute: AdminRoomProgramsRoute,
   AdminRoomsRoute: AdminRoomsRoute,
-  AdminStatSchemasRoute: AdminStatSchemasRoute,
   MatchesMatchIdRoute: MatchesMatchIdRoute,
   RoomsRoomIdRoute: RoomsRoomIdRoute,
   AccountIndexRoute: AccountIndexRoute,
@@ -412,6 +369,7 @@ const rootRouteChildren: RootRouteChildren = {
   PubsIndexRoute: PubsIndexRoute,
   RoomsIndexRoute: RoomsIndexRoute,
   StatsIndexRoute: StatsIndexRoute,
+  AdminRoomsRoomIdRoute: AdminRoomsRoomIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthSignInDiscordRoute: ApiAuthSignInDiscordRoute,
 }
