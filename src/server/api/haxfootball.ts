@@ -557,7 +557,7 @@ export async function listAdminResources(): Promise<AdminResources> {
     await Promise.all([
       unwrap(client.accounts.list()),
       unwrap(client.roles.list()),
-      unwrap(client.permissions.list()),
+      unwrap(client.permissions.list({ limit: 100 })),
       unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
       unwrap(client.rooms.proxyEndpoints.list()),
       unwrap(client.eventSchemas.list()) as Promise<Page<WebEventSchema> | null>,
@@ -606,7 +606,7 @@ export async function listAdminRoleResources(): Promise<AdminRoleResources> {
 
   const [roles, permissions] = await Promise.all([
     unwrap(client.roles.list()),
-    unwrap(client.permissions.list()),
+    unwrap(client.permissions.list({ limit: 100 })),
   ]);
 
   return {
