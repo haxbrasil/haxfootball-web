@@ -17,6 +17,8 @@ import {
   type ListRoomProgramsResponse,
   type ListRoomProxyEndpointsResponse,
   type ListRoomProgramVersionsResponse,
+  type RoomProgram,
+  type RoomProgramVersion,
   type ListRoomsQuery,
   type ListRoomsResponse,
   type Match,
@@ -29,6 +31,11 @@ import {
   type Role,
   type Room,
   type EventSchema,
+  type CreateRoomProgramInput,
+  type CreateRoomProgramVersionInput,
+  type DiscoverRoomProgramVersionsInput,
+  type DiscoverRoomProgramVersionsResponse,
+  type UpdateRoomProgramInput,
   type UpdateRoleInput,
 } from "@haxbrasil/haxfootball-api-sdk";
 import type { PageInfo, PaginationQuery } from "#/lib/pagination/page";
@@ -59,6 +66,9 @@ export type Page<T> = {
 };
 
 type RoomProgramVersionAlias = components["schemas"]["RoomProgramVersionAlias"];
+type RoomArtifact = components["schemas"]["RoomArtifact"];
+type UpsertRoomProgramVersionAliasInput =
+  components["schemas"]["UpsertRoomProgramVersionAliasBody"];
 type HaxFootballClient = NonNullable<ReturnType<typeof getApiClient>>;
 
 export type WebQueryMatchMetricsResponse = Omit<
@@ -167,6 +177,12 @@ export type AdminRoomManagementResources = {
   roomHistory: ListRoomsResponse;
   roomPrograms: ListRoomProgramsResponse;
   proxyEndpoints: ListRoomProxyEndpointsResponse;
+  versionsByProgramId: Record<string, ListRoomProgramVersionsResponse>;
+  aliasesByProgramId: Record<string, Page<RoomProgramVersionAlias>>;
+};
+
+export type AdminRoomProgramResources = {
+  roomPrograms: ListRoomProgramsResponse;
   versionsByProgramId: Record<string, ListRoomProgramVersionsResponse>;
   aliasesByProgramId: Record<string, Page<RoomProgramVersionAlias>>;
 };
@@ -675,6 +691,43 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
   };
 }
 
+export async function listAdminRoomProgramResources(): Promise<AdminRoomProgramResources> {
+  const client = getApiClient();
+  const env = getServerEnv();
+
+  if (!client) {
+    return {
+      roomPrograms: emptyPage(),
+      versionsByProgramId: {},
+      aliasesByProgramId: {},
+    };
+  }
+
+  const programs =
+    (await unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery))) ??
+    emptyPage();
+  const programEntries = await Promise.all(
+    programs.items.map(async (program) => {
+      const [versions, aliases] = await Promise.all([
+        listAllRoomProgramVersions(client, program.id),
+        listAllRoomProgramVersionAliases(client, program.id),
+      ]);
+
+      return [program.id, versions, aliases] as const;
+    }),
+  );
+
+  return {
+    roomPrograms: programs,
+    versionsByProgramId: Object.fromEntries(
+      programEntries.map(([programId, versions]) => [programId, versions]),
+    ),
+    aliasesByProgramId: Object.fromEntries(
+      programEntries.map(([programId, _versions, aliases]) => [programId, aliases]),
+    ),
+  };
+}
+
 export async function listAdminRoomHistory(
   query: PaginationQuery = {},
 ): Promise<ListRoomsResponse> {
@@ -762,6 +815,90 @@ export async function launchRoom(input: CreateRoomInput): Promise<Room | null> {
   }
 
   return room;
+}
+
+export async function createRoomProgram(
+  input: CreateRoomProgramInput,
+): Promise<RoomProgram | null> {
+  const client = getApiClient();
+
+  return client ? unwrap(client.rooms.programs.create(input as never)) : null;
+}
+
+export async function updateRoomProgram(input: {
+  id: string;
+  body: UpdateRoomProgramInput;
+}): Promise<RoomProgram | null> {
+  const client = getApiClient();
+
+  return client ? unwrap(client.rooms.programs.update(input.id, input.body as never)) : null;
+}
+
+export async function createRoomProgramVersion(input: {
+  programId: string;
+  body: CreateRoomProgramVersionInput;
+}): Promise<RoomProgramVersion | null> {
+  const client = getApiClient();
+
+  return client ? unwrap(client.rooms.programs.createVersion(input.programId, input.body)) : null;
+}
+
+export async function discoverRoomProgramVersions(input: {
+  programId: string;
+  body: DiscoverRoomProgramVersionsInput;
+}): Promise<DiscoverRoomProgramVersionsResponse | null> {
+  const client = getApiClient();
+
+  return client
+    ? unwrap(client.rooms.programs.discoverVersions(input.programId, input.body))
+    : null;
+}
+
+export async function upsertRoomProgramVersionAlias(input: {
+  programId: string;
+  alias: string;
+  body: UpsertRoomProgramVersionAliasInput;
+}): Promise<RoomProgramVersionAlias | null> {
+  const client = getApiClient();
+
+  return client
+    ? unwrap(
+        client.request<RoomProgramVersionAlias>({
+          method: "PUT" as never,
+          path: `/room-programs/${encodeURIComponent(input.programId)}/version-aliases/${encodeURIComponent(input.alias)}`,
+          body: input.body,
+        }),
+      )
+    : null;
+}
+
+export async function uploadRoomProgramArtifact(input: {
+  programId: string;
+  branch: string;
+  sha: string;
+  assetName: string;
+  file: File;
+}): Promise<RoomArtifact | null> {
+  const client = getApiClient();
+
+  if (!client) {
+    return null;
+  }
+
+  const formData = new FormData();
+
+  formData.set("branch", input.branch);
+  formData.set("sha", input.sha);
+  formData.set("assetName", input.assetName);
+  formData.set("file", input.file, input.assetName);
+
+  return unwrap(
+    client.request<RoomArtifact>({
+      method: "POST",
+      path: `/room-programs/${encodeURIComponent(input.programId)}/artifacts`,
+      formData,
+    }),
+  );
 }
 
 export async function closeRoom(id: string): Promise<Room | null> {

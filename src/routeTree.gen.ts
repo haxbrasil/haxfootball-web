@@ -19,6 +19,7 @@ import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as RoomsRoomIdRouteImport } from './routes/rooms/$roomId'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
 import { Route as AdminRoomsRouteImport } from './routes/admin/rooms'
+import { Route as AdminRoomProgramsRouteImport } from './routes/admin/room-programs'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AccountLoginRouteImport } from './routes/account/login'
@@ -76,6 +77,11 @@ const AdminRoomsRoute = AdminRoomsRouteImport.update({
   path: '/admin/rooms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoomProgramsRoute = AdminRoomProgramsRouteImport.update({
+  id: '/admin/room-programs',
+  path: '/admin/room-programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRolesRoute = AdminRolesRouteImport.update({
   id: '/admin/roles',
   path: '/admin/roles',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/roles': typeof AdminRolesRoute
+  '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/roles': typeof AdminRolesRoute
+  '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/roles': typeof AdminRolesRoute
+  '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/account/login'
     | '/admin/accounts'
     | '/admin/roles'
+    | '/admin/room-programs'
     | '/admin/rooms'
     | '/matches/$matchId'
     | '/rooms/$roomId'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/account/login'
     | '/admin/accounts'
     | '/admin/roles'
+    | '/admin/room-programs'
     | '/admin/rooms'
     | '/matches/$matchId'
     | '/rooms/$roomId'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/account/login'
     | '/admin/accounts'
     | '/admin/roles'
+    | '/admin/room-programs'
     | '/admin/rooms'
     | '/matches/$matchId'
     | '/rooms/$roomId'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   AccountLoginRoute: typeof AccountLoginRoute
   AdminAccountsRoute: typeof AdminAccountsRoute
   AdminRolesRoute: typeof AdminRolesRoute
+  AdminRoomProgramsRoute: typeof AdminRoomProgramsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
   RoomsRoomIdRoute: typeof RoomsRoomIdRoute
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRoomsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/room-programs': {
+      id: '/admin/room-programs'
+      path: '/admin/room-programs'
+      fullPath: '/admin/room-programs'
+      preLoaderRoute: typeof AdminRoomProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/roles': {
       id: '/admin/roles'
       path: '/admin/roles'
@@ -360,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountLoginRoute: AccountLoginRoute,
   AdminAccountsRoute: AdminAccountsRoute,
   AdminRolesRoute: AdminRolesRoute,
+  AdminRoomProgramsRoute: AdminRoomProgramsRoute,
   AdminRoomsRoute: AdminRoomsRoute,
   MatchesMatchIdRoute: MatchesMatchIdRoute,
   RoomsRoomIdRoute: RoomsRoomIdRoute,

@@ -24,23 +24,23 @@ function session(input: {
 describe("visibleAdminSections", () => {
   it("shows only sections allowed by explicit permissions", () => {
     expect(
-      visibleAdminSections(session({ permissions: ["room-launch:operate", "role:admin"] })).map(
-        (section) => section.key,
-      ),
-    ).toEqual(["rooms", "roles"]);
+      visibleAdminSections(
+        session({ permissions: ["room-launch:operate", "room-program:admin", "role:admin"] }),
+      ).map((section) => section.key),
+    ).toEqual(["rooms", "room-programs", "roles"]);
   });
 
   it("shows all implemented sections for wildcard or bypass roles", () => {
     expect(
       visibleAdminSections(session({ permissions: ["*"] })).map((section) => section.key),
-    ).toEqual(["rooms", "accounts", "roles"]);
+    ).toEqual(["rooms", "room-programs", "accounts", "roles"]);
     expect(
       visibleAdminSections(session({ bypassAllPermissions: true })).map((section) => section.key),
-    ).toEqual(["rooms", "accounts", "roles"]);
+    ).toEqual(["rooms", "room-programs", "accounts", "roles"]);
   });
 
   it("does not treat unimplemented admin permissions as admin access", () => {
-    const unrelatedSession = session({ permissions: ["room-program:admin", "event-schema:admin"] });
+    const unrelatedSession = session({ permissions: ["event-schema:admin"] });
 
     expect(visibleAdminSections(unrelatedSession)).toEqual([]);
     expect(canAccessImplementedAdmin(unrelatedSession)).toBe(false);

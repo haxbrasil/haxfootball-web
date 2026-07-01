@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getDefaultVersionValue,
   getVersionOptions,
   readLaunchConfig,
   type WebRoomLaunchConfigField,
@@ -74,12 +75,12 @@ describe("readLaunchConfig", () => {
 });
 
 describe("getVersionOptions", () => {
-  it("orders concrete versions semantically so the last option is the latest version", () => {
+  it("orders concrete versions semantically with latest first", () => {
     const options = getVersionOptions(
       {
         versionsByProgramId: {
           program: {
-            items: [{ version: "v1.0.72" }, { version: "v1.0.54" }, { version: "v1.0.9" }],
+            items: [{ version: "v1.0.8" }, { version: "v1.0.74" }, { version: "v1.0.9" }],
           },
         },
         aliasesByProgramId: {},
@@ -87,6 +88,26 @@ describe("getVersionOptions", () => {
       "program",
     );
 
-    expect(options.at(-1)).toEqual({ label: "v1.0.72", value: "v1.0.72" });
+    expect(options.map((option) => option.value)).toEqual(["v1.0.74", "v1.0.9", "v1.0.8"]);
+  });
+
+  it("uses the latest concrete version as the default even when aliases exist", () => {
+    const defaultVersion = getDefaultVersionValue(
+      {
+        versionsByProgramId: {
+          program: {
+            items: [{ version: "v1.0.8" }, { version: "v1.0.74" }],
+          },
+        },
+        aliasesByProgramId: {
+          program: {
+            items: [{ alias: "stable", version: { version: "v1.0.8" } }],
+          },
+        },
+      } as never,
+      "program",
+    );
+
+    expect(defaultVersion).toBe("v1.0.74");
   });
 });

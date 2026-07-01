@@ -4,6 +4,7 @@ import { useRouter } from "@tanstack/react-router";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 import {
+  getDefaultVersionValue,
   getVersionOptions,
   groupedLaunchConfigFields,
   readLaunchConfig,
@@ -14,9 +15,7 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
   const router = useRouter();
   const initialProgramId = resources.roomPrograms.items[0]?.id ?? "";
   const [programId, setProgramIdState] = useState(initialProgramId);
-  const [version, setVersion] = useState(
-    () => getVersionOptions(resources, initialProgramId).at(-1)?.value ?? "",
-  );
+  const [version, setVersion] = useState(() => getDefaultVersionValue(resources, initialProgramId));
   const [message, setMessage] = useState<FormMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,12 +34,12 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
   );
 
   useEffect(() => {
-    setVersion(versionOptions.at(-1)?.value ?? "");
-  }, [versionOptions]);
+    setVersion(getDefaultVersionValue(resources, programId));
+  }, [programId, resources]);
 
   function setProgramId(nextProgramId: string) {
     setProgramIdState(nextProgramId);
-    setVersion(getVersionOptions(resources, nextProgramId).at(-1)?.value ?? "");
+    setVersion(getDefaultVersionValue(resources, nextProgramId));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {

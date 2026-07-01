@@ -1,13 +1,13 @@
 import { hasApiPermission } from "#/server/auth/permissions";
 import type { ApiAccountSession } from "#/server/auth/session";
 
-export type AdminSectionKey = "rooms" | "accounts" | "roles";
+export type AdminSectionKey = "rooms" | "room-programs" | "accounts" | "roles";
 
 export type AdminSection = {
   key: AdminSectionKey;
   title: string;
   description: string;
-  href: "/admin/rooms" | "/admin/accounts" | "/admin/roles";
+  href: "/admin/rooms" | "/admin/room-programs" | "/admin/accounts" | "/admin/roles";
   permission: string;
 };
 
@@ -18,6 +18,13 @@ export const adminSections = [
     description: "Lançar salas, acompanhar salas abertas e consultar histórico.",
     href: "/admin/rooms",
     permission: "room-launch:operate",
+  },
+  {
+    key: "room-programs",
+    title: "Programas de sala",
+    description: "Gerenciar programas, campos de lançamento, versões e aliases.",
+    href: "/admin/room-programs",
+    permission: "room-program:admin",
   },
   {
     key: "accounts",
