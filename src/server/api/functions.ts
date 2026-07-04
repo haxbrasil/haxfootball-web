@@ -273,7 +273,7 @@ export const updateRoleFn = createServerFn({ method: "POST" })
 export const disableMatchEventFn = createServerFn({ method: "POST" })
   .inputValidator(disableMatchEventInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("stat:event:disable");
+    await requireApiPermission("stat-event:disable");
 
     const disabled = await disableMatchEvent(data);
 

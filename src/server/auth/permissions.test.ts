@@ -25,7 +25,7 @@ describe("hasApiPermission", () => {
   });
 
   it("allows API bypass roles", () => {
-    expect(hasApiPermission(session({ bypassAllPermissions: true }), "stat:event:disable")).toBe(
+    expect(hasApiPermission(session({ bypassAllPermissions: true }), "stat-event:disable")).toBe(
       true,
     );
   });

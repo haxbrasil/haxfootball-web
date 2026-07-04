@@ -7,7 +7,7 @@ import {
 
 describe("session storage helpers", () => {
   it("round-trips stored API permissions", () => {
-    const permissions = ["room:admin", "stat:event:disable"];
+    const permissions = ["room:admin", "stat-event:disable"];
 
     expect(parseStoredPermissions(serializeStoredPermissions(permissions))).toEqual(permissions);
   });
