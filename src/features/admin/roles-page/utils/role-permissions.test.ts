@@ -1,6 +1,6 @@
 import type { Role } from "@haxbrasil/haxfootball-api-sdk";
 import { describe, expect, it } from "vitest";
-import { rolePermissionKeys, togglePermission } from "./role-permissions";
+import { rolePermissionKeys, samePermissionSelection, togglePermission } from "./role-permissions";
 
 describe("togglePermission", () => {
   it("adds and removes permission keys without duplicates", () => {
@@ -16,12 +16,21 @@ describe("togglePermission", () => {
 });
 
 describe("rolePermissionKeys", () => {
-  it("adds wildcard when the role bypasses all permissions", () => {
+  it("uses only wildcard input when the role bypasses all permissions", () => {
     const role = {
       bypassAllPermissions: true,
       permissions: ["room:admin"],
     } as Role;
 
-    expect(rolePermissionKeys(role)).toEqual(["*", "room:admin"]);
+    expect(rolePermissionKeys(role)).toEqual(["*"]);
+  });
+});
+
+describe("samePermissionSelection", () => {
+  it("compares selections independently from order", () => {
+    expect(
+      samePermissionSelection(["room:admin", "account:admin"], ["account:admin", "room:admin"]),
+    ).toBe(true);
+    expect(samePermissionSelection(["room:admin"], ["room:admin", "account:admin"])).toBe(false);
   });
 });

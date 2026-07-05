@@ -1,13 +1,13 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Role } from "@haxbrasil/haxfootball-api-sdk";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import { createRoleFn, updateRoleFn } from "#/server/api/functions";
-import { rolePermissionKeys } from "../utils/role-permissions";
+import { rolePermissionKeys, samePermissionSelection } from "../utils/role-permissions";
 
-export function useCreateRoleForm() {
+export function useCreateRoleForm({ onCreated }: { onCreated?: (role: Role) => void } = {}) {
   const router = useRouter();
   const createRole = useServerFn(createRoleFn);
   const [message, setMessage] = useState<FormMessage | null>(null);
@@ -41,6 +41,7 @@ export function useCreateRoleForm() {
     setSelectedPermissions([]);
     setMessage({ kind: "success", text: "Cargo criado." });
     await router.invalidate();
+    onCreated?.(result.role);
   }
 
   return {
@@ -55,9 +56,16 @@ export function useCreateRoleForm() {
 export function useUpdateRolePermissionsForm(role: Role) {
   const router = useRouter();
   const updateRole = useServerFn(updateRoleFn);
-  const [selectedPermissions, setSelectedPermissions] = useState(() => rolePermissionKeys(role));
+  const initialPermissions = useMemo(() => rolePermissionKeys(role), [role]);
+  const [selectedPermissions, setSelectedPermissions] = useState(initialPermissions);
   const [message, setMessage] = useState<FormMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isDirty = !samePermissionSelection(selectedPermissions, initialPermissions);
+
+  function reset() {
+    setSelectedPermissions(initialPermissions);
+    setMessage(null);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,6 +96,8 @@ export function useUpdateRolePermissionsForm(role: Role) {
   return {
     isSubmitting,
     message,
+    isDirty,
+    reset,
     selectedPermissions,
     setSelectedPermissions,
     submit,

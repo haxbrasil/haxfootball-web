@@ -605,8 +605,8 @@ export async function listAdminRoleResources(): Promise<AdminRoleResources> {
   }
 
   const [roles, permissions] = await Promise.all([
-    unwrap(client.roles.list()),
-    unwrap(client.permissions.list({ limit: 100 })),
+    listAllRoles(client),
+    listAllPermissions(client),
   ]);
 
   return {
@@ -750,6 +750,56 @@ async function listAllRoomProgramVersions(
 
   do {
     const page = await unwrap(client.rooms.programs.listVersions(programId, { cursor, limit }));
+
+    if (!page) {
+      return emptyPage();
+    }
+
+    items.push(...page.items);
+    cursor = page.page.nextCursor ?? undefined;
+  } while (cursor);
+
+  return {
+    items,
+    page: {
+      limit,
+      nextCursor: null,
+    },
+  };
+}
+
+async function listAllRoles(client: HaxFootballClient): Promise<ListRolesResponse> {
+  const items: ListRolesResponse["items"] = [];
+  const limit = 100;
+  let cursor: string | undefined;
+
+  do {
+    const page = await unwrap(client.roles.list({ cursor, limit }));
+
+    if (!page) {
+      return emptyPage<Role>();
+    }
+
+    items.push(...page.items);
+    cursor = page.page.nextCursor ?? undefined;
+  } while (cursor);
+
+  return {
+    items,
+    page: {
+      limit,
+      nextCursor: null,
+    },
+  };
+}
+
+async function listAllPermissions(client: HaxFootballClient): Promise<ListPermissionsResponse> {
+  const items: ListPermissionsResponse["items"] = [];
+  const limit = 100;
+  let cursor: string | undefined;
+
+  do {
+    const page = await unwrap(client.permissions.list({ cursor, limit }));
 
     if (!page) {
       return emptyPage();
