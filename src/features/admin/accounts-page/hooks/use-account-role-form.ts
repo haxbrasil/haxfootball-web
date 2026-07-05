@@ -1,5 +1,4 @@
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Account } from "@haxbrasil/haxfootball-api-sdk";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,31 +10,40 @@ export function useAccountRoleForm(account: Account) {
   const updateAccountRole = useServerFn(updateAccountRoleFn);
   const [message, setMessage] = useState<FormMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedRoleUuid, setSelectedRoleUuid] = useState(account.role.uuid);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    setSelectedRoleUuid(account.role.uuid);
+  }, [account.role.uuid]);
+
+  async function updateRole(roleUuid: string) {
+    if (roleUuid === selectedRoleUuid || isSubmitting) {
+      return;
+    }
+
+    const previousRoleUuid = selectedRoleUuid;
+    setSelectedRoleUuid(roleUuid);
     setMessage(null);
     setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
     const result = await updateAccountRole({
       data: {
         accountUuid: account.uuid,
-        roleUuid: String(formData.get("roleUuid") ?? ""),
+        roleUuid,
       },
     });
 
     setIsSubmitting(false);
 
     if (!result.ok) {
+      setSelectedRoleUuid(previousRoleUuid);
       setMessage({ kind: "error", text: result.message });
 
       return;
     }
 
-    setMessage({ kind: "success", text: "Cargo atualizado." });
     await router.invalidate();
   }
 
-  return { isSubmitting, message, submit };
+  return { isSubmitting, message, selectedRoleUuid, updateRole };
 }

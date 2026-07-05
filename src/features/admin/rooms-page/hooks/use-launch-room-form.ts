@@ -4,6 +4,7 @@ import { useRouter } from "@tanstack/react-router";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 import {
+  extractGeoLaunchConfigFields,
   getDefaultVersionValue,
   getVersionOptions,
   groupedLaunchConfigFields,
@@ -28,9 +29,13 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
     () => (selectedProgram?.launchConfigFields ?? []) as unknown as WebRoomLaunchConfigField[],
     [selectedProgram],
   );
-  const launchConfigGroups = useMemo(
-    () => groupedLaunchConfigFields(launchConfigFields),
+  const { geoFields, fieldsWithoutGeo } = useMemo(
+    () => extractGeoLaunchConfigFields(launchConfigFields),
     [launchConfigFields],
+  );
+  const launchConfigGroups = useMemo(
+    () => groupedLaunchConfigFields(fieldsWithoutGeo),
+    [fieldsWithoutGeo],
   );
 
   useEffect(() => {
@@ -77,6 +82,7 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
     message,
     programId,
     version,
+    geoFields,
     launchConfigGroups,
     selectedProgram,
     setProgramId,

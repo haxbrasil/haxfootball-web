@@ -8,6 +8,7 @@ import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { localizedTextLabel } from "#/lib/localization/localized-text";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
+import { GeoLaunchConfigField } from "./geo-launch-config-field";
 import { LaunchConfigField } from "./launch-config-field";
 import { useLaunchRoomForm } from "../hooks/use-launch-room-form";
 
@@ -67,8 +68,10 @@ export function LaunchRoomCard({ resources }: { resources: AdminRoomManagementRe
               />
             </div>
 
-            {form.launchConfigGroups.length ? (
+            {form.geoFields || form.launchConfigGroups.length ? (
               <div className="space-y-5 border-t pt-4">
+                {form.geoFields ? <GeoLaunchConfigField fields={form.geoFields} /> : null}
+
                 {form.launchConfigGroups.map((group) => (
                   <fieldset key={group.category} className="space-y-3">
                     <legend className="text-sm font-medium text-foreground">{group.label}</legend>

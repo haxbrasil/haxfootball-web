@@ -15,18 +15,22 @@ import {
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { ScrollArea } from "#/components/ui/scroll-area";
+import type { Language } from "#/server/api/haxfootball";
 import { PermissionChecklist } from "./permission-checklist";
 import { useCreateRoleForm } from "../hooks/use-role-permissions-form";
 
 export function CreateRoleCard({
   permissions,
+  languages,
   onCreated,
 }: {
   permissions: Permission[];
+  languages: Language[];
   onCreated?: (role: Role) => void;
 }) {
   const [open, setOpen] = useState(false);
   const form = useCreateRoleForm({
+    languages,
     onCreated(role) {
       setOpen(false);
       onCreated?.(role);
@@ -49,15 +53,27 @@ export function CreateRoleCard({
 
         <ScrollArea className="min-h-0 pr-3">
           <form className="space-y-4" onSubmit={form.submit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="roleName">Identificador</Label>
-                <Input id="roleName" name="name" required />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="roleName">Identificador</Label>
+              <Input id="roleName" name="name" required />
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="roleTitle">Título</Label>
-                <Input id="roleTitle" name="title" required />
+            <div className="grid gap-3 rounded-md border bg-muted/25 p-3">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Títulos
+              </span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {languages.map((language) => (
+                  <div key={language.code} className="grid gap-2">
+                    <Label htmlFor={`roleTitle-${language.code}`}>{language.name}</Label>
+                    <Input
+                      id={`roleTitle-${language.code}`}
+                      value={form.titleLabels[language.code] ?? ""}
+                      onChange={(event) => form.setTitleLabel(language.code, event.target.value)}
+                      required
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 

@@ -7,6 +7,8 @@ import {
   disableMatchEvent,
   getMatch,
   getMatchMetrics,
+  getAccountByUuid,
+  getRole,
   getRoom,
   getStats,
   getStatsCategoryRankings,
@@ -21,12 +23,14 @@ import {
   listRooms,
   updateAccountRole,
   updateRole,
+  upsertLocalizedValues,
 } from "#/server/api/haxfootball";
 import {
   getCurrentSession,
   requireAnyApiPermission,
   requireApiPermission,
 } from "#/server/auth/session";
+import { canChangeAccountRole } from "#/lib/auth/role-assignment-policy";
 import type { AccountLinkedSessionEntry, ListMatchesResponse } from "./haxfootball";
 
 const idInput = z.object({
@@ -79,17 +83,25 @@ const statsQueryInput = z.object({
 });
 
 const rolePermissionKeys = z.array(z.string().min(1));
+const roleNameInput = z.string().regex(/^[a-z][a-z0-9-]{0,116}$/);
+const roleTitleLabelsInput = z.record(
+  z.string().regex(/^[a-z][a-z0-9-]{1,15}$/),
+  z.string().trim().min(1),
+);
+const localizedValueKeyInput = z.string().regex(/^[a-z][a-z0-9.-]{0,127}$/);
 
 const createRoleInput = z.object({
-  name: z.string().min(1),
+  name: roleNameInput,
   title: z.string().min(1),
+  titleLabels: roleTitleLabelsInput.optional(),
   permissions: rolePermissionKeys,
 });
 
 const updateRoleInput = z.object({
   uuid: z.string().min(1),
   name: z.string().min(1).optional(),
-  title: z.string().min(1).optional(),
+  title: localizedValueKeyInput.optional(),
+  titleLabels: roleTitleLabelsInput.optional(),
   permissions: rolePermissionKeys,
 });
 
@@ -216,9 +228,10 @@ export const getAdminOverviewFn = createServerFn({ method: "GET" }).handler(asyn
 });
 
 export const listAdminAccountResourcesFn = createServerFn({ method: "GET" }).handler(async () => {
-  await requireApiPermission("account:admin");
+  const session = await requireApiPermission("account:admin");
+  const resources = await listAdminAccountResources();
 
-  return listAdminAccountResources();
+  return { ...resources, session };
 });
 
 export const listAdminRoleResourcesFn = createServerFn({ method: "GET" }).handler(async () => {
@@ -230,7 +243,38 @@ export const listAdminRoleResourcesFn = createServerFn({ method: "GET" }).handle
 export const updateAccountRoleFn = createServerFn({ method: "POST" })
   .inputValidator(updateAccountRoleInput)
   .handler(async ({ data }) => {
-    await requireApiPermission("account:admin");
+    const session = await requireApiPermission("account-role:update");
+    const [actorAccount, targetAccount, targetRole] = await Promise.all([
+      getAccountByUuid(session.account.uuid),
+      getAccountByUuid(data.accountUuid),
+      getRole(data.roleUuid),
+    ]);
+
+    if (!actorAccount) {
+      return { ok: false, message: "Sessão inválida." } as const;
+    }
+
+    if (!targetAccount) {
+      return { ok: false, message: "Conta não encontrada." } as const;
+    }
+
+    if (!targetRole) {
+      return { ok: false, message: "Cargo não encontrado." } as const;
+    }
+
+    if (
+      !canChangeAccountRole({
+        actor: actorAccount,
+        targetAccountUuid: targetAccount.uuid,
+        currentRole: targetAccount.role,
+        targetRole,
+      })
+    ) {
+      return {
+        ok: false,
+        message: "Você não pode atribuir esse cargo.",
+      } as const;
+    }
 
     const account = await updateAccountRole(data);
 
@@ -244,7 +288,27 @@ export const createRoleFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireApiPermission("role:admin");
 
-    const role = await createRole(data);
+    const roleTitleKey = data.titleLabels ? `role.${data.name}.title` : data.title;
+
+    if (data.titleLabels) {
+      const localizedValues = await upsertLocalizedValues({
+        values: Object.entries(data.titleLabels).map(([language, label]) => ({
+          value: roleTitleKey,
+          language,
+          label,
+        })),
+      });
+
+      if (!localizedValues) {
+        return { ok: false, message: "Não foi possível salvar os títulos do cargo." } as const;
+      }
+    }
+
+    const role = await createRole({
+      name: data.name,
+      title: roleTitleKey,
+      permissions: data.permissions,
+    });
 
     return role
       ? ({ ok: true, role } as const)
@@ -263,6 +327,7 @@ export const updateRoleFn = createServerFn({ method: "POST" })
         title: data.title,
         permissions: data.permissions,
       },
+      titleLabels: data.titleLabels,
     });
 
     return role

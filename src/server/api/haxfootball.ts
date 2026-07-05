@@ -70,6 +70,10 @@ type RoomArtifact = components["schemas"]["RoomArtifact"];
 type UpsertRoomProgramVersionAliasInput =
   components["schemas"]["UpsertRoomProgramVersionAliasBody"];
 type HaxFootballClient = NonNullable<ReturnType<typeof getApiClient>>;
+type RoleListQuery = PaginationQuery & { language?: string };
+export type Language = components["schemas"]["ListLanguages"]["items"][number];
+export type LocalizedValue = components["schemas"]["Value"];
+type BulkUpsertLocalizedValuesInput = components["schemas"]["BulkUpsertValuesBody"];
 
 export type WebQueryMatchMetricsResponse = Omit<
   QueryMatchMetricsResponse,
@@ -164,6 +168,8 @@ export type AdminAccountResources = {
 export type AdminRoleResources = {
   roles: ListRolesResponse;
   permissions: ListPermissionsResponse;
+  languages: Page<Language>;
+  roleTitleValues: Record<string, LocalizedValue | null>;
 };
 
 export type AdminOverviewResources = {
@@ -596,22 +602,29 @@ export async function listAdminAccountResources(): Promise<AdminAccountResources
 
 export async function listAdminRoleResources(): Promise<AdminRoleResources> {
   const client = getApiClient();
+  const env = getServerEnv();
 
   if (!client) {
     return {
       roles: emptyPage(),
       permissions: emptyPage(),
+      languages: emptyPage<Language>(),
+      roleTitleValues: {},
     };
   }
 
-  const [roles, permissions] = await Promise.all([
-    listAllRoles(client),
+  const [roles, permissions, languages] = await Promise.all([
+    listAllRoles(client, env.LANGUAGE),
     listAllPermissions(client),
+    listAllLanguages(client),
   ]);
+  const roleTitleValues = await listRoleTitleValues(client, roles.items);
 
   return {
     roles: roles ?? emptyPage(),
     permissions: permissions ?? emptyPage(),
+    languages,
+    roleTitleValues,
   };
 }
 
@@ -768,13 +781,16 @@ async function listAllRoomProgramVersions(
   };
 }
 
-async function listAllRoles(client: HaxFootballClient): Promise<ListRolesResponse> {
+async function listAllRoles(
+  client: HaxFootballClient,
+  language?: string,
+): Promise<ListRolesResponse> {
   const items: ListRolesResponse["items"] = [];
   const limit = 100;
   let cursor: string | undefined;
 
   do {
-    const page = await unwrap(client.roles.list({ cursor, limit }));
+    const page = await unwrap(client.roles.list({ cursor, language, limit } as RoleListQuery));
 
     if (!page) {
       return emptyPage<Role>();
@@ -791,6 +807,61 @@ async function listAllRoles(client: HaxFootballClient): Promise<ListRolesRespons
       nextCursor: null,
     },
   };
+}
+
+async function listAllLanguages(client: HaxFootballClient): Promise<Page<Language>> {
+  const items: Language[] = [];
+  const limit = 100;
+  let cursor: string | undefined;
+
+  do {
+    const page = await unwrap(
+      client.request<Page<Language>>({
+        path: "/languages",
+        query: { cursor, limit },
+      }),
+    );
+
+    if (!page) {
+      return emptyPage<Language>();
+    }
+
+    items.push(...page.items);
+    cursor = page.page.nextCursor ?? undefined;
+  } while (cursor);
+
+  return {
+    items,
+    page: {
+      limit,
+      nextCursor: null,
+    },
+  };
+}
+
+async function listRoleTitleValues(
+  client: HaxFootballClient,
+  roles: Role[],
+): Promise<Record<string, LocalizedValue | null>> {
+  const titleKeys = [...new Set(roles.map((role) => role.title.value))].filter(
+    isLocalizationValueKey,
+  );
+  const entries = await Promise.all(
+    titleKeys.map(async (titleKey) => [
+      titleKey,
+      await unwrap(
+        client.request<LocalizedValue>({
+          path: `/values/${encodeURIComponent(titleKey)}`,
+        }),
+      ),
+    ]),
+  );
+
+  return Object.fromEntries(entries);
+}
+
+function isLocalizationValueKey(value: string): boolean {
+  return /^[a-z][a-z0-9.-]{0,127}$/.test(value);
 }
 
 async function listAllPermissions(client: HaxFootballClient): Promise<ListPermissionsResponse> {
@@ -999,19 +1070,60 @@ export async function updateAccountRole(input: {
     : null;
 }
 
+export async function getRole(uuid: string): Promise<Role | null> {
+  const client = getApiClient();
+
+  return client ? unwrap(client.roles.get(uuid)) : null;
+}
+
 export async function createRole(input: CreateRoleInput): Promise<Role | null> {
   const client = getApiClient();
 
   return client ? unwrap(client.roles.create(input)) : null;
 }
 
+export async function upsertLocalizedValues(
+  input: BulkUpsertLocalizedValuesInput,
+): Promise<LocalizedValue[] | null> {
+  const client = getApiClient();
+
+  return client
+    ? unwrap(
+        client.request<LocalizedValue[]>({
+          method: "POST",
+          path: "/values/bulk",
+          body: input,
+        }),
+      )
+    : null;
+}
+
 export async function updateRole(input: {
   uuid: string;
   body: UpdateRoleInput;
+  titleLabels?: Record<string, string>;
 }): Promise<Role | null> {
   const client = getApiClient();
 
-  return client ? unwrap(client.roles.update(input.uuid, input.body)) : null;
+  if (!client) {
+    return null;
+  }
+
+  if (input.titleLabels && input.body.title) {
+    const localizedValues = await upsertLocalizedValues({
+      values: Object.entries(input.titleLabels).map(([language, label]) => ({
+        value: input.body.title as string,
+        language,
+        label,
+      })),
+    });
+
+    if (!localizedValues) {
+      return null;
+    }
+  }
+
+  return unwrap(client.roles.update(input.uuid, input.body));
 }
 
 export async function confirmAccountCredentials(input: {

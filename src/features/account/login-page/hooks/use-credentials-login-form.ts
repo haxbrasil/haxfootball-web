@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { loginWithCredentialsFn } from "#/server/auth/functions";
 import { notifyAccountSessionChanged } from "#/features/account/utils/session-events";
@@ -8,6 +8,7 @@ import { getCredentialsLoginErrorMessage } from "../utils/get-credentials-login-
 
 export function useCredentialsLoginForm() {
   const navigate = useNavigate();
+  const router = useRouter();
   const loginWithCredentials = useServerFn(loginWithCredentialsFn);
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,6 +36,7 @@ export function useCredentialsLoginForm() {
 
       setIsSubmitting(false);
       notifyAccountSessionChanged();
+      await router.invalidate();
       await navigate({ to: "/account" });
     } catch (error) {
       console.error(error);

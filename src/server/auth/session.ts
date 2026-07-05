@@ -17,6 +17,7 @@ import {
   getAccountByUuid,
 } from "#/server/api/haxfootball";
 import { createAuth } from "#/server/auth/auth";
+import { canImpersonateAccount } from "#/lib/auth/impersonation-policy";
 import { hasApiPermission } from "#/server/auth/permissions";
 import {
   isSessionExpired,
@@ -25,7 +26,12 @@ import {
 } from "#/server/auth/session-storage";
 import { getCloudflareEnv } from "#/server/cloudflare";
 import { getDb } from "#/server/db/client";
-import { authAccounts, credentialLoginAttempts, webSessions } from "#/server/db/schema";
+import {
+  authAccounts,
+  credentialLoginAttempts,
+  webImpersonationEvents,
+  webSessions,
+} from "#/server/db/schema";
 
 export { hasApiPermission } from "#/server/auth/permissions";
 
@@ -51,9 +57,26 @@ export type ApiAccountSession = {
       bypassAllPermissions: boolean;
     };
   };
+  impersonation?: {
+    actor: {
+      uuid: string;
+      externalId: string;
+      name: string;
+    };
+    startedAt: string;
+  };
 };
 
 type LoginResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
+type ImpersonationResult =
   | {
       ok: true;
     }
@@ -109,6 +132,155 @@ export async function logoutCurrentSession(): Promise<void> {
   }
 
   deleteCookie("bfl_session", { path: "/" });
+}
+
+export async function startImpersonation(accountUuid: string): Promise<ImpersonationResult> {
+  const actorSession = await getCurrentSession();
+
+  if (!actorSession) {
+    return { ok: false, message: "Entre para visualizar outra conta." };
+  }
+
+  if (actorSession.impersonation) {
+    return { ok: false, message: "Saia da visualização atual antes de iniciar outra." };
+  }
+
+  if (!hasApiPermission(actorSession, "account:impersonate")) {
+    return { ok: false, message: "Você não tem permissão para visualizar outra conta." };
+  }
+
+  if (actorSession.account.uuid === accountUuid) {
+    return { ok: false, message: "Você já está nessa conta." };
+  }
+
+  const targetAccount = await getAccountByUuid(accountUuid);
+
+  if (!targetAccount) {
+    return { ok: false, message: "Conta não encontrada." };
+  }
+
+  if (!canImpersonateAccount({ actor: actorSession.account, target: targetAccount })) {
+    return { ok: false, message: "Essa conta tem permissões que você não pode assumir." };
+  }
+
+  const db = optionalDb();
+
+  if (!db) {
+    return { ok: false, message: "Sessões web não estão disponíveis." };
+  }
+
+  const now = new Date();
+  const token = getCookie("bfl_session") ?? randomToken();
+  const tokenHash = await hashToken(token);
+  const existingSession = await findWebSessionByTokenHash(tokenHash);
+  const expiresAt =
+    existingSession?.expiresAt ?? new Date(now.getTime() + sessionTtlSeconds * 1000);
+
+  if (existingSession) {
+    await db
+      .update(webSessions)
+      .set({
+        apiAccountUuid: targetAccount.uuid,
+        apiAccountExternalId: targetAccount.externalId,
+        apiAccountName: targetAccount.name,
+        apiPermissions: serializeStoredPermissions(targetAccount.role.permissions),
+        apiBypassAllPermissions: targetAccount.role.bypassAllPermissions,
+        impersonatedByAccountUuid: actorSession.account.uuid,
+        impersonatedByAccountExternalId: actorSession.account.externalId,
+        impersonatedByAccountName: actorSession.account.name,
+        impersonationStartedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(webSessions.id, existingSession.id));
+  } else {
+    await db.insert(webSessions).values({
+      id: crypto.randomUUID(),
+      tokenHash,
+      apiAccountUuid: targetAccount.uuid,
+      apiAccountExternalId: targetAccount.externalId,
+      apiAccountName: targetAccount.name,
+      apiPermissions: serializeStoredPermissions(targetAccount.role.permissions),
+      apiBypassAllPermissions: targetAccount.role.bypassAllPermissions,
+      impersonatedByAccountUuid: actorSession.account.uuid,
+      impersonatedByAccountExternalId: actorSession.account.externalId,
+      impersonatedByAccountName: actorSession.account.name,
+      impersonationStartedAt: now,
+      expiresAt,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  setCookie("bfl_session", token, {
+    httpOnly: true,
+    maxAge: Math.max(1, Math.floor((expiresAt.getTime() - now.getTime()) / 1000)),
+    path: "/",
+    sameSite: "lax",
+    secure: isSecureRequest(),
+  });
+
+  await recordImpersonationEvent({
+    kind: "start",
+    actor: actorSession.account,
+    target: targetAccount,
+  });
+
+  return { ok: true };
+}
+
+export async function stopImpersonation(): Promise<ImpersonationResult> {
+  const token = getCookie("bfl_session");
+  const db = optionalDb();
+
+  if (!token || !db) {
+    return { ok: false, message: "Nenhuma visualização ativa." };
+  }
+
+  const session = await findWebSessionByTokenHash(await hashToken(token));
+
+  if (!session?.impersonatedByAccountUuid) {
+    return { ok: false, message: "Nenhuma visualização ativa." };
+  }
+
+  const actorAccount = await getAccountByUuid(session.impersonatedByAccountUuid);
+
+  if (!actorAccount) {
+    await db.delete(webSessions).where(eq(webSessions.id, session.id));
+    deleteCookie("bfl_session", { path: "/" });
+
+    return {
+      ok: false,
+      message: "A conta original não existe mais. Entre novamente.",
+    };
+  }
+
+  await db
+    .update(webSessions)
+    .set({
+      apiAccountUuid: actorAccount.uuid,
+      apiAccountExternalId: actorAccount.externalId,
+      apiAccountName: actorAccount.name,
+      apiPermissions: serializeStoredPermissions(actorAccount.role.permissions),
+      apiBypassAllPermissions: actorAccount.role.bypassAllPermissions,
+      impersonatedByAccountUuid: null,
+      impersonatedByAccountExternalId: null,
+      impersonatedByAccountName: null,
+      impersonationStartedAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(webSessions.id, session.id));
+
+  await recordImpersonationEvent({
+    kind: "stop",
+    actor: actorAccount,
+    target: {
+      uuid: session.apiAccountUuid,
+      externalId: session.apiAccountExternalId,
+      name: session.apiAccountName,
+    },
+  });
+
+  return { ok: true };
 }
 
 export async function getCurrentSession(): Promise<ApiAccountSession | null> {
@@ -178,11 +350,7 @@ async function getCredentialSession(): Promise<ApiAccountSession | null> {
     return null;
   }
 
-  const [session] = await db
-    .select()
-    .from(webSessions)
-    .where(eq(webSessions.tokenHash, await hashToken(token)))
-    .limit(1);
+  const session = await findWebSessionByTokenHash(await hashToken(token));
 
   if (!session) {
     return null;
@@ -195,9 +363,30 @@ async function getCredentialSession(): Promise<ApiAccountSession | null> {
     return null;
   }
 
+  const impersonation = session.impersonatedByAccountUuid
+    ? {
+        actor: {
+          uuid: session.impersonatedByAccountUuid,
+          externalId: session.impersonatedByAccountExternalId ?? "",
+          name: session.impersonatedByAccountName ?? "Conta original",
+        },
+        startedAt: serializeSessionDate(session.impersonationStartedAt ?? session.updatedAt),
+      }
+    : undefined;
   const account = await getAccountByUuid(session.apiAccountUuid);
 
   if (account) {
+    if (impersonation) {
+      const actorAccount = await getAccountByUuid(impersonation.actor.uuid);
+
+      if (!actorAccount || !canImpersonateAccount({ actor: actorAccount, target: account })) {
+        await db.delete(webSessions).where(eq(webSessions.id, session.id));
+        deleteCookie("bfl_session", { path: "/" });
+
+        return null;
+      }
+    }
+
     await db
       .update(webSessions)
       .set({
@@ -209,7 +398,7 @@ async function getCredentialSession(): Promise<ApiAccountSession | null> {
       })
       .where(eq(webSessions.id, session.id));
 
-    return accountSession("credentials", account);
+    return accountSession("credentials", account, impersonation);
   }
 
   return {
@@ -224,6 +413,7 @@ async function getCredentialSession(): Promise<ApiAccountSession | null> {
         bypassAllPermissions: session.apiBypassAllPermissions,
       },
     },
+    impersonation,
   };
 }
 
@@ -303,7 +493,11 @@ async function recordCredentialLoginAttempt(
   }
 }
 
-function accountSession(source: ApiAccountSession["source"], account: Account): ApiAccountSession {
+function accountSession(
+  source: ApiAccountSession["source"],
+  account: Account,
+  impersonation?: ApiAccountSession["impersonation"],
+): ApiAccountSession {
   return {
     source,
     account: {
@@ -316,7 +510,55 @@ function accountSession(source: ApiAccountSession["source"], account: Account): 
         bypassAllPermissions: account.role.bypassAllPermissions,
       },
     },
+    impersonation,
   };
+}
+
+async function findWebSessionByTokenHash(tokenHash: string) {
+  const db = optionalDb();
+
+  if (!db) {
+    return null;
+  }
+
+  const [session] = await db
+    .select()
+    .from(webSessions)
+    .where(eq(webSessions.tokenHash, tokenHash))
+    .limit(1);
+
+  return session ?? null;
+}
+
+async function recordImpersonationEvent(input: {
+  kind: "start" | "stop";
+  actor: Pick<Account, "uuid" | "externalId" | "name">;
+  target: Pick<Account, "uuid" | "externalId" | "name">;
+}): Promise<void> {
+  const db = optionalDb();
+
+  if (!db) {
+    return;
+  }
+
+  try {
+    await db.insert(webImpersonationEvents).values({
+      id: crypto.randomUUID(),
+      kind: input.kind,
+      actorAccountUuid: input.actor.uuid,
+      actorAccountExternalId: input.actor.externalId,
+      actorAccountName: input.actor.name,
+      targetAccountUuid: input.target.uuid,
+      targetAccountExternalId: input.target.externalId,
+      targetAccountName: input.target.name,
+      requestHash: await hashToken(
+        `${getRequestHeader("x-forwarded-for") ?? "local"}:${getRequestHeader("user-agent") ?? ""}`,
+      ),
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.warn("Failed to record impersonation event.", error);
+  }
 }
 
 function optionalDb(): ReturnType<typeof getDb> | null {
@@ -351,4 +593,12 @@ function isSecureRequest(): boolean {
   const request = getRequest();
 
   return new URL(request.url).protocol === "https:";
+}
+
+function serializeSessionDate(value: Date | null | undefined): string {
+  const timestamp = value?.getTime();
+
+  return typeof timestamp === "number" && !Number.isNaN(timestamp)
+    ? new Date(timestamp).toISOString()
+    : new Date().toISOString();
 }

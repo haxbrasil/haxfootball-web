@@ -6,6 +6,7 @@ import { AccountNavLink } from "./account-nav-link";
 import { AdminNavigationLink } from "./admin-navigation-link";
 import { AppLogoLink } from "./app-logo-link";
 import { DesktopNavigation } from "./desktop-navigation";
+import { ImpersonationBanner } from "./impersonation-banner";
 import { MobileNavigation } from "./mobile-navigation";
 import { adminNavigationItem, navigation } from "./navigation";
 
@@ -35,6 +36,7 @@ export function AppShell({
             </div>
           </div>
         </header>
+        {session?.impersonation ? <ImpersonationBanner session={session} /> : null}
 
         <main className="mx-auto w-full max-w-7xl px-4 py-6 pb-20 md:pb-8">{children}</main>
 

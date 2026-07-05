@@ -5,8 +5,14 @@ import { listAdminAccountResourcesFn } from "#/server/api/functions";
 export const Route = createFileRoute("/admin/accounts")({
   loader: () => listAdminAccountResourcesFn(),
   component: () => {
-    const { accounts, roles } = Route.useLoaderData();
+    const data = Route.useLoaderData();
 
-    return <AdminAccountsPage accounts={accounts} roles={roles} />;
+    if (!data?.accounts || !data.roles || !data.session) {
+      return null;
+    }
+
+    const { accounts, roles, session } = data;
+
+    return <AdminAccountsPage accounts={accounts} roles={roles} session={session} />;
   },
 });

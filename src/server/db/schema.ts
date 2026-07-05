@@ -81,6 +81,19 @@ export const credentialLoginAttempts = sqliteTable("credential_login_attempts", 
   succeeded: integer("succeeded", { mode: "boolean" }).notNull(),
 });
 
+export const webImpersonationEvents = sqliteTable("web_impersonation_events", {
+  id: text("id").primaryKey(),
+  kind: text("kind", { enum: ["start", "stop"] }).notNull(),
+  actorAccountUuid: text("actor_account_uuid").notNull(),
+  actorAccountExternalId: text("actor_account_external_id").notNull(),
+  actorAccountName: text("actor_account_name").notNull(),
+  targetAccountUuid: text("target_account_uuid").notNull(),
+  targetAccountExternalId: text("target_account_external_id").notNull(),
+  targetAccountName: text("target_account_name").notNull(),
+  requestHash: text("request_hash").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 export const webSessions = sqliteTable(
   "web_sessions",
   {
@@ -94,6 +107,10 @@ export const webSessions = sqliteTable(
     apiBypassAllPermissions: integer("api_bypass_all_permissions", { mode: "boolean" })
       .notNull()
       .default(false),
+    impersonatedByAccountUuid: text("impersonated_by_account_uuid"),
+    impersonatedByAccountExternalId: text("impersonated_by_account_external_id"),
+    impersonatedByAccountName: text("impersonated_by_account_name"),
+    impersonationStartedAt: integer("impersonation_started_at", { mode: "timestamp" }),
     expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),

@@ -6,18 +6,24 @@ import { SearchField } from "#/components/ds/forms/search-field";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { useFilteredList } from "#/hooks/use-filtered-list";
+import type { Language, LocalizedValue } from "#/server/api/haxfootball";
 import { cn } from "#/lib/utils";
 import { localizedTextLabel } from "#/lib/localization/localized-text";
 import { CreateRoleCard } from "./components/create-role-card";
 import { RolePermissionsCard } from "./components/role-permissions-card";
 import { filterRoles } from "./utils/filter-roles";
+import { roleTitleKey } from "./utils/role-title-localization";
 
 export function AdminRolesPage({
   roles,
   permissions,
+  languages,
+  roleTitleValues,
 }: {
   roles: ListRolesResponse;
   permissions: ListPermissionsResponse;
+  languages: Language[];
+  roleTitleValues: Record<string, LocalizedValue | null>;
 }) {
   const [selectedRoleUuid, setSelectedRoleUuid] = useState<string | null>(
     roles.items[0]?.uuid ?? null,
@@ -45,6 +51,7 @@ export function AdminRolesPage({
         action={
           <CreateRoleCard
             permissions={permissions.items}
+            languages={languages}
             onCreated={(role) => setSelectedRoleUuid(role.uuid)}
           />
         }
@@ -96,6 +103,8 @@ export function AdminRolesPage({
               key={selectedRole.uuid}
               role={selectedRole}
               permissions={permissions.items}
+              languages={languages}
+              localizedValue={roleTitleValues[roleTitleKey(selectedRole)]}
             />
           ) : (
             <EmptyState title="Selecione um cargo" />
@@ -120,8 +129,10 @@ function RoleListItem({
       type="button"
       variant="ghost"
       className={cn(
-        "h-auto w-full justify-start rounded-md border px-3 py-3 text-left",
-        selected ? "border-primary/60 bg-primary/10" : "border-border bg-background/35",
+        "h-auto w-full justify-start rounded-md border px-3 py-3 text-left hover:text-foreground",
+        selected
+          ? "border-primary/60 bg-primary/10 hover:bg-primary/15"
+          : "border-border bg-background/35 hover:bg-background/80",
       )}
       onClick={onSelect}
     >

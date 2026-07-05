@@ -2,6 +2,7 @@ import type { ListAccountsResponse, ListRolesResponse } from "@haxbrasil/haxfoot
 import { PageHeader } from "#/components/ds/app-shell";
 import { SearchField } from "#/components/ds/forms/search-field";
 import { useFilteredList } from "#/hooks/use-filtered-list";
+import type { ApiAccountSession } from "#/server/auth/session";
 import { AccountsTable } from "./components/accounts-table";
 import { filterAccounts } from "./utils/filter-accounts";
 
@@ -10,9 +11,11 @@ export { filterAccounts } from "./utils/filter-accounts";
 export function AdminAccountsPage({
   accounts,
   roles,
+  session,
 }: {
   accounts: ListAccountsResponse;
   roles: ListRolesResponse;
+  session: ApiAccountSession;
 }) {
   const { filteredItems, query, setQuery } = useFilteredList(accounts.items, filterAccounts);
 
@@ -28,7 +31,7 @@ export function AdminAccountsPage({
         placeholder="Nome, Discord ou cargo"
       />
 
-      <AccountsTable accounts={filteredItems} roles={roles} />
+      <AccountsTable accounts={filteredItems} roles={roles} session={session} />
     </>
   );
 }

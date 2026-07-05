@@ -5,6 +5,11 @@ import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 
 export type LaunchConfigValue = string | number | boolean | null;
 export type LaunchConfigCategory = "room" | "game" | "diagnostics" | "infrastructure";
+export type GeoLaunchConfigFields = {
+  geoCode: WebRoomLaunchConfigField;
+  geoLat: WebRoomLaunchConfigField;
+  geoLon: WebRoomLaunchConfigField;
+};
 export type WebRoomLaunchConfigField = Omit<
   RoomLaunchConfigField,
   "displayName" | "description"
@@ -53,6 +58,29 @@ export function readLaunchConfig(formData: FormData, fields: WebRoomLaunchConfig
   }
 
   return Object.fromEntries(entries);
+}
+
+export function extractGeoLaunchConfigFields(fields: WebRoomLaunchConfigField[]): {
+  geoFields: GeoLaunchConfigFields | null;
+  fieldsWithoutGeo: WebRoomLaunchConfigField[];
+} {
+  const geoCode = fields.find((field) => field.key === "geoCode");
+  const geoLat = fields.find((field) => field.key === "geoLat");
+  const geoLon = fields.find((field) => field.key === "geoLon");
+
+  if (!geoCode || !geoLat || !geoLon) {
+    return {
+      geoFields: null,
+      fieldsWithoutGeo: fields,
+    };
+  }
+
+  return {
+    geoFields: { geoCode, geoLat, geoLon },
+    fieldsWithoutGeo: fields.filter(
+      (field) => field.key !== "geoCode" && field.key !== "geoLat" && field.key !== "geoLon",
+    ),
+  };
 }
 
 export function getVersionOptions(

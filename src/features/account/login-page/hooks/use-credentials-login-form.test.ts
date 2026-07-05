@@ -4,6 +4,7 @@ import { useCredentialsLoginForm } from "./use-credentials-login-form";
 
 const loginWithCredentials = vi.fn();
 const navigate = vi.fn();
+const invalidate = vi.fn();
 
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: () => loginWithCredentials,
@@ -11,6 +12,7 @@ vi.mock("@tanstack/react-start", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
+  useRouter: () => ({ invalidate }),
 }));
 
 vi.mock("#/server/auth/functions", () => ({
@@ -21,6 +23,7 @@ describe("useCredentialsLoginForm", () => {
   beforeEach(() => {
     loginWithCredentials.mockReset();
     navigate.mockReset();
+    invalidate.mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
@@ -40,6 +43,7 @@ describe("useCredentialsLoginForm", () => {
 
     expect(result.current.message).toBe("Conta ou senha inválidas.");
     expect(result.current.isSubmitting).toBe(false);
+    expect(invalidate).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -52,6 +56,7 @@ describe("useCredentialsLoginForm", () => {
 
     expect(result.current.message).toBe("Não foi possível entrar agora. Tente novamente.");
     expect(result.current.isSubmitting).toBe(false);
+    expect(invalidate).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -64,6 +69,7 @@ describe("useCredentialsLoginForm", () => {
 
     expect(result.current.message).toBeNull();
     expect(result.current.isSubmitting).toBe(false);
+    expect(invalidate).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith({ to: "/account" });
   });
 });

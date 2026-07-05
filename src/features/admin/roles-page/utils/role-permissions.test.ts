@@ -1,6 +1,11 @@
 import type { Role } from "@haxbrasil/haxfootball-api-sdk";
 import { describe, expect, it } from "vitest";
-import { rolePermissionKeys, samePermissionSelection, togglePermission } from "./role-permissions";
+import {
+  roleFormIsDirty,
+  rolePermissionKeys,
+  samePermissionSelection,
+  togglePermission,
+} from "./role-permissions";
 
 describe("togglePermission", () => {
   it("adds and removes permission keys without duplicates", () => {
@@ -32,5 +37,51 @@ describe("samePermissionSelection", () => {
       samePermissionSelection(["room:admin", "account:admin"], ["account:admin", "room:admin"]),
     ).toBe(true);
     expect(samePermissionSelection(["room:admin"], ["room:admin", "account:admin"])).toBe(false);
+  });
+});
+
+describe("roleFormIsDirty", () => {
+  it("tracks role title changes", () => {
+    expect(
+      roleFormIsDirty({
+        titleLabels: { pt: "Admin", en: "Admin" },
+        initialTitleLabels: { pt: "Moderador", en: "Moderator" },
+        permissions: ["account:admin"],
+        initialPermissions: ["account:admin"],
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores title surrounding whitespace", () => {
+    expect(
+      roleFormIsDirty({
+        titleLabels: { pt: "  Moderador  ", en: "  Moderator  " },
+        initialTitleLabels: { pt: "Moderador", en: "Moderator" },
+        permissions: ["account:admin"],
+        initialPermissions: ["account:admin"],
+      }),
+    ).toBe(false);
+  });
+
+  it("tracks permission changes", () => {
+    expect(
+      roleFormIsDirty({
+        titleLabels: { pt: "Moderador", en: "Moderator" },
+        initialTitleLabels: { pt: "Moderador", en: "Moderator" },
+        permissions: ["account:admin", "role:admin"],
+        initialPermissions: ["account:admin"],
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores permission order", () => {
+    expect(
+      roleFormIsDirty({
+        titleLabels: { pt: "Moderador", en: "Moderator" },
+        initialTitleLabels: { pt: "Moderador", en: "Moderator" },
+        permissions: ["role:admin", "account:admin"],
+        initialPermissions: ["account:admin", "role:admin"],
+      }),
+    ).toBe(false);
   });
 });

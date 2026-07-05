@@ -4,6 +4,8 @@ import {
   getCurrentSession,
   loginWithCredentials,
   logoutCurrentSession,
+  startImpersonation,
+  stopImpersonation,
 } from "#/server/auth/session";
 
 const credentialsInput = z.object({
@@ -19,4 +21,12 @@ export const logoutFn = createServerFn({ method: "POST" }).handler(() => logoutC
 
 export const getCurrentSessionFn = createServerFn({ method: "GET" }).handler(() =>
   getCurrentSession(),
+);
+
+export const startImpersonationFn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ accountUuid: z.string().min(1) }))
+  .handler(({ data }) => startImpersonation(data.accountUuid));
+
+export const stopImpersonationFn = createServerFn({ method: "POST" }).handler(() =>
+  stopImpersonation(),
 );

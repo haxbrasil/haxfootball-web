@@ -1,6 +1,5 @@
 import type { Account, ListRolesResponse } from "@haxbrasil/haxfootball-api-sdk";
-import { FormMessageAlert } from "#/components/ds/forms/form-message";
-import { Button } from "#/components/ui/button";
+import { InlineFormMessage } from "#/components/ds/forms/form-message";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import { localizedTextLabel } from "#/lib/localization/localized-text";
 import { useAccountRoleForm } from "../hooks/use-account-role-form";
@@ -8,32 +7,38 @@ import { useAccountRoleForm } from "../hooks/use-account-role-form";
 export function AccountRoleForm({
   account,
   roles,
+  disabledRoleUuid,
 }: {
   account: Account;
   roles: ListRolesResponse;
+  disabledRoleUuid?: string;
 }) {
   const form = useAccountRoleForm(account);
 
   return (
-    <form className="grid min-w-56 gap-2" onSubmit={form.submit}>
-      <div className="flex gap-2">
-        <NativeSelect
-          name="roleUuid"
-          defaultValue={account.role.uuid}
-          className="min-w-36"
-          aria-label={`Cargo de ${account.name}`}
-        >
-          {roles.items.map((role) => (
-            <NativeSelectOption key={role.uuid} value={role.uuid}>
-              {localizedTextLabel(role.title)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-        <Button size="sm" disabled={form.isSubmitting} type="submit">
-          Salvar
-        </Button>
-      </div>
-      {form.message ? <FormMessageAlert message={form.message} /> : null}
-    </form>
+    <div className="flex min-w-56 flex-wrap items-center gap-2">
+      <NativeSelect
+        value={form.selectedRoleUuid}
+        onChange={(event) => form.updateRole(event.target.value)}
+        disabled={form.isSubmitting}
+        className="min-w-44"
+        aria-label={`Cargo de ${account.name}`}
+      >
+        {roles.items.map((role) => (
+          <NativeSelectOption
+            key={role.uuid}
+            value={role.uuid}
+            disabled={role.uuid === disabledRoleUuid}
+          >
+            {localizedTextLabel(role.title)}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+      {form.isSubmitting ? (
+        <span className="text-xs text-muted-foreground">Salvando...</span>
+      ) : form.message ? (
+        <InlineFormMessage message={form.message} />
+      ) : null}
+    </div>
   );
 }
