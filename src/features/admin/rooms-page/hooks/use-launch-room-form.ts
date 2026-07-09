@@ -12,7 +12,10 @@ import {
   type WebRoomLaunchConfigField,
 } from "../utils/launch-config";
 
-export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
+export function useLaunchRoomForm(
+  resources: AdminRoomManagementResources,
+  options: { onLaunched?: () => void } = {},
+) {
   const router = useRouter();
   const initialProgramId = resources.roomPrograms.items[0]?.id ?? "";
   const [programId, setProgramIdState] = useState(initialProgramId);
@@ -73,8 +76,13 @@ export function useLaunchRoomForm(resources: AdminRoomManagementResources) {
     }
 
     form.reset();
-    setMessage({ kind: "success", text: "Sala lançada." });
     await router.invalidate();
+
+    if (options.onLaunched) {
+      options.onLaunched();
+    } else {
+      setMessage({ kind: "success", text: "Sala lançada." });
+    }
   }
 
   return {
