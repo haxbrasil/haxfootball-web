@@ -22,9 +22,13 @@ import {
   type ListRoomsQuery,
   type ListRoomsResponse,
   type Match,
+  type MatchCompositionInput,
+  type MatchRound,
   type MatchEvent,
   type MatchMetrics,
   type MatchSummary,
+  type PhysicalMatch,
+  type ComposedMatch,
   type Player,
   type QueryMatchMetricsInput,
   type QueryMatchMetricsResponse,
@@ -74,6 +78,23 @@ type RoleListQuery = PaginationQuery & { language?: string };
 export type Language = components["schemas"]["ListLanguages"]["items"][number];
 export type LocalizedValue = components["schemas"]["Value"];
 type BulkUpsertLocalizedValuesInput = components["schemas"]["BulkUpsertValuesBody"];
+type RoomProgramLiveStateContract = NonNullable<RoomProgram["liveStateContract"]>;
+
+export type WebRoomProgram = Omit<RoomProgram, "liveStateContract"> & {
+  liveStateContract:
+    | (Omit<RoomProgramLiveStateContract, "documents"> & {
+        documents: Array<
+          Omit<RoomProgramLiveStateContract["documents"][number], "schema"> & {
+            schema: JsonValue;
+          }
+        >;
+      })
+    | null;
+};
+
+export type WebListRoomProgramsResponse = Omit<ListRoomProgramsResponse, "items"> & {
+  items: WebRoomProgram[];
+};
 
 export type WebQueryMatchMetricsResponse = Omit<
   QueryMatchMetricsResponse,
@@ -94,23 +115,59 @@ export type PublicAccount = Pick<Account, "uuid" | "name" | "createdAt" | "updat
 
 export type ListPublicAccountsResponse = Page<PublicAccount>;
 
-export type WebMatchMetrics = Array<
-  Omit<MatchMetrics[number], "metrics"> & {
-    metrics: Record<string, JsonValue>;
-  }
->;
+type MatchMetricRow = Extract<MatchMetrics, unknown[]>[number];
+type ComposedMatchMetrics = Exclude<MatchMetrics, unknown[]>;
+
+export type WebMatchMetricRow = Omit<MatchMetricRow, "metrics"> & {
+  metrics: Record<string, JsonValue>;
+};
+
+export type WebMatchMetrics =
+  | WebMatchMetricRow[]
+  | {
+      overall: WebMatchMetricRow[];
+      rounds: Array<
+        Omit<ComposedMatchMetrics["rounds"][number], "metrics"> & {
+          metrics: WebMatchMetricRow[];
+        }
+      >;
+    };
 
 export type WebMatchEvent = Omit<MatchEvent, "value"> & {
   value: JsonValue;
 };
 
-export type WebMatch = Omit<Match, "events"> & {
+export type WebPhysicalMatch = Omit<PhysicalMatch, "events"> & {
   events: WebMatchEvent[];
 };
+
+export type WebMatchRound = MatchRound extends infer Round
+  ? Round extends { match: PhysicalMatch }
+    ? Omit<Round, "match"> & { match: WebPhysicalMatch }
+    : never
+  : never;
+
+export type WebComposedMatch = Omit<ComposedMatch, "rounds"> & {
+  rounds: WebMatchRound[];
+};
+
+export type WebMatch = WebPhysicalMatch | WebComposedMatch;
+
+export type WebRoundMatchEvent = {
+  round: MatchRound extends infer Round
+    ? Round extends { match: PhysicalMatch }
+      ? Omit<Round, "match">
+      : never
+    : never;
+  event: WebMatchEvent;
+};
+
+export type WebMatchEventsPage = Page<WebMatchEvent | WebRoundMatchEvent>;
 
 export type MatchDetail = {
   match: WebMatch | null;
   metrics: WebMatchMetrics | null;
+  events: WebMatchEventsPage;
   metricMetadata: WebQueryMatchMetricsResponse["meta"]["availableMetrics"];
   featuredMetrics: WebQueryMatchMetricsResponse["meta"]["featuredMetrics"];
 };
@@ -155,7 +212,7 @@ export type AdminResources = {
   accounts: ListAccountsResponse;
   roles: ListRolesResponse;
   permissions: ListPermissionsResponse;
-  roomPrograms: ListRoomProgramsResponse;
+  roomPrograms: WebListRoomProgramsResponse;
   proxyEndpoints: ListRoomProxyEndpointsResponse;
   eventSchemas: Page<WebEventSchema>;
 };
@@ -181,14 +238,14 @@ export type AdminOverviewResources = {
 export type AdminRoomManagementResources = {
   rooms: ListRoomsResponse;
   roomHistory: ListRoomsResponse;
-  roomPrograms: ListRoomProgramsResponse;
+  roomPrograms: WebListRoomProgramsResponse;
   proxyEndpoints: ListRoomProxyEndpointsResponse;
   versionsByProgramId: Record<string, ListRoomProgramVersionsResponse>;
   aliasesByProgramId: Record<string, Page<RoomProgramVersionAlias>>;
 };
 
 export type AdminRoomProgramResources = {
-  roomPrograms: ListRoomProgramsResponse;
+  roomPrograms: WebListRoomProgramsResponse;
   versionsByProgramId: Record<string, ListRoomProgramVersionsResponse>;
   aliasesByProgramId: Record<string, Page<RoomProgramVersionAlias>>;
 };
@@ -276,13 +333,29 @@ export async function listMatches(query: PaginationQuery = {}): Promise<ListMatc
     : emptyPage();
 }
 
+export async function listAdminMatches(query: PaginationQuery = {}): Promise<ListMatchesResponse> {
+  const client = getApiClient();
+  const env = getServerEnv();
+
+  return client
+    ? ((await unwrap(
+        client.matches.list({
+          ...query,
+          gameMode: env.GAME_MODE_NAME,
+        }),
+      )) ?? emptyPage())
+    : emptyPage();
+}
+
 export async function getMatch(id: string): Promise<WebMatch | null> {
   const client = getApiClient();
 
   return client
-    ? cachedJson(`public:matches:${id}`, 30, async () =>
-        normalizeMatch(await unwrap(client.matches.get(id))),
-      )
+    ? cachedJson(`public:matches:${id}`, 30, async () => {
+        const match = await unwrap(client.matches.get(id));
+
+        return normalizeMatch(client, match);
+      })
     : null;
 }
 
@@ -293,12 +366,7 @@ export async function getMatchMetrics(id: string): Promise<WebMatchMetrics | nul
     ? cachedJson(`public:matches:${id}:metrics`, 30, async () => {
         const metrics = await unwrap(client.matches.getMetrics(id));
 
-        return (
-          metrics?.map((row) => ({
-            ...row,
-            metrics: normalizeJsonRecord(row.metrics),
-          })) ?? null
-        );
+        return normalizeMatchMetrics(metrics);
       })
     : null;
 }
@@ -306,7 +374,7 @@ export async function getMatchMetrics(id: string): Promise<WebMatchMetrics | nul
 export async function listMatchEvents(
   id: string,
   query: PaginationQuery = {},
-): Promise<Page<WebMatchEvent>> {
+): Promise<WebMatchEventsPage> {
   const client = getApiClient();
 
   return client
@@ -316,14 +384,72 @@ export async function listMatchEvents(
         return response
           ? {
               ...response,
-              items: response.items.map((event) => ({
-                ...event,
-                value: normalizeJsonValue(event.value),
-              })),
+              items: response.items.map(normalizeMatchEventItem),
+              page: {
+                limit: Number(response.page.limit),
+                nextCursor: response.page.nextCursor,
+              },
             }
-          : emptyPage<WebMatchEvent>();
+          : emptyPage<WebMatchEvent | WebRoundMatchEvent>();
       })
-    : emptyPage<WebMatchEvent>();
+    : emptyPage<WebMatchEvent | WebRoundMatchEvent>();
+}
+
+export async function getMatchCompositionCandidate(id: string): Promise<WebPhysicalMatch | null> {
+  const client = getApiClient();
+  const match = client ? await unwrap(client.matches.get(id)) : null;
+
+  return match?.kind === "single" ? normalizePhysicalMatch(match) : null;
+}
+
+export async function createMatchComposition(
+  input: MatchCompositionInput,
+): Promise<WebComposedMatch | null> {
+  const client = getApiClient();
+
+  if (!client) {
+    return null;
+  }
+
+  const match = await unwrap(client.matches.createComposition(input));
+
+  await clearMatchCaches([match?.id, ...input.rounds.map((round) => round.matchId)]);
+
+  return match ? hydrateComposedMatch(client, match) : null;
+}
+
+export async function updateMatchComposition(
+  id: string,
+  input: MatchCompositionInput,
+): Promise<WebComposedMatch | null> {
+  const client = getApiClient();
+
+  if (!client) {
+    return null;
+  }
+
+  const match = await unwrap(client.matches.updateComposition(id, input));
+
+  await clearMatchCaches([id, ...input.rounds.map((round) => round.matchId)]);
+
+  return match ? hydrateComposedMatch(client, match) : null;
+}
+
+export async function deleteMatchComposition(id: string): Promise<boolean> {
+  const client = getApiClient();
+  const composition = client ? await unwrap(client.matches.get(id)) : null;
+  const result = client ? await client.matches.deleteComposition(id) : null;
+
+  if (!result?.ok) {
+    return false;
+  }
+
+  await clearMatchCaches([
+    id,
+    ...(composition?.kind === "composed" ? composition.rounds.map((round) => round.matchId) : []),
+  ]);
+
+  return true;
 }
 
 export async function listPublicAccounts(
@@ -573,7 +699,7 @@ export async function listAdminResources(): Promise<AdminResources> {
     accounts: accounts ?? emptyPage<Account>(),
     roles: roles ?? emptyPage(),
     permissions: permissions ?? emptyPage(),
-    roomPrograms: roomPrograms ?? emptyPage(),
+    roomPrograms: normalizeRoomProgramPage(roomPrograms),
     proxyEndpoints: proxyEndpoints ?? emptyPage(),
     eventSchemas: eventSchemas ?? emptyPage<WebEventSchema>(),
   };
@@ -678,7 +804,7 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
     unwrap(client.rooms.proxyEndpoints.list()),
   ]);
 
-  const programs = roomPrograms ?? emptyPage();
+  const programs = normalizeRoomProgramPage(roomPrograms);
   const programEntries = await Promise.all(
     programs.items.map(async (program) => {
       const [versions, aliases] = await Promise.all([
@@ -716,9 +842,9 @@ export async function listAdminRoomProgramResources(): Promise<AdminRoomProgramR
     };
   }
 
-  const programs =
-    (await unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery))) ??
-    emptyPage();
+  const programs = normalizeRoomProgramPage(
+    await unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
+  );
   const programEntries = await Promise.all(
     programs.items.map(async (program) => {
       const [versions, aliases] = await Promise.all([
@@ -940,19 +1066,23 @@ export async function launchRoom(input: CreateRoomInput): Promise<Room | null> {
 
 export async function createRoomProgram(
   input: CreateRoomProgramInput,
-): Promise<RoomProgram | null> {
+): Promise<WebRoomProgram | null> {
   const client = getApiClient();
+  const program = client ? await unwrap(client.rooms.programs.create(input as never)) : null;
 
-  return client ? unwrap(client.rooms.programs.create(input as never)) : null;
+  return program ? normalizeRoomProgram(program) : null;
 }
 
 export async function updateRoomProgram(input: {
   id: string;
   body: UpdateRoomProgramInput;
-}): Promise<RoomProgram | null> {
+}): Promise<WebRoomProgram | null> {
   const client = getApiClient();
+  const program = client
+    ? await unwrap(client.rooms.programs.update(input.id, input.body as never))
+    : null;
 
-  return client ? unwrap(client.rooms.programs.update(input.id, input.body as never)) : null;
+  return program ? normalizeRoomProgram(program) : null;
 }
 
 export async function createRoomProgramVersion(input: {
@@ -1175,16 +1305,138 @@ function normalizeQueryMetricsResponse(
     : null;
 }
 
-function normalizeMatch(match: Match | null): WebMatch | null {
-  return match
-    ? {
-        ...match,
-        events: match.events.map((event) => ({
-          ...event,
-          value: normalizeJsonValue(event.value),
-        })),
+async function normalizeMatch(
+  client: HaxFootballClient,
+  match: Match | null,
+): Promise<WebMatch | null> {
+  if (!match) {
+    return null;
+  }
+
+  return match.kind === "single"
+    ? normalizePhysicalMatch(match)
+    : hydrateComposedMatch(client, match);
+}
+
+function normalizePhysicalMatch(match: PhysicalMatch): WebPhysicalMatch {
+  return {
+    ...match,
+    events: match.events.map(normalizeMatchEvent),
+  };
+}
+
+async function hydrateComposedMatch(
+  client: HaxFootballClient,
+  match: ComposedMatch,
+): Promise<WebComposedMatch> {
+  const hydratedRounds = await Promise.all(
+    match.rounds.map((round) =>
+      round.kind === "extra-time"
+        ? unwrap(client.matches.getExtraTime(match.id))
+        : unwrap(client.matches.getRound(match.id, Number(round.number))),
+    ),
+  );
+
+  return {
+    ...match,
+    rounds: match.rounds.map((round, index) => {
+      const hydratedRound = hydratedRounds[index];
+
+      if (!hydratedRound) {
+        throw new Error(`Could not hydrate match round ${round.matchId}`);
       }
-    : null;
+
+      return {
+        ...round,
+        match: normalizePhysicalMatch(hydratedRound.match),
+      };
+    }),
+  };
+}
+
+function normalizeMatchMetrics(metrics: MatchMetrics | null): WebMatchMetrics | null {
+  if (!metrics) {
+    return null;
+  }
+
+  if (Array.isArray(metrics)) {
+    return metrics.map(normalizeMatchMetricRow);
+  }
+
+  return {
+    overall: metrics.overall.map(normalizeMatchMetricRow),
+    rounds: metrics.rounds.map((round) => ({
+      ...round,
+      metrics: round.metrics.map(normalizeMatchMetricRow),
+    })),
+  };
+}
+
+function normalizeMatchMetricRow(row: MatchMetricRow): WebMatchMetricRow {
+  return {
+    ...row,
+    metrics: normalizeJsonRecord(row.metrics),
+  };
+}
+
+function normalizeMatchEvent(event: MatchEvent): WebMatchEvent {
+  return {
+    ...event,
+    value: normalizeJsonValue(event.value),
+  };
+}
+
+function normalizeMatchEventItem(
+  item: MatchEvent | { round: WebRoundMatchEvent["round"]; event: MatchEvent },
+): WebMatchEvent | WebRoundMatchEvent {
+  return "event" in item
+    ? {
+        round: item.round,
+        event: normalizeMatchEvent(item.event),
+      }
+    : normalizeMatchEvent(item);
+}
+
+function normalizeRoomProgramPage(
+  page: ListRoomProgramsResponse | null,
+): WebListRoomProgramsResponse {
+  return page
+    ? {
+        ...page,
+        items: page.items.map(normalizeRoomProgram),
+      }
+    : emptyPage<WebRoomProgram>();
+}
+
+function normalizeRoomProgram(program: RoomProgram): WebRoomProgram {
+  return {
+    ...program,
+    liveStateContract: program.liveStateContract
+      ? {
+          ...program.liveStateContract,
+          documents: program.liveStateContract.documents.map((document) => ({
+            ...document,
+            schema: normalizeJsonValue(document.schema),
+          })),
+        }
+      : null,
+  };
+}
+
+async function clearMatchCaches(ids: Array<string | null | undefined>) {
+  const gameMode = getServerEnv().GAME_MODE_NAME;
+  const listQueries = [{ gameMode }, { limit: 5, gameMode }, { limit: 50, gameMode }];
+  const matchIds = ids.filter((id): id is string => Boolean(id));
+
+  await Promise.all([
+    ...listQueries.map((query) => deleteCachedJson(`public:matches:${JSON.stringify(query)}`)),
+    deleteCachedJson("public:stats:player:top"),
+    ...matchIds.flatMap((id) => [
+      deleteCachedJson(`public:matches:${id}`),
+      deleteCachedJson(`public:matches:${id}:events:${JSON.stringify({ limit: 100 })}`),
+      deleteCachedJson(`public:matches:${id}:metrics`),
+    ]),
+  ]);
 }
 
 function toPublicAccount(account: Account): PublicAccount {

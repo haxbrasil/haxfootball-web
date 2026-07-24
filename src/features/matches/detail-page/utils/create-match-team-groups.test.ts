@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { MatchDetail } from "#/server/api/haxfootball";
+import type { WebPhysicalMatch } from "#/server/api/haxfootball";
 import { createMatchTeamGroups } from "./create-match-team-groups";
 
-type MatchParticipation = NonNullable<MatchDetail["match"]>["participations"][number];
+type MatchParticipation = WebPhysicalMatch["participations"][number];
 
 const participation = (
   input: Omit<Partial<MatchParticipation>, "player"> & {

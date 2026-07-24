@@ -11,7 +11,11 @@ export function MatchTeamsPanel({ detail }: { detail: MatchDetail }) {
     return null;
   }
 
-  const teams = createMatchTeamGroups(match.participations);
+  const participations =
+    match.kind === "single"
+      ? match.participations
+      : match.rounds.flatMap((round) => round.match.participations);
+  const teams = createMatchTeamGroups(participations);
   const hasScore =
     match.score?.red !== null &&
     match.score?.red !== undefined &&

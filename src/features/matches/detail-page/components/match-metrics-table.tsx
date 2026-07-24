@@ -1,7 +1,7 @@
 import { DataCard, EmptyState } from "#/components/ds/app-shell";
 import { groupMetricKeysByCategory } from "#/lib/stats-metrics/categories";
 import { cn } from "#/lib/utils";
-import type { MatchDetail } from "#/server/api/haxfootball";
+import type { MatchDetail, WebMatchMetricRow } from "#/server/api/haxfootball";
 import { formatStatValue } from "../utils/stat-formatting";
 
 export function MatchMetricsTable({
@@ -9,7 +9,7 @@ export function MatchMetricsTable({
   metricMetadata,
   omittedMetricKeys = [],
 }: {
-  metrics: NonNullable<MatchDetail["metrics"]>;
+  metrics: WebMatchMetricRow[];
   metricMetadata: MatchDetail["metricMetadata"];
   omittedMetricKeys?: string[];
 }) {
@@ -140,7 +140,7 @@ export function MatchMetricsTable({
 }
 
 function getPeakValues(
-  metrics: NonNullable<MatchDetail["metrics"]>,
+  metrics: WebMatchMetricRow[],
   metricKeys: string[],
 ): Record<string, number | undefined> {
   const peaks: Record<string, number | undefined> = {};

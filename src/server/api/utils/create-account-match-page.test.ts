@@ -2,7 +2,12 @@ import type { MatchSummary } from "@haxbrasil/haxfootball-api-sdk";
 import { describe, expect, it } from "vitest";
 import { createAccountMatchPage } from "./create-account-match-page";
 
-const match = (input: Partial<MatchSummary> & Pick<MatchSummary, "id">): MatchSummary => ({
+type SingleMatchSummary = Extract<MatchSummary, { kind: "single" }>;
+
+const match = (
+  input: Partial<SingleMatchSummary> & Pick<SingleMatchSummary, "id">,
+): SingleMatchSummary => ({
+  kind: "single",
   createdAt: input.createdAt ?? "2026-01-01T00:00:00.000Z",
   endedAt: input.endedAt ?? null,
   id: input.id,

@@ -1,7 +1,7 @@
 import type { StatsMetric } from "#/lib/stats-metrics/formatting";
-import type { MatchDetail, WebMatchMetrics } from "#/server/api/haxfootball";
+import type { MatchDetail, WebMatchMetricRow } from "#/server/api/haxfootball";
 
-export type MatchPointsRow = WebMatchMetrics[number] & {
+export type MatchPointsRow = WebMatchMetricRow & {
   points: number | string;
 };
 
@@ -20,7 +20,7 @@ export function getMatchPointsMetric(detail: MatchDetail): StatsMetric | null {
 }
 
 export function getMatchPointsRows(
-  metrics: WebMatchMetrics,
+  metrics: WebMatchMetricRow[],
   pointsMetricKey: string,
 ): MatchPointsRow[] {
   return metrics
@@ -37,7 +37,7 @@ export function getMatchPointsRows(
 }
 
 export function getMatchScoringRows(
-  metrics: WebMatchMetrics,
+  metrics: WebMatchMetricRow[],
   pointsMetricKey: string,
 ): MatchPointsRow[] {
   return getMatchPointsRows(metrics, pointsMetricKey).filter((row) => hasScored(row.points));

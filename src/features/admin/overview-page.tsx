@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, PackageOpen, ShieldCheck, Users, Volleyball } from "lucide-react";
+import { ArrowRight, Layers3, PackageOpen, ShieldCheck, Users, Volleyball } from "lucide-react";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -10,6 +10,7 @@ import type { AdminOverviewResources } from "#/server/api/haxfootball";
 const sectionIcons = {
   rooms: Volleyball,
   "room-programs": PackageOpen,
+  matches: Layers3,
   accounts: Users,
   roles: ShieldCheck,
 } satisfies Record<AdminSectionKey, typeof ShieldCheck>;
@@ -81,6 +82,10 @@ function sectionSummary(section: AdminSectionKey, resources: AdminOverviewResour
 
   if (section === "accounts") {
     return pageCountLabel(resources.accounts, "conta", "contas");
+  }
+
+  if (section === "matches") {
+    return "partidas";
   }
 
   return pageCountLabel(resources.roles, "cargo", "cargos");

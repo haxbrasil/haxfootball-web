@@ -124,15 +124,17 @@ export const getMatchFn = createServerFn({ method: "GET" })
 export const getMatchDetailFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data }) => {
-    const [match, metrics, stats] = await Promise.all([
+    const [match, metrics, events, stats] = await Promise.all([
       getMatch(data.id),
       getMatchMetrics(data.id),
+      listMatchEvents(data.id, { limit: 100 }),
       getStats({ limit: 1 }),
     ]);
 
     return {
       match,
       metrics,
+      events,
       metricMetadata: stats?.meta.availableMetrics ?? [],
       featuredMetrics: stats?.meta.featuredMetrics ?? {},
     };
