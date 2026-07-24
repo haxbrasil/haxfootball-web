@@ -17,7 +17,6 @@ import {
   listAdminAccountResources,
   listAdminOverviewResources,
   listAdminRoleResources,
-  listMatchEvents,
   listMatches,
   listPublicAccounts,
   listRooms,
@@ -60,12 +59,6 @@ const updateAccountRoleInput = z.object({
 const disableMatchEventInput = z.object({
   matchId: z.string().min(1),
   eventId: z.string().min(1),
-});
-
-const matchIdPaginationInput = z.object({
-  matchId: z.string().min(1),
-  cursor: z.string().min(1).optional(),
-  limit: z.number().int().min(1).max(100).optional(),
 });
 
 const statsQueryInput = z.object({
@@ -124,28 +117,18 @@ export const getMatchFn = createServerFn({ method: "GET" })
 export const getMatchDetailFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data }) => {
-    const [match, metrics, events, stats] = await Promise.all([
+    const [match, metrics, stats] = await Promise.all([
       getMatch(data.id),
       getMatchMetrics(data.id),
-      listMatchEvents(data.id, { limit: 100 }),
       getStats({ limit: 1 }),
     ]);
 
     return {
       match,
       metrics,
-      events,
       metricMetadata: stats?.meta.availableMetrics ?? [],
       featuredMetrics: stats?.meta.featuredMetrics ?? {},
     };
-  });
-
-export const listMatchEventsFn = createServerFn({ method: "GET" })
-  .inputValidator(matchIdPaginationInput)
-  .handler(({ data }) => {
-    const { matchId, ...query } = data;
-
-    return listMatchEvents(matchId, query);
   });
 
 export const listPublicAccountsFn = createServerFn({ method: "GET" })
