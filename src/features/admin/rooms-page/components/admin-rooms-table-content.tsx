@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { EmptyState } from "#/components/ds/app-shell/empty-state";
 import { ResourceTable } from "#/components/ds/resource-table";
 import { StatusBadge } from "#/components/ds/status-badge";
+import { roomDisplayName } from "#/features/rooms/room-display-name";
 import { localizedTextLabel } from "#/lib/localization/localized-text";
 import { useCloseRoomAction } from "../hooks/use-close-room-action";
 import { RoomActions } from "./room-actions";
@@ -19,6 +20,19 @@ export function AdminRoomsTableContent({ rooms }: { rooms: Room[] }) {
     <ResourceTable
       rows={rooms}
       columns={[
+        {
+          key: "room",
+          title: "Sala",
+          cell: (room) => {
+            const name = roomDisplayName(room);
+
+            return (
+              <span className="block max-w-72 truncate font-medium" title={name}>
+                {name}
+              </span>
+            );
+          },
+        },
         {
           key: "program",
           title: "Programa",
