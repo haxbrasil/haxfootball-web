@@ -15,8 +15,8 @@ importers:
         specifier: ^1.16.1
         version: 1.37.2(vite@8.0.13(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3))(workerd@1.20260518.1)(wrangler@4.93.0)
       '@haxbrasil/haxfootball-api-sdk':
-        specifier: github:haxbrasil/haxfootball-api-sdk
-        version: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/7a3ed5dafba79780cf69649d4d790a36e16b2a45
+        specifier: github:haxbrasil/haxfootball-api-sdk#cf825de2ee183c358b5f6dd4d74928afbed1ecad
+        version: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/cf825de2ee183c358b5f6dd4d74928afbed1ecad
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.76.0(react@19.2.6))
@@ -1443,8 +1443,8 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/7a3ed5dafba79780cf69649d4d790a36e16b2a45':
-    resolution: {gitHosted: true, integrity: sha512-2FkIAgHihByAS8GHKGok4odoVRnjNb1W0uRaVzKz+QNe4zzfksaSq/16wWTGrA3aZVgKk3k8T4EsTUj44RVI/w==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/7a3ed5dafba79780cf69649d4d790a36e16b2a45}
+  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/cf825de2ee183c358b5f6dd4d74928afbed1ecad':
+    resolution: {gitHosted: true, integrity: sha512-5T/uaYAkdNboJx1cFaoC+MXuEHaetFPnUhP0VS/YweS90Ti/qnoYAmvRPTgnzYIqvIm7aXIx26BpGsNJ2hnuMQ==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/cf825de2ee183c358b5f6dd4d74928afbed1ecad}
     version: 0.1.0
     engines: {node: '>=20'}
 
@@ -6261,7 +6261,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/7a3ed5dafba79780cf69649d4d790a36e16b2a45': {}
+  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/cf825de2ee183c358b5f6dd4d74928afbed1ecad': {}
 
   '@hookform/resolvers@5.2.2(react-hook-form@7.76.0(react@19.2.6))':
     dependencies:

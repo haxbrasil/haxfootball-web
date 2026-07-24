@@ -21,6 +21,7 @@ import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
 import { Route as AdminRoomsRouteImport } from './routes/admin/rooms'
 import { Route as AdminRoomProgramsRouteImport } from './routes/admin/room-programs'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
+import { Route as AdminMatchesRouteImport } from './routes/admin/matches'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AccountLoginRouteImport } from './routes/account/login'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -87,6 +88,11 @@ const AdminRolesRoute = AdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminMatchesRoute = AdminMatchesRouteImport.update({
+  id: '/admin/matches',
+  path: '/admin/matches',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAccountsRoute = AdminAccountsRouteImport.update({
   id: '/admin/accounts',
   path: '/admin/accounts',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/matches': typeof AdminMatchesRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/matches': typeof AdminMatchesRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/matches': typeof AdminMatchesRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account/login'
     | '/admin/accounts'
+    | '/admin/matches'
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account/login'
     | '/admin/accounts'
+    | '/admin/matches'
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account/login'
     | '/admin/accounts'
+    | '/admin/matches'
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountLoginRoute: typeof AccountLoginRoute
   AdminAccountsRoute: typeof AdminAccountsRoute
+  AdminMatchesRoute: typeof AdminMatchesRoute
   AdminRolesRoute: typeof AdminRolesRoute
   AdminRoomProgramsRoute: typeof AdminRoomProgramsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
@@ -337,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRolesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/matches': {
+      id: '/admin/matches'
+      path: '/admin/matches'
+      fullPath: '/admin/matches'
+      preLoaderRoute: typeof AdminMatchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/accounts': {
       id: '/admin/accounts'
       path: '/admin/accounts'
@@ -379,6 +399,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountLoginRoute: AccountLoginRoute,
   AdminAccountsRoute: AdminAccountsRoute,
+  AdminMatchesRoute: AdminMatchesRoute,
   AdminRolesRoute: AdminRolesRoute,
   AdminRoomProgramsRoute: AdminRoomProgramsRoute,
   AdminRoomsRoute: AdminRoomsRoute,

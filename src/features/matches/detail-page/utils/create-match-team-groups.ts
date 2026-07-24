@@ -1,6 +1,6 @@
-import type { MatchDetail } from "#/server/api/haxfootball";
+import type { WebPhysicalMatch } from "#/server/api/haxfootball";
 
-type MatchParticipation = NonNullable<MatchDetail["match"]>["participations"][number];
+type MatchParticipation = WebPhysicalMatch["participations"][number];
 
 export type MatchTeamGroups = {
   red: MatchParticipation[];
