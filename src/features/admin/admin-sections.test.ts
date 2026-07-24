@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canAccessImplementedAdmin, visibleAdminSections } from "#/features/admin/admin-sections";
+import {
+  adminSections,
+  canAccessImplementedAdmin,
+  visibleAdminSections,
+} from "#/features/admin/admin-sections";
 import type { ApiAccountSession } from "#/server/auth/session";
 
 function session(input: {
@@ -46,5 +50,14 @@ describe("visibleAdminSections", () => {
 
     expect(visibleAdminSections(unrelatedSession)).toEqual([]);
     expect(canAccessImplementedAdmin(unrelatedSession)).toBe(false);
+  });
+
+  it("describes matches as a general administrative resource", () => {
+    const matchesSection = adminSections.find((section) => section.key === "matches");
+
+    expect(matchesSection?.title).toBe("Partidas");
+    expect(matchesSection?.description).toBe(
+      "Consultar partidas e executar operações administrativas.",
+    );
   });
 });

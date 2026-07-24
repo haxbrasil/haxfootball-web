@@ -34,7 +34,7 @@ export const adminSections = [
   {
     key: "matches",
     title: "Partidas",
-    description: "Vincular partidas como tempos e prorrogação.",
+    description: "Consultar partidas e executar operações administrativas.",
     href: "/admin/matches",
     permission: "match:admin",
   },
