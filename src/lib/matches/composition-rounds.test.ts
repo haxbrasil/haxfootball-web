@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   matchRoundLabel,
+  summarizeCompositionRounds,
   toMatchCompositionRounds,
   validateCompositionRoundDrafts,
 } from "./composition-rounds";
@@ -23,6 +24,23 @@ describe("match composition rounds", () => {
       { kind: "sequential", number: 2, matchId: "match002" },
       { kind: "extra-time", number: null, matchId: "match003" },
     ]);
+  });
+
+  it("summarizes sequential rounds and extra time independently", () => {
+    expect(
+      summarizeCompositionRounds([
+        { kind: "sequential" },
+        { kind: "sequential" },
+        { kind: "extra-time" },
+      ]),
+    ).toEqual({
+      sequentialRoundCount: 2,
+      hasExtraTime: true,
+    });
+    expect(summarizeCompositionRounds([{ kind: "sequential" }, { kind: "sequential" }])).toEqual({
+      sequentialRoundCount: 2,
+      hasExtraTime: false,
+    });
   });
 
   it("rejects too few, duplicate, multiple, and misplaced extra-time rounds", () => {

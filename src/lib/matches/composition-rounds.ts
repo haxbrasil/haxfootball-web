@@ -25,6 +25,16 @@ export function matchRoundLabel(
   return `${Number(round.number)}º tempo`;
 }
 
+export function summarizeCompositionRounds(rounds: Array<{ kind: "sequential" | "extra-time" }>): {
+  sequentialRoundCount: number;
+  hasExtraTime: boolean;
+} {
+  return {
+    sequentialRoundCount: rounds.filter((round) => round.kind === "sequential").length,
+    hasExtraTime: rounds.some((round) => round.kind === "extra-time"),
+  };
+}
+
 export function validateCompositionRoundDrafts(rounds: CompositionRoundDraft[]): string | null {
   if (rounds.length < 2) {
     return "Selecione pelo menos duas partidas.";
