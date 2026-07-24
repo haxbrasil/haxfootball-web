@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DataCard, PageHeader } from "./app-shell";
+import { DataCard } from "./app-shell/data-card";
+import { PageHeader } from "./app-shell/page-header";
 
 const meta = {
   title: "DS/PageHeader",

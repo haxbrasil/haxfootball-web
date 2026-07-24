@@ -1,12 +1,15 @@
 import { Sparkles, Trophy } from "lucide-react";
 import type { MatchDetail } from "#/server/api/haxfootball";
+import { overallMatchMetricRows } from "#/lib/matches/match-metrics";
 import { MatchPointsLeaderboard } from "./match-points-leaderboard";
 import { SingleScorerPointsCard } from "./single-scorer-points-card";
 import { getMatchPointsMetric, getMatchScoringRows } from "../utils/match-points";
 
 export function MatchPointsPanel({ detail }: { detail: MatchDetail }) {
   const pointsMetric = getMatchPointsMetric(detail);
-  const rows = pointsMetric ? getMatchScoringRows(detail.metrics ?? [], pointsMetric.key) : [];
+  const rows = pointsMetric
+    ? getMatchScoringRows(overallMatchMetricRows(detail.metrics), pointsMetric.key)
+    : [];
 
   if (!pointsMetric || rows.length === 0) {
     return null;

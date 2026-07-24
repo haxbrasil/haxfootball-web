@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { WebMatchMetrics } from "#/server/api/haxfootball";
+import type { WebMatchMetricRow } from "#/server/api/haxfootball";
 import { createRankedPointsRows, getMatchScoringRows } from "./match-points";
 
 function pointsRow(input: {
   id: string;
   name: string;
   points: number | string;
-}): WebMatchMetrics[number] {
+}): WebMatchMetricRow {
   return {
     metrics: {
       points: input.points,
@@ -20,7 +20,7 @@ function pointsRow(input: {
       name: input.name,
       updatedAt: "2026-01-01T00:00:00.000Z",
     },
-  } as WebMatchMetrics[number];
+  } as WebMatchMetricRow;
 }
 
 describe("match points", () => {

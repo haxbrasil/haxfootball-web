@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MatchCode } from "#/components/ds/match-code";
 import { MatchStatusBadge } from "#/components/ds/match-status-badge";
 import { Scoreline } from "#/components/ds/scoreline";
+import { Badge } from "#/components/ui/badge";
 import { formatDateTime } from "#/lib/date/format-date-time";
 import { cn } from "#/lib/utils";
 
@@ -12,6 +13,8 @@ type MatchSummaryLinkMatch = {
   initiatedAt: string | null;
   score?: { red?: number | string | null; blue?: number | string | null } | null;
   status: string;
+  kind?: "single" | "composed";
+  rounds?: unknown[];
 };
 
 export function MatchSummaryLink({
@@ -33,6 +36,9 @@ export function MatchSummaryLink({
             <MatchCode id={match.id} />
           </h3>
           <MatchStatusBadge value={match.status} />
+          {match.kind === "composed" ? (
+            <Badge variant="secondary">{match.rounds?.length ?? 0} tempos</Badge>
+          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">{formatDateTime(match.initiatedAt)}</p>
       </div>
