@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { ListMatchesResponse, MatchSummary } from "@haxbrasil/haxfootball-api-sdk";
-import { Eye, Layers3, Undo2 } from "lucide-react";
+import { Eye, Layers3 } from "lucide-react";
 import { EmptyState } from "#/components/ds/app-shell/empty-state";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
 import { SearchField } from "#/components/ds/forms/search-field";
@@ -10,17 +10,6 @@ import { MatchCode } from "#/components/ds/match-code";
 import { MatchStatusBadge } from "#/components/ds/match-status-badge";
 import { ResourceTable } from "#/components/ds/resource-table";
 import { Scoreline } from "#/components/ds/scoreline";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { summarizeCompositionRounds } from "#/lib/matches/composition-rounds";
@@ -41,7 +30,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
   const [query, setQuery] = useState("");
   const [compositionTarget, setCompositionTarget] = useState<CompositionTarget>(null);
   const [compositionDialogOpen, setCompositionDialogOpen] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
@@ -56,7 +44,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
 
   function openComposition(target: CompositionTarget) {
     setCompositionTarget(target);
-    setMessage(null);
     setCompositionDialogOpen(true);
   }
 
@@ -67,16 +54,15 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
 
   async function unbind(id: string) {
     setIsBusy(true);
-    setMessage(null);
     const result = await unbindComposition({ data: { id } });
     setIsBusy(false);
 
     if (!result.ok) {
-      setMessage(result.message);
-      return;
+      return result;
     }
 
     await router.invalidate();
+    return result;
   }
 
   async function loadMore() {
@@ -117,8 +103,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
         placeholder="ID, estado ou tipo"
       />
 
-      {message ? <p className="mb-4 text-sm text-destructive">{message}</p> : null}
-
       {filteredMatches.length === 0 ? (
         <EmptyState title="Nenhuma partida encontrada" />
       ) : (
@@ -128,7 +112,7 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
             {
               key: "match",
               title: "Partida",
-              cell: (match) => <MatchCode id={match.id} />,
+              cell: (match) => <MatchIdentityCell match={match} />,
             },
             {
               key: "status",
@@ -143,11 +127,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
               ),
             },
             {
-              key: "rounds",
-              title: "Tempos",
-              cell: (match) => <MatchRoundsCell match={match} />,
-            },
-            {
               key: "actions",
               title: "Ações",
               cell: (match) => (
@@ -155,7 +134,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
                   match={match}
                   isBusy={isBusy}
                   onCompose={() => openComposition(match)}
-                  onUnbind={() => void unbind(match.id)}
                 />
               ),
             },
@@ -177,24 +155,30 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
         candidates={singleMatches}
         onOpenChange={setCompositionDialogOpen}
         onSaved={refreshMatches}
+        onUnbind={unbind}
       />
     </>
   );
 }
 
-function MatchRoundsCell({ match }: { match: MatchSummary }) {
+function MatchIdentityCell({ match }: { match: MatchSummary }) {
   if (match.kind === "single") {
-    return <span className="text-sm text-muted-foreground">—</span>;
+    return <MatchCode id={match.id} />;
   }
 
   const { sequentialRoundCount, hasExtraTime } = summarizeCompositionRounds(match.rounds);
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <Badge variant="secondary">
+    <div className="flex flex-wrap items-center gap-2">
+      <MatchCode id={match.id} />
+      <Badge variant="outline" className="bg-muted/40 text-muted-foreground">
         {sequentialRoundCount} {sequentialRoundCount === 1 ? "tempo" : "tempos"}
       </Badge>
-      {hasExtraTime ? <Badge variant="outline">Prorrogação</Badge> : null}
+      {hasExtraTime ? (
+        <Badge variant="outline" className="bg-muted/40 text-muted-foreground">
+          Prorrogação
+        </Badge>
+      ) : null}
     </div>
   );
 }
@@ -203,47 +187,23 @@ function MatchActions({
   match,
   isBusy,
   onCompose,
-  onUnbind,
 }: {
   match: MatchSummary;
   isBusy: boolean;
   onCompose: () => void;
-  onUnbind: () => void;
 }) {
   return (
     <div className="flex flex-wrap justify-end gap-2">
+      <Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={onCompose}>
+        <Layers3 className="size-4" />
+        {match.kind === "composed" ? "Gerenciar vínculo" : "Vincular"}
+      </Button>
       <Button asChild type="button" size="sm" variant="ghost">
         <Link to="/matches/$matchId" params={{ matchId: match.id }}>
           <Eye className="size-4" />
           Ver
         </Link>
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={onCompose}>
-        <Layers3 className="size-4" />
-        {match.kind === "composed" ? "Gerenciar vínculo" : "Vincular"}
-      </Button>
-      {match.kind === "composed" ? (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button type="button" size="sm" variant="outline" disabled={isBusy}>
-              <Undo2 className="size-4" />
-              Desvincular
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Desvincular os tempos?</AlertDialogTitle>
-              <AlertDialogDescription>
-                A partida composta deixa de existir e as partidas físicas voltam à lista.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={onUnbind}>Desvincular</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
     </div>
   );
 }

@@ -9,12 +9,14 @@ import {
   Search,
   Sparkles,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import { MatchCode } from "#/components/ds/match-code";
 import { Scoreline } from "#/components/ds/scoreline";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -67,12 +69,14 @@ export function MatchCompositionDialog({
   candidates,
   onOpenChange,
   onSaved,
+  onUnbind,
 }: {
   open: boolean;
   target: CompositionTarget;
   candidates: SingleMatchSummary[];
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
+  onUnbind: (id: string) => Promise<{ ok: true; data?: unknown } | { ok: false; message: string }>;
 }) {
   const findCandidate = useServerFn(findMatchCompositionCandidateFn);
   const saveComposition = useServerFn(saveMatchCompositionFn);
@@ -80,6 +84,8 @@ export function MatchCompositionDialog({
   const [searchId, setSearchId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [unbindError, setUnbindError] = useState<string | null>(null);
+  const [unbindConfirmationOpen, setUnbindConfirmationOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const editingId = target?.kind === "composed" ? target.id : null;
   const selectedIds = useMemo(
@@ -109,6 +115,8 @@ export function MatchCompositionDialog({
     setSearchId("");
     setMessage(null);
     setSaveError(null);
+    setUnbindError(null);
+    setUnbindConfirmationOpen(false);
   }, [open, target]);
 
   function addRound(match: SingleMatchSummary | PhysicalMatch) {
@@ -216,6 +224,25 @@ export function MatchCompositionDialog({
     }
 
     await onSaved();
+    onOpenChange(false);
+  }
+
+  async function unbind() {
+    if (!editingId) {
+      return;
+    }
+
+    setIsBusy(true);
+    const result = await onUnbind(editingId);
+    setIsBusy(false);
+
+    if (!result.ok) {
+      setUnbindConfirmationOpen(false);
+      setUnbindError(result.message);
+      return;
+    }
+
+    setUnbindConfirmationOpen(false);
     onOpenChange(false);
   }
 
@@ -455,14 +482,28 @@ export function MatchCompositionDialog({
 
           {message ? <p className="text-sm text-destructive">{message}</p> : null}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" disabled={isBusy} onClick={() => void save()}>
-              <Layers3 className="size-4" />
-              {editingId ? "Salvar vínculo" : "Criar vínculo"}
-            </Button>
+          <DialogFooter className={editingId ? "sm:justify-between" : undefined}>
+            {editingId ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                disabled={isBusy}
+                onClick={() => setUnbindConfirmationOpen(true)}
+              >
+                <Undo2 className="size-4" />
+                Desvincular
+              </Button>
+            ) : null}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" disabled={isBusy} onClick={() => void save()}>
+                <Layers3 className="size-4" />
+                {editingId ? "Salvar vínculo" : "Criar vínculo"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -475,6 +516,39 @@ export function MatchCompositionDialog({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setSaveError(null)}>Entendi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={unbindConfirmationOpen} onOpenChange={setUnbindConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desvincular os tempos?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A partida composta deixa de existir e as partidas físicas voltam à lista.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBusy}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isBusy}
+              onClick={() => void unbind()}
+            >
+              Desvincular
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={unbindError !== null} onOpenChange={() => setUnbindError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Não foi possível desvincular as partidas</AlertDialogTitle>
+            <AlertDialogDescription>{unbindError}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setUnbindError(null)}>Entendi</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

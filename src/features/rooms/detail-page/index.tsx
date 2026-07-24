@@ -4,6 +4,7 @@ import { LeagueHeader } from "#/components/ds/league-header";
 import { StatusBadge } from "#/components/ds/status-badge";
 import { Button } from "#/components/ui/button";
 import { formatDateTime } from "#/lib/date/format-date-time";
+import { roomDisplayName } from "../room-display-name";
 
 export function RoomDetailPage({
   room,
@@ -19,7 +20,7 @@ export function RoomDetailPage({
   return (
     <>
       <LeagueHeader
-        title={room.program?.name ?? room.id}
+        title={roomDisplayName(room)}
         eyebrow={null}
         showBrand={false}
         description={description}
@@ -36,6 +37,10 @@ export function RoomDetailPage({
           <div>
             <dt className="text-muted-foreground">ID</dt>
             <dd>{room.id}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Programa</dt>
+            <dd>{room.program.name}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Versão</dt>
