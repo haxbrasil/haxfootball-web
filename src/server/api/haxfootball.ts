@@ -151,6 +151,16 @@ export type WebComposedMatch = Omit<ComposedMatch, "rounds"> & {
   rounds: WebMatchRound[];
 };
 
+export type MatchCompositionMutationResult =
+  | {
+      ok: true;
+      composition: WebComposedMatch;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
 export type WebMatch = WebPhysicalMatch | WebComposedMatch;
 
 export type WebRoundMatchEvent = {
@@ -404,35 +414,61 @@ export async function getMatchCompositionCandidate(id: string): Promise<WebPhysi
 
 export async function createMatchComposition(
   input: MatchCompositionInput,
-): Promise<WebComposedMatch | null> {
+): Promise<MatchCompositionMutationResult> {
   const client = getApiClient();
 
   if (!client) {
-    return null;
+    return {
+      ok: false,
+      message: "The API client is not configured",
+    };
   }
 
-  const match = await unwrap(client.matches.createComposition(input));
+  const result = await client.matches.createComposition(input);
 
-  await clearMatchCaches([match?.id, ...input.rounds.map((round) => round.matchId)]);
+  if (!result.ok) {
+    return {
+      ok: false,
+      message: result.error.message,
+    };
+  }
 
-  return match ? hydrateComposedMatch(client, match) : null;
+  await clearMatchCaches([result.data.id, ...input.rounds.map((round) => round.matchId)]);
+
+  return {
+    ok: true,
+    composition: await hydrateComposedMatch(client, result.data),
+  };
 }
 
 export async function updateMatchComposition(
   id: string,
   input: MatchCompositionInput,
-): Promise<WebComposedMatch | null> {
+): Promise<MatchCompositionMutationResult> {
   const client = getApiClient();
 
   if (!client) {
-    return null;
+    return {
+      ok: false,
+      message: "The API client is not configured",
+    };
   }
 
-  const match = await unwrap(client.matches.updateComposition(id, input));
+  const result = await client.matches.updateComposition(id, input);
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      message: result.error.message,
+    };
+  }
 
   await clearMatchCaches([id, ...input.rounds.map((round) => round.matchId)]);
 
-  return match ? hydrateComposedMatch(client, match) : null;
+  return {
+    ok: true,
+    composition: await hydrateComposedMatch(client, result.data),
+  };
 }
 
 export async function deleteMatchComposition(id: string): Promise<boolean> {

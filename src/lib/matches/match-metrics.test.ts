@@ -38,7 +38,12 @@ describe("overallMatchMetricRows", () => {
       ],
       rounds: [
         {
-          round: { kind: "sequential", matchId: "match001", number: 1 },
+          round: {
+            kind: "sequential",
+            matchId: "match001",
+            number: 1,
+            orientation: "aligned",
+          },
           metrics: [],
         },
       ],
