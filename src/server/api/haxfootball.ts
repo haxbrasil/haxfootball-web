@@ -163,21 +163,9 @@ export type MatchCompositionMutationResult =
 
 export type WebMatch = WebPhysicalMatch | WebComposedMatch;
 
-export type WebRoundMatchEvent = {
-  round: MatchRound extends infer Round
-    ? Round extends { match: PhysicalMatch }
-      ? Omit<Round, "match">
-      : never
-    : never;
-  event: WebMatchEvent;
-};
-
-export type WebMatchEventsPage = Page<WebMatchEvent | WebRoundMatchEvent>;
-
 export type MatchDetail = {
   match: WebMatch | null;
   metrics: WebMatchMetrics | null;
-  events: WebMatchEventsPage;
   metricMetadata: WebQueryMatchMetricsResponse["meta"]["availableMetrics"];
   featuredMetrics: WebQueryMatchMetricsResponse["meta"]["featuredMetrics"];
 };
@@ -379,30 +367,6 @@ export async function getMatchMetrics(id: string): Promise<WebMatchMetrics | nul
         return normalizeMatchMetrics(metrics);
       })
     : null;
-}
-
-export async function listMatchEvents(
-  id: string,
-  query: PaginationQuery = {},
-): Promise<WebMatchEventsPage> {
-  const client = getApiClient();
-
-  return client
-    ? cachedJson(`public:matches:${id}:events:${JSON.stringify(query)}`, 30, async () => {
-        const response = await unwrap(client.matches.listEvents(id, query));
-
-        return response
-          ? {
-              ...response,
-              items: response.items.map(normalizeMatchEventItem),
-              page: {
-                limit: Number(response.page.limit),
-                nextCursor: response.page.nextCursor,
-              },
-            }
-          : emptyPage<WebMatchEvent | WebRoundMatchEvent>();
-      })
-    : emptyPage<WebMatchEvent | WebRoundMatchEvent>();
 }
 
 export async function getMatchCompositionCandidate(id: string): Promise<WebPhysicalMatch | null> {
@@ -1420,17 +1384,6 @@ function normalizeMatchEvent(event: MatchEvent): WebMatchEvent {
     ...event,
     value: normalizeJsonValue(event.value),
   };
-}
-
-function normalizeMatchEventItem(
-  item: MatchEvent | { round: WebRoundMatchEvent["round"]; event: MatchEvent },
-): WebMatchEvent | WebRoundMatchEvent {
-  return "event" in item
-    ? {
-        round: item.round,
-        event: normalizeMatchEvent(item.event),
-      }
-    : normalizeMatchEvent(item);
 }
 
 function normalizeRoomProgramPage(

@@ -6,7 +6,6 @@ import { formatMatchCode } from "#/lib/matches/format-match-code";
 import { overallMatchMetricRows } from "#/lib/matches/match-metrics";
 import type { MatchDetail } from "#/server/api/haxfootball";
 import { MatchMetricsTable } from "./components/match-metrics-table";
-import { MatchEventsPanel } from "./components/match-events-panel";
 import { MatchPointsPanel } from "./components/match-points-panel";
 import { MatchRoundsPanel } from "./components/match-rounds-panel";
 import { MatchTeamsPanel } from "./components/match-teams-panel";
@@ -57,7 +56,6 @@ export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
             omittedMetricKeys={pointsMetric ? [pointsMetric.key] : []}
           />
         ) : null}
-        <MatchEventsPanel matchId={match.id} initialEvents={detail.events} />
       </section>
     </>
   );
