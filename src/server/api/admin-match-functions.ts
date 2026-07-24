@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { matchCompositionErrorMessage } from "#/lib/matches/composition-rounds";
 import {
   createMatchComposition,
   deleteMatchComposition,
@@ -18,17 +19,20 @@ const paginationInput = z
 
 const matchIdInput = z.string().regex(/^[a-z2-9]{8}$/);
 const composedMatchIdInput = z.string().regex(/^c[a-z2-9]{8}$/);
+const roundOrientationInput = z.enum(["auto", "aligned", "swapped"]);
 
 const roundInput = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("sequential"),
     number: z.number().int().min(1),
     matchId: matchIdInput,
+    orientation: roundOrientationInput,
   }),
   z.object({
     kind: z.literal("extra-time"),
     number: z.null(),
     matchId: matchIdInput,
+    orientation: roundOrientationInput,
   }),
 ]);
 
@@ -58,13 +62,16 @@ export const saveMatchCompositionFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireApiPermission("match:admin");
 
-    const composition = data.id
+    const result = data.id
       ? await updateMatchComposition(data.id, { rounds: data.rounds })
       : await createMatchComposition({ rounds: data.rounds });
 
-    return composition
-      ? ({ ok: true, composition } as const)
-      : ({ ok: false, message: "Não foi possível salvar a partida composta." } as const);
+    return result.ok
+      ? ({ ok: true, composition: result.composition } as const)
+      : ({
+          ok: false,
+          message: matchCompositionErrorMessage(result.message),
+        } as const);
   });
 
 export const unbindMatchCompositionFn = createServerFn({ method: "POST" })

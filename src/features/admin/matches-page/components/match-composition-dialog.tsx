@@ -1,8 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MatchSummary, PhysicalMatch } from "@haxbrasil/haxfootball-api-sdk";
-import { ArrowDown, ArrowUp, Layers3, Plus, Search, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeftRight,
+  ArrowUp,
+  Layers3,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { MatchCode } from "#/components/ds/match-code";
 import { Scoreline } from "#/components/ds/scoreline";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -15,7 +33,15 @@ import {
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#/components/ui/select";
+import {
   matchRoundLabel,
+  scoreInCompositionOrientation,
   toMatchCompositionRounds,
   validateCompositionRoundDrafts,
   type CompositionRoundDraft,
@@ -32,6 +58,7 @@ type CompositionTarget = SingleMatchSummary | ComposedMatchSummary | null;
 type SelectedRound = {
   match: SingleMatchSummary | PhysicalMatch;
   kind: CompositionRoundDraft["kind"];
+  orientation: CompositionRoundDraft["orientation"];
 };
 
 export function MatchCompositionDialog({
@@ -52,6 +79,7 @@ export function MatchCompositionDialog({
   const [selectedRounds, setSelectedRounds] = useState<SelectedRound[]>([]);
   const [searchId, setSearchId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const editingId = target?.kind === "composed" ? target.id : null;
   const selectedIds = useMemo(
@@ -69,16 +97,18 @@ export function MatchCompositionDialog({
         target.rounds.map((round) => ({
           match: round.match,
           kind: round.kind,
+          orientation: round.orientation,
         })),
       );
     } else if (target?.kind === "single") {
-      setSelectedRounds([{ match: target, kind: "sequential" }]);
+      setSelectedRounds([{ match: target, kind: "sequential", orientation: "aligned" }]);
     } else {
       setSelectedRounds([]);
     }
 
     setSearchId("");
     setMessage(null);
+    setSaveError(null);
   }, [open, target]);
 
   function addRound(match: SingleMatchSummary | PhysicalMatch) {
@@ -88,7 +118,14 @@ export function MatchCompositionDialog({
     }
 
     setMessage(null);
-    setSelectedRounds((rounds) => [...rounds, { match, kind: "sequential" }]);
+    setSelectedRounds((rounds) => [
+      ...rounds,
+      {
+        match,
+        kind: "sequential",
+        orientation: rounds.length === 0 ? "aligned" : "auto",
+      },
+    ]);
   }
 
   async function searchCandidate() {
@@ -128,7 +165,10 @@ export function MatchCompositionDialog({
       }
 
       next.splice(targetIndex, 0, round);
-      return next;
+      return next.map((entry, roundIndex) => ({
+        ...entry,
+        orientation: roundIndex === 0 ? "aligned" : entry.orientation,
+      }));
     });
   }
 
@@ -141,10 +181,17 @@ export function MatchCompositionDialog({
     );
   }
 
+  function setRoundOrientation(index: number, orientation: CompositionRoundDraft["orientation"]) {
+    setSelectedRounds((rounds) =>
+      rounds.map((round, roundIndex) => (roundIndex === index ? { ...round, orientation } : round)),
+    );
+  }
+
   async function save() {
-    const drafts = selectedRounds.map(({ match, kind }) => ({
+    const drafts = selectedRounds.map(({ match, kind, orientation }) => ({
       matchId: match.id,
       kind,
+      orientation,
     }));
     const validationMessage = validateCompositionRoundDrafts(drafts);
 
@@ -164,7 +211,7 @@ export function MatchCompositionDialog({
     setIsBusy(false);
 
     if (!result.ok) {
-      setMessage(result.message);
+      setSaveError(result.message);
       return;
     }
 
@@ -173,167 +220,264 @@ export function MatchCompositionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle>{editingId ? "Gerenciar vínculo" : "Vincular partidas"}</DialogTitle>
-          <DialogDescription>
-            Combine partidas físicas em tempos de uma única partida. A ordem abaixo define os
-            tempos; somente o último pode ser uma prorrogação.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Gerenciar vínculo" : "Vincular partidas"}</DialogTitle>
+            <DialogDescription>
+              Combine partidas físicas em tempos de uma única partida. A ordem abaixo define os
+              tempos; somente o último pode ser uma prorrogação.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <section className="grid gap-3" aria-labelledby="selected-rounds-title">
-            <div>
-              <h3 id="selected-rounds-title" className="font-semibold">
-                Tempos da partida
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Selecione pelo menos duas partidas físicas.
-              </p>
-            </div>
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <section className="grid gap-3" aria-labelledby="selected-rounds-title">
+              <div>
+                <h3 id="selected-rounds-title" className="font-semibold">
+                  Tempos da partida
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Selecione pelo menos duas partidas físicas.
+                </p>
+              </div>
 
-            {selectedRounds.length === 0 ? (
-              <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-                Nenhuma partida selecionada.
-              </p>
-            ) : (
-              selectedRounds.map((round, index) => (
-                <div
-                  key={round.match.id}
-                  className="grid gap-3 rounded-lg border bg-muted/25 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              {selectedRounds.length === 0 ? (
+                <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+                  Nenhuma partida selecionada.
+                </p>
+              ) : (
+                selectedRounds.map((round, index) => {
+                  const compositionScore = scoreInCompositionOrientation(
+                    round.match.score,
+                    round.orientation,
+                  );
+
+                  return (
+                    <article
+                      key={round.match.id}
+                      className="overflow-hidden rounded-xl border bg-card shadow-xs"
+                    >
+                      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                        <div className="flex min-w-0 flex-wrap items-center gap-3">
+                          <Badge variant="secondary">
+                            {round.kind === "extra-time"
+                              ? matchRoundLabel({ kind: "extra-time" })
+                              : `${
+                                  selectedRounds
+                                    .slice(0, index + 1)
+                                    .filter((entry) => entry.kind === "sequential").length
+                                }º tempo`}
+                          </Badge>
+                          <MatchCode id={round.match.id} />
+                          <span className="text-xs text-muted-foreground">Placar registrado</span>
+                          <Scoreline
+                            red={round.match.score?.red}
+                            blue={round.match.score?.blue}
+                            compact
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Mover ${round.match.id} para cima`}
+                            disabled={index === 0}
+                            onClick={() => moveRound(index, -1)}
+                          >
+                            <ArrowUp className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Mover ${round.match.id} para baixo`}
+                            disabled={index === selectedRounds.length - 1}
+                            onClick={() => moveRound(index, 1)}
+                          >
+                            <ArrowDown className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={round.kind === "extra-time" ? "secondary" : "ghost"}
+                            disabled={index !== selectedRounds.length - 1}
+                            onClick={() => toggleExtraTime(index)}
+                          >
+                            Prorrogação
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Remover ${round.match.id}`}
+                            onClick={() =>
+                              setSelectedRounds((rounds) =>
+                                rounds
+                                  .filter((entry) => entry.match.id !== round.match.id)
+                                  .map((entry, roundIndex) => ({
+                                    ...entry,
+                                    orientation: roundIndex === 0 ? "aligned" : entry.orientation,
+                                  })),
+                              )
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-3 border-t bg-muted/20 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        {index === 0 ? (
+                          <div className="flex items-start gap-2">
+                            <Layers3 className="mt-0.5 size-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Referência dos times</p>
+                              <p className="text-xs text-muted-foreground">
+                                Os lados deste tempo definem vermelho e azul na composição.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start gap-2">
+                              {round.orientation === "auto" ? (
+                                <Sparkles className="mt-0.5 size-4 text-primary" />
+                              ) : (
+                                <ArrowLeftRight className="mt-0.5 size-4 text-muted-foreground" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium">Lados neste tempo</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {round.orientation === "auto"
+                                    ? "O sistema compara o placar e os jogadores."
+                                    : round.orientation === "swapped"
+                                      ? "Vermelho e azul representam os times opostos."
+                                      : "Vermelho e azul representam os mesmos times."}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3">
+                              {round.orientation === "swapped" && compositionScore ? (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>Na composição</span>
+                                  <Scoreline
+                                    red={compositionScore.red}
+                                    blue={compositionScore.blue}
+                                    compact
+                                  />
+                                </div>
+                              ) : null}
+                              <Select
+                                value={round.orientation}
+                                onValueChange={(value) =>
+                                  setRoundOrientation(
+                                    index,
+                                    value as CompositionRoundDraft["orientation"],
+                                  )
+                                }
+                              >
+                                <SelectTrigger
+                                  size="sm"
+                                  className="w-full sm:w-52"
+                                  aria-label={`Orientação dos times em ${round.match.id}`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="auto">Detectar automaticamente</SelectItem>
+                                  <SelectItem value="aligned">Lados mantidos</SelectItem>
+                                  <SelectItem value="swapped">Lados invertidos</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </section>
+
+            <aside className="grid gap-4 rounded-lg border p-4">
+              <div>
+                <h3 className="font-semibold">Adicionar partida</h3>
+                <p className="text-sm text-muted-foreground">
+                  Escolha uma partida carregada ou informe seu ID exato.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  aria-label="ID da partida física"
+                  placeholder="ID de 8 caracteres"
+                  value={searchId}
+                  onChange={(event) => setSearchId(event.target.value.trim().toLowerCase())}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  aria-label="Buscar partida física"
+                  disabled={isBusy}
+                  onClick={() => void searchCandidate()}
                 >
-                  <div className="flex min-w-0 flex-wrap items-center gap-3">
-                    <Badge variant="secondary">
-                      {round.kind === "extra-time"
-                        ? matchRoundLabel({ kind: "extra-time" })
-                        : `${
-                            selectedRounds
-                              .slice(0, index + 1)
-                              .filter((entry) => entry.kind === "sequential").length
-                          }º tempo`}
-                    </Badge>
-                    <MatchCode id={round.match.id} />
-                    <Scoreline
-                      red={round.match.score?.red}
-                      blue={round.match.score?.blue}
-                      compact
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Mover ${round.match.id} para cima`}
-                      disabled={index === 0}
-                      onClick={() => moveRound(index, -1)}
-                    >
-                      <ArrowUp className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Mover ${round.match.id} para baixo`}
-                      disabled={index === selectedRounds.length - 1}
-                      onClick={() => moveRound(index, 1)}
-                    >
-                      <ArrowDown className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={round.kind === "extra-time" ? "secondary" : "ghost"}
-                      disabled={index !== selectedRounds.length - 1}
-                      onClick={() => toggleExtraTime(index)}
-                    >
-                      Prorrogação
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Remover ${round.match.id}`}
-                      onClick={() =>
-                        setSelectedRounds((rounds) =>
-                          rounds.filter((entry) => entry.match.id !== round.match.id),
-                        )
-                      }
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </section>
+                  <Search className="size-4" />
+                </Button>
+              </div>
 
-          <aside className="grid gap-4 rounded-lg border p-4">
-            <div>
-              <h3 className="font-semibold">Adicionar partida</h3>
-              <p className="text-sm text-muted-foreground">
-                Escolha uma partida carregada ou informe seu ID exato.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                aria-label="ID da partida física"
-                placeholder="ID de 8 caracteres"
-                value={searchId}
-                onChange={(event) => setSearchId(event.target.value.trim().toLowerCase())}
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                aria-label="Buscar partida física"
-                disabled={isBusy}
-                onClick={() => void searchCandidate()}
-              >
-                <Search className="size-4" />
-              </Button>
-            </div>
-
-            <div className="bfl-scrollbar grid max-h-64 gap-2 overflow-y-auto pr-1">
-              {candidates.map((match) => (
-                <div
-                  key={match.id}
-                  className="flex items-center justify-between gap-2 rounded-md border p-2"
-                >
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <MatchCode id={match.id} />
-                    <Scoreline red={match.score?.red} blue={match.score?.blue} compact />
-                  </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Adicionar ${match.id}`}
-                    disabled={selectedIds.has(match.id)}
-                    onClick={() => addRound(match)}
+              <div className="bfl-scrollbar grid max-h-64 gap-2 overflow-y-auto pr-1">
+                {candidates.map((match) => (
+                  <div
+                    key={match.id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-2"
                   >
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </aside>
-        </div>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <MatchCode id={match.id} />
+                      <Scoreline red={match.score?.red} blue={match.score?.blue} compact />
+                    </div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Adicionar ${match.id}`}
+                      disabled={selectedIds.has(match.id)}
+                      onClick={() => addRound(match)}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
 
-        {message ? <p className="text-sm text-destructive">{message}</p> : null}
+          {message ? <p className="text-sm text-destructive">{message}</p> : null}
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="button" disabled={isBusy} onClick={() => void save()}>
-            <Layers3 className="size-4" />
-            {editingId ? "Salvar vínculo" : "Criar vínculo"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" disabled={isBusy} onClick={() => void save()}>
+              <Layers3 className="size-4" />
+              {editingId ? "Salvar vínculo" : "Criar vínculo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={saveError !== null} onOpenChange={() => setSaveError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Não foi possível vincular as partidas</AlertDialogTitle>
+            <AlertDialogDescription>{saveError}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setSaveError(null)}>Entendi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
