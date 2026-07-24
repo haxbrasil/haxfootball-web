@@ -3,7 +3,6 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { ListMatchesResponse, MatchSummary } from "@haxbrasil/haxfootball-api-sdk";
 import { Eye, Layers3, Undo2 } from "lucide-react";
-import { DataCard } from "#/components/ds/app-shell/data-card";
 import { EmptyState } from "#/components/ds/app-shell/empty-state";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
 import { SearchField } from "#/components/ds/forms/search-field";
@@ -24,6 +23,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { summarizeCompositionRounds } from "#/lib/matches/composition-rounds";
 import { listAdminMatchesFn, unbindMatchCompositionFn } from "#/server/api/admin-match-functions";
 import { MatchCompositionDialog } from "./components/match-composition-dialog";
 import { filterAdminMatches } from "./utils/filter-admin-matches";
@@ -51,9 +51,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
 
   const singleMatches = items.filter(
     (match): match is SingleMatchSummary => match.kind === "single",
-  );
-  const composedMatches = items.filter(
-    (match): match is ComposedMatchSummary => match.kind === "composed",
   );
   const filteredMatches = useMemo(() => filterAdminMatches(items, query), [items, query]);
 
@@ -112,18 +109,6 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
         }
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <DataCard title="Carregadas">
-          <strong className="text-2xl tabular-nums">{items.length}</strong>
-        </DataCard>
-        <DataCard title="Individuais">
-          <strong className="text-2xl tabular-nums">{singleMatches.length}</strong>
-        </DataCard>
-        <DataCard title="Compostas">
-          <strong className="text-2xl tabular-nums">{composedMatches.length}</strong>
-        </DataCard>
-      </div>
-
       <SearchField
         id="matchSearch"
         label="Buscar nas partidas carregadas"
@@ -143,14 +128,7 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
             {
               key: "match",
               title: "Partida",
-              cell: (match) => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <MatchCode id={match.id} />
-                  <Badge variant={match.kind === "composed" ? "secondary" : "outline"}>
-                    {match.kind === "composed" ? "Composta" : "Individual"}
-                  </Badge>
-                </div>
-              ),
+              cell: (match) => <MatchCode id={match.id} />,
             },
             {
               key: "status",
@@ -167,12 +145,7 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
             {
               key: "rounds",
               title: "Tempos",
-              cell: (match) =>
-                match.kind === "composed" ? (
-                  <span className="text-sm">{match.rounds.length}</span>
-                ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
-                ),
+              cell: (match) => <MatchRoundsCell match={match} />,
             },
             {
               key: "actions",
@@ -206,6 +179,23 @@ export function AdminMatchesPage({ matches }: { matches: ListMatchesResponse }) 
         onSaved={refreshMatches}
       />
     </>
+  );
+}
+
+function MatchRoundsCell({ match }: { match: MatchSummary }) {
+  if (match.kind === "single") {
+    return <span className="text-sm text-muted-foreground">—</span>;
+  }
+
+  const { sequentialRoundCount, hasExtraTime } = summarizeCompositionRounds(match.rounds);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Badge variant="secondary">
+        {sequentialRoundCount} {sequentialRoundCount === 1 ? "tempo" : "tempos"}
+      </Badge>
+      {hasExtraTime ? <Badge variant="outline">Prorrogação</Badge> : null}
+    </div>
   );
 }
 
