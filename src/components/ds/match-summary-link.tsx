@@ -37,7 +37,9 @@ export function MatchSummaryLink({
           </h3>
           <MatchStatusBadge value={match.status} />
           {match.kind === "composed" ? (
-            <Badge variant="secondary">{match.rounds?.length ?? 0} tempos</Badge>
+            <Badge variant="outline" className="bg-muted/40 text-muted-foreground">
+              {match.rounds?.length ?? 0} tempos
+            </Badge>
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">{formatDateTime(match.initiatedAt)}</p>
