@@ -1,5 +1,5 @@
 import { createFileRoute, useLoaderData } from "@tanstack/react-router";
-import { RoomDetailPage } from "#/features/rooms/detail-page";
+import { AdminRoomDetailPage } from "#/features/admin/rooms-page/components/admin-room-detail-page";
 import { getAdminRoomFn } from "#/server/api/admin-room-functions";
 
 export const Route = createFileRoute("/admin/rooms_/$roomId")({
@@ -10,5 +10,5 @@ export const Route = createFileRoute("/admin/rooms_/$roomId")({
 function AdminRoomDetailRoute() {
   const room = useLoaderData({ from: "/admin/rooms_/$roomId" });
 
-  return <RoomDetailPage room={room} description="Estado operacional, versão e link da sala." />;
+  return <AdminRoomDetailPage room={room} />;
 }

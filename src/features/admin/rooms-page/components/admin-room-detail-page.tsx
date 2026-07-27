@@ -1,0 +1,55 @@
+import type { Room } from "@haxbrasil/haxfootball-api-sdk";
+import { DataCard, EmptyState } from "#/components/ds/app-shell";
+import { LeagueHeader } from "#/components/ds/league-header";
+import { StatusBadge } from "#/components/ds/status-badge";
+import { Button } from "#/components/ui/button";
+import { formatDateTime } from "#/lib/date/format-date-time";
+import { roomDisplayName } from "#/lib/rooms/room-display-name";
+
+export function AdminRoomDetailPage({ room }: { room: Room | null }) {
+  if (!room) {
+    return <EmptyState title="Sala não encontrada" />;
+  }
+
+  return (
+    <>
+      <LeagueHeader
+        title={roomDisplayName(room)}
+        eyebrow={null}
+        showBrand={false}
+        description="Estado operacional, versão e link da sala."
+        action={
+          room.roomLink ? (
+            <Button asChild>
+              <a href={room.roomLink}>Entrar</a>
+            </Button>
+          ) : null
+        }
+      />
+      <DataCard title="Estado" meta={<StatusBadge value={room.state} />}>
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">ID</dt>
+            <dd>{room.id}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Programa</dt>
+            <dd>{room.program.name}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Versão</dt>
+            <dd>{room.version.version}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Criada em</dt>
+            <dd>{formatDateTime(room.createdAt)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Falha</dt>
+            <dd>{room.failureReason ?? "-"}</dd>
+          </div>
+        </dl>
+      </DataCard>
+    </>
+  );
+}

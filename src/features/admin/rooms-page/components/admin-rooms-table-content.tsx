@@ -3,8 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { EmptyState } from "#/components/ds/app-shell/empty-state";
 import { ResourceTable } from "#/components/ds/resource-table";
 import { StatusBadge } from "#/components/ds/status-badge";
-import { roomDisplayName } from "#/features/rooms/room-display-name";
 import { localizedTextLabel } from "#/lib/localization/localized-text";
+import { roomDisplayName } from "#/lib/rooms/room-display-name";
 import { useCloseRoomAction } from "../hooks/use-close-room-action";
 import { RoomActions } from "./room-actions";
 

@@ -1,61 +1,51 @@
-import type { Room } from "@haxbrasil/haxfootball-api-sdk";
-import { DataCard, EmptyState } from "#/components/ds/app-shell";
-import { LeagueHeader } from "#/components/ds/league-header";
-import { StatusBadge } from "#/components/ds/status-badge";
-import { Button } from "#/components/ui/button";
+import { useEffect } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { EmptyState } from "#/components/ds/app-shell";
 import { formatDateTime } from "#/lib/date/format-date-time";
-import { roomDisplayName } from "../room-display-name";
+import type { PublicRoomDetail } from "#/lib/rooms/public-room";
+import { RoomLiveHero } from "./components/room-live-hero";
+import { RoomLiveStage } from "./components/room-live-stage";
+import { roomLiveFreshness } from "./room-live-view-model";
+import { useLiveRoom } from "./use-live-room";
 
-export function RoomDetailPage({
-  room,
-  description = "Estado público, versão e link da sala.",
-}: {
-  room: Room | null;
-  description?: string;
-}) {
+export function RoomDetailPage({ room }: { room: PublicRoomDetail | null }) {
   if (!room) {
     return <EmptyState title="Sala não encontrada" />;
   }
 
+  return <AvailableRoomDetail room={room} />;
+}
+
+function AvailableRoomDetail({ room }: { room: PublicRoomDetail }) {
+  useProvisioningRoomRefresh(room.state === "provisioning");
+  const { live, observedAt } = useLiveRoom(room.id, room.live);
+  const currentRoom = { ...room, live };
+  const freshness = roomLiveFreshness(live, observedAt);
+
   return (
     <>
-      <LeagueHeader
-        title={roomDisplayName(room)}
-        eyebrow={null}
-        showBrand={false}
-        description={description}
-        action={
-          room.roomLink ? (
-            <Button asChild>
-              <a href={room.roomLink}>Entrar</a>
-            </Button>
-          ) : null
-        }
-      />
-      <DataCard title="Estado" meta={<StatusBadge value={room.state} />}>
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">ID</dt>
-            <dd>{room.id}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Programa</dt>
-            <dd>{room.program.name}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Versão</dt>
-            <dd>{room.version?.version ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Criada em</dt>
-            <dd>{formatDateTime(room.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Falha</dt>
-            <dd>{room.failureReason ?? "-"}</dd>
-          </div>
-        </dl>
-      </DataCard>
+      <RoomLiveHero room={currentRoom} freshness={freshness} />
+      <RoomLiveStage live={live} freshness={freshness} />
+      <p className="mt-4 text-center text-xs text-muted-foreground">
+        {room.state === "provisioning" ? "Sala solicitada" : "Sala disponível"} em{" "}
+        {formatDateTime(room.createdAt)}
+      </p>
     </>
   );
+}
+
+function useProvisioningRoomRefresh(provisioning: boolean) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!provisioning) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void router.invalidate();
+    }, 2_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [provisioning, router]);
 }

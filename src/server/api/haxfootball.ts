@@ -2,6 +2,7 @@ import "@tanstack/react-start/server-only";
 
 import {
   createHaxFootballApiClient,
+  queries,
   type Account,
   type components,
   type ConfirmAccountResponse,
@@ -43,8 +44,21 @@ import {
   type UpdateRoleInput,
 } from "@haxbrasil/haxfootball-api-sdk";
 import type { PageInfo, PaginationQuery } from "#/lib/pagination/page";
+import type {
+  PublicLiveRoom,
+  PublicRoomDetail,
+  PublicRoomLiveResult,
+  PublicRoomSummary,
+} from "#/lib/rooms/public-room";
 import { groupMetricsByCategory } from "#/lib/stats-metrics/categories";
 import { createAccountMatchPage } from "#/server/api/utils/create-account-match-page";
+import {
+  isPubliclyAvailableRoom,
+  toPublicLiveRoom,
+  toPublicRoomBase,
+  toPublicRoomSummary,
+  type PublicRoomBase,
+} from "#/server/api/utils/public-room-projection";
 import { cachedJson, deleteCachedJson } from "#/server/cache";
 import { getServerEnv } from "#/server/env";
 
@@ -114,6 +128,8 @@ export type WebQueryMatchMetricsResponse = Omit<
 export type PublicAccount = Pick<Account, "uuid" | "name" | "createdAt" | "updatedAt">;
 
 export type ListPublicAccountsResponse = Page<PublicAccount>;
+
+export type ListPublicRoomsResponse = Page<PublicRoomSummary>;
 
 type MatchMetricRow = Extract<MatchMetrics, unknown[]>[number];
 type ComposedMatchMetrics = Exclude<MatchMetrics, unknown[]>;
@@ -277,11 +293,11 @@ export async function unwrap<T>(
   return result.ok ? result.data : null;
 }
 
-export async function listRooms(query: PaginationQuery = {}): Promise<ListRoomsResponse> {
+export async function listRooms(query: PaginationQuery = {}): Promise<ListPublicRoomsResponse> {
   const client = getApiClient();
 
   if (!client) {
-    return emptyPage<Room>();
+    return emptyPage<PublicRoomSummary>();
   }
 
   const apiQuery: ListRoomsQuery = {
@@ -289,21 +305,74 @@ export async function listRooms(query: PaginationQuery = {}): Promise<ListRoomsR
     state: "open",
   };
 
-  return cachedJson(
-    `public:rooms:${JSON.stringify(apiQuery)}`,
-    15,
-    async () => (await unwrap(client.rooms.list(apiQuery))) ?? emptyPage<Room>(),
-  );
+  return cachedJson(`public:v2:rooms:${JSON.stringify(apiQuery)}`, 15, async () => {
+    const rooms = await unwrap(client.rooms.list(apiQuery));
+
+    return rooms
+      ? {
+          items: rooms.items
+            .filter(isPubliclyAvailableRoom)
+            .map((room) => toPublicRoomSummary(room)),
+          page: rooms.page,
+        }
+      : emptyPage<PublicRoomSummary>();
+  });
 }
 
-export async function getRoom(id: string): Promise<Room | null> {
+export async function getRoom(id: string): Promise<PublicRoomDetail | null> {
+  const room = await getPublicRoomBase(id);
+
+  if (!room) {
+    return null;
+  }
+
+  const live = await loadPublicRoomLive(id);
+
+  return {
+    ...room,
+    live: live ?? null,
+  };
+}
+
+export async function getRoomLive(id: string): Promise<PublicRoomLiveResult> {
+  const room = await getPublicRoomBase(id);
+
+  if (!room) {
+    return { status: "room-unavailable" };
+  }
+
+  const live = await loadPublicRoomLive(id);
+
+  return live === undefined ? { status: "error" } : { status: "ok", live };
+}
+
+async function loadPublicRoomLive(id: string): Promise<PublicLiveRoom | null | undefined> {
+  const client = getApiClient();
+
+  if (!client) {
+    return undefined;
+  }
+
+  const result = await client.live.query({
+    document: queries.getRoom,
+    variables: { id },
+  });
+
+  if (!result.ok) {
+    return undefined;
+  }
+
+  return result.data.liveRoom ? toPublicLiveRoom(result.data.liveRoom) : null;
+}
+
+async function getPublicRoomBase(id: string): Promise<PublicRoomBase | null> {
   const client = getApiClient();
 
   return client
-    ? cachedJson(`public:rooms:${id}:open-only`, 15, async () => {
+    ? cachedJson(`public:v2:rooms:${id}:open-only`, 15, async () => {
         const room = await unwrap(client.rooms.get(id));
 
-        return room && room.state !== "closed" && room.state !== "failed" ? room : null;
+        return room && isPubliclyAvailableRoom(room) ? toPublicRoomBase(room) : null;
       })
     : null;
 }

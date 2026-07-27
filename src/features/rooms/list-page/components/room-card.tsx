@@ -1,14 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import type { Room } from "@haxbrasil/haxfootball-api-sdk";
 import { DataCard } from "#/components/ds/app-shell";
 import { StatusBadge } from "#/components/ds/status-badge";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
-import { roomDisplayName } from "../../room-display-name";
+import type { PublicRoomSummary } from "#/lib/rooms/public-room";
 
-export function RoomCard({ room }: { room: Room }) {
-  const displayName = roomDisplayName(room);
-
+export function RoomCard({ room }: { room: PublicRoomSummary }) {
   return (
     <DataCard
       title="Sala"
@@ -16,7 +13,7 @@ export function RoomCard({ room }: { room: Room }) {
         <div className="flex flex-wrap justify-end gap-2">
           <StatusBadge value={room.state} />
           <Badge variant="outline" className="bg-muted/40 text-muted-foreground">
-            {room.version.version}
+            {room.version}
           </Badge>
         </div>
       }
@@ -24,9 +21,9 @@ export function RoomCard({ room }: { room: Room }) {
     >
       <h2
         className="mb-4 line-clamp-2 min-h-[3.5rem] text-xl font-semibold leading-7"
-        title={displayName}
+        title={room.name}
       >
-        {displayName}
+        {room.name}
       </h2>
       <div className="flex gap-2">
         <Button asChild size="sm" variant="outline">

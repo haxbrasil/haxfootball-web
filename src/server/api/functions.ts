@@ -10,6 +10,7 @@ import {
   getAccountByUuid,
   getRole,
   getRoom,
+  getRoomLive,
   getStats,
   getStatsCategoryRankings,
   listAccountLinkedMatches,
@@ -105,6 +106,10 @@ export const listRoomsFn = createServerFn({ method: "GET" })
 export const getRoomFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(({ data }) => getRoom(data.id));
+
+export const getRoomLiveFn = createServerFn({ method: "GET" })
+  .inputValidator(idInput)
+  .handler(({ data }) => getRoomLive(data.id));
 
 export const listMatchesFn = createServerFn({ method: "GET" })
   .inputValidator(paginationInput)

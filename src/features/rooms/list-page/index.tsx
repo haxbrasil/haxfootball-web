@@ -1,10 +1,10 @@
-import type { ListRoomsResponse } from "@haxbrasil/haxfootball-api-sdk";
 import { DataGrid } from "#/components/ds/app-shell";
 import { EmptyLeagueState } from "#/components/ds/empty-league-state";
 import { LeagueHeader } from "#/components/ds/league-header";
+import type { ListPublicRoomsResponse } from "#/server/api/haxfootball";
 import { RoomCard } from "./components/room-card";
 
-export function RoomsPage({ rooms }: { rooms: ListRoomsResponse }) {
+export function RoomsPage({ rooms }: { rooms: ListPublicRoomsResponse }) {
   return (
     <>
       <LeagueHeader
