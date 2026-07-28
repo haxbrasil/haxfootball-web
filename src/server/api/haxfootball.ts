@@ -52,6 +52,7 @@ import type {
 } from "#/lib/rooms/public-room";
 import { groupMetricsByCategory } from "#/lib/stats-metrics/categories";
 import { createAccountMatchPage } from "#/server/api/utils/create-account-match-page";
+import { collectAllPages } from "#/server/api/utils/collect-all-pages";
 import {
   isPubliclyAvailableRoom,
   toPublicLiveRoom,
@@ -756,7 +757,7 @@ export async function listAdminResources(): Promise<AdminResources> {
 
   const [accounts, roles, permissions, roomPrograms, proxyEndpoints, eventSchemas] =
     await Promise.all([
-      unwrap(client.accounts.list()),
+      listAllAccounts(client),
       unwrap(client.roles.list()),
       unwrap(client.permissions.list({ limit: 100 })),
       unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
@@ -784,10 +785,7 @@ export async function listAdminAccountResources(): Promise<AdminAccountResources
     };
   }
 
-  const [accounts, roles] = await Promise.all([
-    unwrap(client.accounts.list()),
-    unwrap(client.roles.list()),
-  ]);
+  const [accounts, roles] = await Promise.all([listAllAccounts(client), listAllRoles(client)]);
 
   return {
     accounts: accounts ?? emptyPage<Account>(),
@@ -946,6 +944,14 @@ export async function listAdminRoomHistory(
   }
 
   return (await unwrap(client.rooms.list({ ...query, state: "all" }))) ?? emptyPage<Room>();
+}
+
+async function listAllAccounts(client: HaxFootballClient): Promise<ListAccountsResponse> {
+  return (
+    (await collectAllPages(({ cursor, limit }) =>
+      unwrap(client.accounts.list({ cursor, limit })),
+    )) ?? emptyPage<Account>()
+  );
 }
 
 async function listAllRoomProgramVersions(
