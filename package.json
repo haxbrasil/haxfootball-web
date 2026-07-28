@@ -31,6 +31,7 @@
     "@base-ui/react": "^1.5.0",
     "@cloudflare/vite-plugin": "^1.16.1",
     "@haxbrasil/haxfootball-api-sdk": "github:haxbrasil/haxfootball-api-sdk#80855e58278ce84c18c6b529e8b300c2217b6a4d",
+    "@haxbrasil/haxfootball-replay": "0.1.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

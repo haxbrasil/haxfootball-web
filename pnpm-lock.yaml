@@ -17,6 +17,9 @@ importers:
       '@haxbrasil/haxfootball-api-sdk':
         specifier: github:haxbrasil/haxfootball-api-sdk#80855e58278ce84c18c6b529e8b300c2217b6a4d
         version: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/80855e58278ce84c18c6b529e8b300c2217b6a4d
+      '@haxbrasil/haxfootball-replay':
+        specifier: 0.1.0
+        version: 0.1.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.76.0(react@19.2.6))
@@ -1452,6 +1455,12 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-ZcEZvWvTS7IiCsPthfXJaYYDiCgLowsC4mwKUtxWoUke9LeSvnvvT4UgDLugc7jZ7uYLc4sv8i9mF03Obk9sgw==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/80855e58278ce84c18c6b529e8b300c2217b6a4d}
     version: 0.1.0
     engines: {node: '>=20'}
+
+  '@haxbrasil/haxfootball-replay@0.1.0':
+    resolution: {integrity: sha512-mdfyfaYSsWKe9H10JRnjZnR3xz5aflKt1THMAfL1ApcTAvSLwQc1rA1ddoB+yAiQjbz9nmRI1/V6IGVkqDDDqA==, tarball: https://npm.pkg.github.com/download/@haxbrasil/haxfootball-replay/0.1.0/99f0dbdf9a27735bf35a1fe5eb5eacbaa4d8df95}
+    peerDependencies:
+      react: ^19.0.0
+      react-dom: ^19.0.0
 
   '@hookform/resolvers@5.2.2':
     resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
@@ -4805,6 +4814,9 @@ packages:
       oxlint-tsgolint:
         optional: true
 
+  pako@2.2.0:
+    resolution: {integrity: sha512-zJq6RP/5q+TO2OpFV3FHzlPnFjmkb7Nc99a5SNjJE+uu/PkpChs+NIZSSzbBoD+6kjiISXjfYdwj1ZRQ81dz/w==}
+
   parse5-htmlparser2-tree-adapter@7.1.0:
     resolution: {integrity: sha512-ruw5xyKs6lrpo9x9rCZqZZnIUntICjQAd0Wsmp396Ul9lN/h+ifgVV1x1gZHi8euej6wTfpqX8j+BFQxF0NS/g==}
 
@@ -6278,6 +6290,12 @@ snapshots:
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
       graphql: 16.14.2
+
+  '@haxbrasil/haxfootball-replay@0.1.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      pako: 2.2.0
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
 
   '@hookform/resolvers@5.2.2(react-hook-form@7.76.0(react@19.2.6))':
     dependencies:
@@ -9343,6 +9361,8 @@ snapshots:
       '@oxlint/binding-win32-arm64-msvc': 1.66.0
       '@oxlint/binding-win32-ia32-msvc': 1.66.0
       '@oxlint/binding-win32-x64-msvc': 1.66.0
+
+  pako@2.2.0: {}
 
   parse5-htmlparser2-tree-adapter@7.1.0:
     dependencies:

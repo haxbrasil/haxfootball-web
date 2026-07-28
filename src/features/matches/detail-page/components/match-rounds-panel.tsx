@@ -1,12 +1,9 @@
-import { ExternalLink } from "lucide-react";
 import { MatchStatusBadge } from "#/components/ds/match-status-badge";
 import { Scoreline } from "#/components/ds/scoreline";
 import { Badge } from "#/components/ui/badge";
-import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { matchRoundLabel } from "#/lib/matches/composition-rounds";
 import type { MatchDetail, WebComposedMatch } from "#/server/api/haxfootball";
-import { createHaxBallReplayUrl } from "../utils/haxball-replay-url";
 import { MatchMetricsTable } from "./match-metrics-table";
 
 export function MatchRoundsPanel({
@@ -42,14 +39,6 @@ export function MatchRoundsPanel({
                   <MatchStatusBadge value={round.match.status} />
                   <Scoreline red={round.match.score?.red} blue={round.match.score?.blue} compact />
                 </div>
-                {round.match.recording ? (
-                  <Button asChild size="sm" variant="outline">
-                    <a href={createHaxBallReplayUrl(round.match.recording.url)}>
-                      <ExternalLink className="size-4" />
-                      Gravação
-                    </a>
-                  </Button>
-                ) : null}
               </header>
 
               {metrics ? (

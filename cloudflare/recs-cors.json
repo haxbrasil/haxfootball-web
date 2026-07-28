@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://www.haxball.com",
+          "https://html5.haxball.com",
+          "https://haxball.com",
+          "https://bfl.haxbrasil.com",
+          "http://localhost:3000"
+        ],
+        "methods": ["GET", "HEAD"],
+        "headers": ["*"]
+      },
+      "exposeHeaders": ["Content-Length", "Accept-Ranges", "Content-Range", "ETag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}
