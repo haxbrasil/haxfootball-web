@@ -25,12 +25,7 @@ export function MatchReplayPanel({ match }: { match: WebMatch }) {
   return (
     <Card>
       <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle>Replay da partida</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Reprodução fiel da sala, incluindo sincronizações HBRX.
-          </p>
-        </div>
+        <CardTitle>Replay da partida</CardTitle>
         <ReplayActions options={options} selected={selected} onSelect={setSelectedId} />
       </CardHeader>
       <CardContent>
