@@ -3,6 +3,7 @@ import { z } from "zod";
 import { emptyPage } from "#/lib/pagination/page";
 import { implementedAdminPermissions, visibleAdminSections } from "#/features/admin/admin-sections";
 import {
+  countMatches,
   createRole,
   disableMatchEvent,
   getMatch,
@@ -114,6 +115,8 @@ export const getRoomLiveFn = createServerFn({ method: "GET" })
 export const listMatchesFn = createServerFn({ method: "GET" })
   .inputValidator(paginationInput)
   .handler(({ data }) => listMatches(data ?? {}));
+
+export const countMatchesFn = createServerFn({ method: "GET" }).handler(() => countMatches());
 
 export const getMatchFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)

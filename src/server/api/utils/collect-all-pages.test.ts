@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { collectAllPages, type CursorPage } from "./collect-all-pages";
+import { collectAllPages, countAllPages, type CursorPage } from "./collect-all-pages";
 
 describe("collectAllPages", () => {
   it("loads every cursor page into one result", async () => {
@@ -42,5 +42,22 @@ describe("collectAllPages", () => {
       .mockResolvedValueOnce(null);
 
     await expect(collectAllPages(loadPage)).resolves.toBeNull();
+  });
+});
+
+describe("countAllPages", () => {
+  it("counts items across every page without collecting them", async () => {
+    const pages = new Map<string | undefined, CursorPage<number>>([
+      [undefined, { items: [1, 2], page: { limit: 2, nextCursor: "next" } }],
+      ["next", { items: [3], page: { limit: 2, nextCursor: null } }],
+    ]);
+
+    const result = await countAllPages(async ({ cursor }) => pages.get(cursor) ?? null, 2);
+
+    expect(result).toBe(3);
+  });
+
+  it("returns null when a page cannot be loaded", async () => {
+    await expect(countAllPages(async () => null)).resolves.toBeNull();
   });
 });

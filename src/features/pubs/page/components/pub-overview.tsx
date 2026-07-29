@@ -1,10 +1,7 @@
 import { Activity } from "lucide-react";
-import type { ListMatchesResponse } from "@haxbrasil/haxfootball-api-sdk";
 import { PubOverviewMetric } from "./pub-overview-metric";
 
-export function PubOverview({ matches }: { matches: ListMatchesResponse }) {
-  const visibleMatches = matches.items.length;
-
+export function PubOverview({ matchCount }: { matchCount: number }) {
   return (
     <section className="bfl-field-surface overflow-hidden rounded-xl border border-border/80 shadow-lg">
       <div className="grid gap-6 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -19,7 +16,7 @@ export function PubOverview({ matches }: { matches: ListMatchesResponse }) {
         </div>
 
         <div className="min-w-56">
-          <PubOverviewMetric icon={Activity} label="Jogos" value={String(visibleMatches)} />
+          <PubOverviewMetric icon={Activity} label="Jogos" value={String(matchCount)} />
         </div>
       </div>
     </section>

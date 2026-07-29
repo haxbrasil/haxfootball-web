@@ -32,3 +32,24 @@ export async function collectAllPages<T>(
     },
   };
 }
+
+export async function countAllPages<T>(
+  loadPage: (query: { cursor?: string; limit: number }) => Promise<CursorPage<T> | null>,
+  limit = 100,
+): Promise<number | null> {
+  let count = 0;
+  let cursor: string | undefined;
+
+  do {
+    const page = await loadPage({ cursor, limit });
+
+    if (!page) {
+      return null;
+    }
+
+    count += page.items.length;
+    cursor = page.page.nextCursor ?? undefined;
+  } while (cursor);
+
+  return count;
+}

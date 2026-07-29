@@ -52,7 +52,7 @@ import type {
 } from "#/lib/rooms/public-room";
 import { groupMetricsByCategory } from "#/lib/stats-metrics/categories";
 import { createAccountMatchPage } from "#/server/api/utils/create-account-match-page";
-import { collectAllPages } from "#/server/api/utils/collect-all-pages";
+import { collectAllPages, countAllPages } from "#/server/api/utils/collect-all-pages";
 import {
   isPubliclyAvailableRoom,
   toPublicLiveRoom,
@@ -399,6 +399,10 @@ export async function listMatches(query: PaginationQuery = {}): Promise<ListMatc
         async () => (await unwrap(client.matches.list(apiQuery))) ?? emptyPage(),
       )
     : emptyPage();
+}
+
+export async function countMatches(): Promise<number> {
+  return (await countAllPages(({ cursor, limit }) => listMatches({ cursor, limit }))) ?? 0;
 }
 
 export async function listAdminMatches(query: PaginationQuery = {}): Promise<ListMatchesResponse> {

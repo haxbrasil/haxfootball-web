@@ -7,14 +7,16 @@ import { defaultPubRankingFilters } from "./utils/pub-ranking-filters";
 
 export function PubsPage({
   matches,
+  matchCount,
   rankings,
 }: {
   matches: ListMatchesResponse;
+  matchCount: number;
   rankings: StatsCategoryRankingsResponse;
 }) {
   return (
     <div className="grid gap-5">
-      <PubOverview matches={matches} />
+      <PubOverview matchCount={matchCount} />
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
         <PubGamesPanel matches={matches} />
