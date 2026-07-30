@@ -23,6 +23,7 @@ const first = {
   recording: null,
   gameMode: null,
   eventSchema: null,
+  players: [],
   createdAt: "2026-07-24T19:00:00.000Z",
   updatedAt: "2026-07-24T20:00:00.000Z",
 };

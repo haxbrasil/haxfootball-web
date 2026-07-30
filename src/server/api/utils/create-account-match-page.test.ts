@@ -16,6 +16,7 @@ const match = (
   recording: input.recording ?? null,
   score: input.score ?? null,
   eventSchema: input.eventSchema ?? null,
+  players: input.players ?? [],
   status: input.status ?? "completed",
   updatedAt: input.updatedAt ?? "2026-01-01T00:00:00.000Z",
 });
