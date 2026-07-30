@@ -11,7 +11,7 @@ import { isScorelessMatch } from "./utils/match-list-filters";
 
 export function MatchesPage({ matches }: { matches: ListMatchesResponse }) {
   const list = useMatchesList(matches);
-  const [hideScoreless, setHideScoreless] = useState(false);
+  const [hideScoreless, setHideScoreless] = useState(true);
   const visibleItems = useMemo(
     () => (hideScoreless ? list.items.filter((match) => !isScorelessMatch(match)) : list.items),
     [hideScoreless, list.items],
