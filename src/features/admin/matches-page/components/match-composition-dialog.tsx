@@ -48,6 +48,7 @@ import {
   validateCompositionRoundDrafts,
   type CompositionRoundDraft,
 } from "#/lib/matches/composition-rounds";
+import { normalizeMatchIdInput } from "#/lib/matches/match-id";
 import {
   findMatchCompositionCandidateFn,
   saveMatchCompositionFn,
@@ -138,14 +139,15 @@ export function MatchCompositionDialog({
 
   async function searchCandidate() {
     setMessage(null);
+    const normalizedSearchId = normalizeMatchIdInput(searchId);
 
-    if (!/^[a-z2-9]{8}$/.test(searchId)) {
+    if (!/^[a-z2-9]{8}$/.test(normalizedSearchId)) {
       setMessage("Informe um ID físico válido de oito caracteres.");
       return;
     }
 
     setIsBusy(true);
-    const candidate = await findCandidate({ data: { id: searchId } });
+    const candidate = await findCandidate({ data: { id: normalizedSearchId } });
     setIsBusy(false);
 
     if (!candidate) {
@@ -440,7 +442,7 @@ export function MatchCompositionDialog({
                   aria-label="ID da partida física"
                   placeholder="ID de 8 caracteres"
                   value={searchId}
-                  onChange={(event) => setSearchId(event.target.value.trim().toLowerCase())}
+                  onChange={(event) => setSearchId(normalizeMatchIdInput(event.target.value))}
                 />
                 <Button
                   type="button"

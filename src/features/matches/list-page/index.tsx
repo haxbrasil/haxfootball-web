@@ -7,15 +7,20 @@ import { LeagueHeader } from "#/components/ds/league-header";
 import { MatchListFilters } from "./components/match-list-filters";
 import { MatchListRow } from "./components/match-list-row";
 import { useMatchesList } from "./hooks/use-matches-list";
-import { isScorelessMatch } from "./utils/match-list-filters";
+import {
+  defaultMatchListFilters,
+  filterMatches,
+  type MatchListFilterState,
+} from "./utils/match-list-filters";
 
 export function MatchesPage({ matches }: { matches: ListMatchesResponse }) {
   const list = useMatchesList(matches);
-  const [hideScoreless, setHideScoreless] = useState(true);
-  const visibleItems = useMemo(
-    () => (hideScoreless ? list.items.filter((match) => !isScorelessMatch(match)) : list.items),
-    [hideScoreless, list.items],
-  );
+  const [filters, setFilters] = useState<MatchListFilterState>(defaultMatchListFilters);
+  const visibleItems = useMemo(() => filterMatches(list.items, filters), [filters, list.items]);
+
+  function updateFilters(patch: Partial<MatchListFilterState>) {
+    setFilters((current) => ({ ...current, ...patch }));
+  }
 
   return (
     <>
@@ -31,8 +36,9 @@ export function MatchesPage({ matches }: { matches: ListMatchesResponse }) {
         title="Últimas partidas"
         action={
           <MatchListFilters
-            hideScoreless={hideScoreless}
-            onHideScorelessChange={setHideScoreless}
+            filters={filters}
+            onChange={updateFilters}
+            onReset={() => setFilters(defaultMatchListFilters)}
           />
         }
       >
@@ -40,7 +46,7 @@ export function MatchesPage({ matches }: { matches: ListMatchesResponse }) {
           <EmptyLeagueState
             title="Nenhuma partida encontrada"
             body={
-              hideScoreless && list.items.length > 0
+              visibleItems.length === 0 && list.items.length > 0
                 ? "Nenhuma partida carregada corresponde aos filtros atuais."
                 : "As partidas registradas pela sala aparecem aqui assim que ficarem disponíveis."
             }
