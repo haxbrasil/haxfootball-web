@@ -202,6 +202,7 @@ export type ChampionshipHistoricalPlayerData = Serializable<ChampionshipHistoric
 
 type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+const championshipHistoryPageLimit = 100;
 
 export type Serializable<T> = unknown extends T
   ? JsonValue
@@ -291,7 +292,9 @@ export async function getPublicChampionshipBySlug(
         offset: 0,
       }),
     ),
-    requireResult(client.championships.history.get(summary.uuid, { limit: 200 })),
+    requireResult(
+      client.championships.history.get(summary.uuid, { limit: championshipHistoryPageLimit }),
+    ),
     actorAccountUuid
       ? requireResult(
           client.championships.registration.getSelf(summary.uuid, {
@@ -429,7 +432,7 @@ export async function getChampionshipWorkspace(
     requireResult(
       client.championships.history.get(championshipUuid, {
         actorAccountUuid,
-        limit: 500,
+        limit: championshipHistoryPageLimit,
       }),
     ),
     includeHistoricalImports
