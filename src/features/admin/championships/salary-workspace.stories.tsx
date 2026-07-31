@@ -142,7 +142,7 @@ function fixture(state: "editable" | "over-cap"): ChampionshipWorkspaceData {
         salary: {
           enabled: true,
           capUnits,
-          displayLabel: "créditos",
+          displayLabel: "M",
           maximumTradeDifference: 10,
         },
         draft: {
@@ -215,7 +215,7 @@ function fixture(state: "editable" | "over-cap"): ChampionshipWorkspaceData {
       enabled: true,
       priceState: locked ? "locked" : "editable",
       capUnits,
-      displayLabel: "créditos",
+      displayLabel: "M",
       visibility: "admin",
       validation: {
         missingPriceCount: locked ? 0 : 1,

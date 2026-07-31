@@ -39,6 +39,7 @@ import type {
   ChampionshipWorkspaceData,
   PublicChampionshipDetail,
 } from "#/server/api/championship-api";
+import { formatSalaryUnits } from "#/features/championships/salary-format";
 import {
   acceptChampionshipTradeFn,
   cancelChampionshipTradeFn,
@@ -581,7 +582,10 @@ function PlayerPool({
                     <span>
                       {participant.priceUnits === null
                         ? "Sem valor"
-                        : `${numberValue(participant.priceUnits)} ${data.championship.rules.salary.displayLabel}`}
+                        : formatSalaryUnits(
+                            numberValue(participant.priceUnits),
+                            data.championship.rules.salary.displayLabel,
+                          )}
                     </span>
                     {projection && targetTeam ? (
                       <span className={projection.overCap ? "text-red-300" : ""}>

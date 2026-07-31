@@ -37,6 +37,7 @@ import {
   matchFormatLabel,
   registrationLabel,
 } from "../championship-labels";
+import { formatSalaryUnits } from "../salary-format";
 
 export function ChampionshipDetailPage({
   data,
@@ -223,7 +224,7 @@ export function ChampionshipDetailPage({
           title="Teto salarial"
           value={
             salary.enabled
-              ? `${salary.capUnits} ${salary.displayLabel}`
+              ? formatSalaryUnits(salary.capUnits, salary.displayLabel)
               : "Não utilizado nesta edição"
           }
           detail={
@@ -355,7 +356,7 @@ function PublicSalarySection({ data }: { data: PublicChampionshipDetail }) {
           </p>
         </div>
         <span className="text-sm font-semibold">
-          {salary.capUnits} {salary.displayLabel}
+          {formatSalaryUnits(salary.capUnits, salary.displayLabel)}
         </span>
       </div>
 
@@ -372,7 +373,9 @@ function PublicSalarySection({ data }: { data: PublicChampionshipDetail }) {
               ) : team.overCap ? (
                 <Badge variant="destructive">Acima do teto</Badge>
               ) : (
-                <Badge variant="outline">{team.remainingUnits} livres</Badge>
+                <Badge variant="outline">
+                  {formatSalaryUnits(team.remainingUnits, salary.displayLabel)} livres
+                </Badge>
               )}
             </div>
             <Progress
@@ -385,8 +388,8 @@ function PublicSalarySection({ data }: { data: PublicChampionshipDetail }) {
               className={`mt-4 ${team.overCap ? "[&_[data-slot=progress-indicator]]:bg-red-400" : ""}`}
             />
             <div className="mt-2 flex justify-between text-xs tabular-nums text-muted-foreground">
-              <span>{team.usageUnits} usados</span>
-              <span>{salary.capUnits} de limite</span>
+              <span>{formatSalaryUnits(team.usageUnits, salary.displayLabel)} usados</span>
+              <span>{formatSalaryUnits(salary.capUnits, salary.displayLabel)} de limite</span>
             </div>
           </div>
         ))}
@@ -409,7 +412,9 @@ function PublicSalarySection({ data }: { data: PublicChampionshipDetail }) {
               {participant.membership?.role === "gm" ? " · GM" : ""}
             </span>
             <span className="text-right tabular-nums">
-              {participant.priceUnits ?? "—"} {salary.displayLabel}
+              {participant.priceUnits === null
+                ? "—"
+                : formatSalaryUnits(participant.priceUnits, salary.displayLabel)}
             </span>
           </div>
         ))}

@@ -23,9 +23,11 @@ type MatchSummaryLinkMatch = MatchSummaryRoster & {
 export function MatchSummaryLink({
   match,
   size = "md",
+  showPlayers = true,
 }: {
   match: MatchSummaryLinkMatch;
   size?: MatchSummaryLinkSize;
+  showPlayers?: boolean;
 }) {
   const players = matchSummaryPlayers(match);
 
@@ -48,7 +50,7 @@ export function MatchSummaryLink({
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">{formatDateTime(match.initiatedAt)}</p>
-        {players.length > 0 ? <MatchPlayerBadges players={players} /> : null}
+        {showPlayers && players.length > 0 ? <MatchPlayerBadges players={players} /> : null}
       </div>
 
       <Scoreline red={match.score?.red} blue={match.score?.blue} compact />

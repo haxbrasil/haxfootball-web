@@ -4,6 +4,7 @@ import { BroadcastPanel } from "#/components/ds/broadcast-panel";
 import { EmptyLeagueState } from "#/components/ds/empty-league-state";
 import { InfiniteListBoundary } from "#/components/ds/infinite-list";
 import { LeagueHeader } from "#/components/ds/league-header";
+import { Skeleton } from "#/components/ui/skeleton";
 import { MatchListFilters } from "./components/match-list-filters";
 import { MatchListRow } from "./components/match-list-row";
 import { useMatchesList } from "./hooks/use-matches-list";
@@ -67,5 +68,23 @@ export function MatchesPage({ matches }: { matches: ListMatchesResponse }) {
         />
       </BroadcastPanel>
     </>
+  );
+}
+
+export function MatchesPageSkeleton() {
+  return (
+    <div className="space-y-6" aria-label="Carregando partidas">
+      <Skeleton className="h-36 w-full rounded-xl" />
+      <section className="bfl-panel overflow-hidden rounded-xl border">
+        <div className="bfl-panel-header border-b px-4 py-3">
+          <Skeleton className="h-5 w-36" />
+        </div>
+        <div className="grid gap-3 p-4">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} className="h-24 w-full" />
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

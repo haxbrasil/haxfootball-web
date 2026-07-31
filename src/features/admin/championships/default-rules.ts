@@ -20,7 +20,7 @@ export const defaultChampionshipRules = {
   salary: {
     enabled: true,
     capUnits: 100,
-    displayLabel: "moedas",
+    displayLabel: "M",
     maximumTradeDifference: 10,
   },
   draft: {

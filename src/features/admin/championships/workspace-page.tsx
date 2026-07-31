@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   CircleDollarSign,
   ClipboardCheck,
@@ -43,6 +44,14 @@ import {
   DialogTrigger,
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
 import {
   CommandDialog,
   CommandEmpty,
@@ -403,6 +412,7 @@ function SetupWorkspace({ data, isAdmin }: { data: ChampionshipWorkspaceData; is
       <WorkspaceTitle
         title="Configuração da edição"
         description="Dados públicos, regras congeláveis, ciclo de vida e programas de sala."
+        action={<LifecycleMenu data={data} disabled={!isAdmin} />}
       />
       {!isAdmin ? (
         <Alert>
@@ -413,10 +423,7 @@ function SetupWorkspace({ data, isAdmin }: { data: ChampionshipWorkspaceData; is
         </Alert>
       ) : null}
       <ChampionshipDetailsForm data={data} disabled={!isAdmin} />
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <LifecyclePanel data={data} disabled={!isAdmin} />
-        <RoomProgramsPanel data={data} disabled={!isAdmin} />
-      </div>
+      <RoomProgramsPanel data={data} disabled={!isAdmin} />
       <RulesForm data={data} disabled={!isAdmin} />
     </div>
   );
@@ -804,7 +811,7 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
                 disabled={disabled || !salaryEnabled}
               />
               <FormField
-                label="Rótulo da unidade"
+                label="Unidade monetária (M = US$ 1 milhão)"
                 name="displayLabel"
                 defaultValue={rules.salary.displayLabel}
                 disabled={disabled || !salaryEnabled}
@@ -872,13 +879,7 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
   );
 }
 
-function LifecyclePanel({
-  data,
-  disabled,
-}: {
-  data: ChampionshipWorkspaceData;
-  disabled: boolean;
-}) {
+function LifecycleMenu({ data, disabled }: { data: ChampionshipWorkspaceData; disabled: boolean }) {
   const transition = useServerFn(transitionChampionshipFn);
   const router = useRouter();
   const championship = data.championship;
@@ -916,40 +917,46 @@ function LifecyclePanel({
   }
 
   return (
-    <section className="border bg-card/55">
-      <SectionHeader icon={FileClock} title="Ciclo de vida" />
-      <div className="space-y-4 p-5">
-        {message ? <InlineMessage text={message} /> : null}
-        <div className="flex items-start gap-3">
-          <div className="mt-1 size-2 bg-emerald-400" />
-          <div>
-            <div className="font-medium">{championshipLifecycleLabel(championship.lifecycle)}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {championship.visibility === "public"
-                ? "Página pública visível"
-                : "Visível apenas para a organização"}
-            </div>
-          </div>
-        </div>
-        <div className="grid gap-2">
-          {actions.map((action) => (
-            <Button
-              key={action.transition}
-              variant={action.transition === "cancel" ? "destructive" : "outline"}
-              className="justify-start"
-              disabled={disabled || busy}
-              onClick={() => void run(action)}
-            >
-              {action.transition === "publish" ? <Eye /> : null}
-              {action.transition === "unpublish" ? <EyeOff /> : null}
-              {action.transition === "activate" ? <Radio /> : null}
-              {action.transition === "complete" ? <CheckCircle2 /> : null}
-              {action.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-    </section>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="min-w-44 justify-between">
+          <span className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-400" />
+            {championshipLifecycleLabel(championship.lifecycle)}
+          </span>
+          <ChevronDown />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel className="space-y-1">
+          <span className="block">Ciclo de vida</span>
+          <span className="block text-xs font-normal text-muted-foreground">
+            {championship.visibility === "public"
+              ? "Página pública visível"
+              : "Visível apenas para a organização"}
+          </span>
+        </DropdownMenuLabel>
+        {message ? <div className="mx-2 my-1 text-xs text-muted-foreground">{message}</div> : null}
+        <DropdownMenuSeparator />
+        {actions.map((action) => (
+          <DropdownMenuItem
+            key={action.transition}
+            variant={action.transition === "cancel" ? "destructive" : "default"}
+            disabled={disabled || busy}
+            onSelect={(event) => {
+              event.preventDefault();
+              void run(action);
+            }}
+          >
+            {action.transition === "publish" ? <Eye /> : null}
+            {action.transition === "unpublish" ? <EyeOff /> : null}
+            {action.transition === "activate" ? <Radio /> : null}
+            {action.transition === "complete" ? <CheckCircle2 /> : null}
+            {action.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

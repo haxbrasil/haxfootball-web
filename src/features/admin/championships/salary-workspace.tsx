@@ -53,6 +53,7 @@ import {
 } from "#/components/ui/table";
 import { Textarea } from "#/components/ui/textarea";
 import type { ChampionshipWorkspaceData } from "#/server/api/championship-api";
+import { formatSalaryUnits } from "#/features/championships/salary-format";
 import {
   createChampionshipParticipantFn,
   executeChampionshipRosterMoveFn,
@@ -154,7 +155,7 @@ function SalaryWorkspaceHeading({
           label="Inscritos"
           value={data.participants.items.filter(({ status }) => status === "active").length}
         />
-        <Metric label="Teto" value={`${salary.capUnits} ${salary.displayLabel}`} />
+        <Metric label="Teto" value={formatSalaryUnits(salary.capUnits, salary.displayLabel)} />
         <Metric
           label="Pendências"
           value={salary.validation.missingPriceCount}
@@ -1075,7 +1076,8 @@ function TeamCapComparison({
                 />
                 <div className="mt-2 flex justify-between text-xs tabular-nums">
                   <span>
-                    {team.usageUnits} / {data.salary.capUnits} {data.salary.displayLabel}
+                    {formatSalaryUnits(team.usageUnits, data.salary.displayLabel)} /{" "}
+                    {formatSalaryUnits(data.salary.capUnits, data.salary.displayLabel)}
                   </span>
                   <span
                     className={
@@ -1268,7 +1270,7 @@ function RosterMoveDialog({
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">{preview.participant.displayName}</div>
                 <div className="text-xs text-muted-foreground">
-                  {preview.participant.priceUnits ?? 0} {data.salary.displayLabel}
+                  {formatSalaryUnits(preview.participant.priceUnits ?? 0, data.salary.displayLabel)}
                 </div>
               </div>
               <div className="text-right text-sm">
@@ -1426,7 +1428,8 @@ function TradeSimulation({ data }: { data: ChampionshipWorkspaceData }) {
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{projection.team.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {projection.team.usageUnits} → {projection.usageAfter} {data.salary.displayLabel}
+                  {formatSalaryUnits(projection.team.usageUnits, data.salary.displayLabel)} →{" "}
+                  {formatSalaryUnits(projection.usageAfter, data.salary.displayLabel)}
                 </div>
               </div>
               <Badge variant={projection.overCap ? "destructive" : "outline"}>

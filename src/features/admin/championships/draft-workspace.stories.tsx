@@ -222,7 +222,7 @@ function fixture(state: FixtureState): DraftStoryData {
         salary: {
           enabled: true,
           capUnits: 100,
-          displayLabel: "créditos",
+          displayLabel: "M",
           maximumTradeDifference: 10,
         },
         draft: { rounds: 4, countdownSeconds: 60, publicPrices: true },

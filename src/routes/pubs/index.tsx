@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PubsPage } from "#/features/pubs/page";
+import { PubsPage, PubsPageSkeleton } from "#/features/pubs/page";
 import { countMatchesFn, getStatsCategoryRankingsFn, listMatchesFn } from "#/server/api/functions";
 
 export const Route = createFileRoute("/pubs/")({
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/pubs/")({
 
     return { matches, matchCount, rankings };
   },
+  pendingComponent: PubsPageSkeleton,
   component: () => {
     const data = Route.useLoaderData();
 
