@@ -84,8 +84,10 @@ import {
   upsertChampionshipSavedViewFn,
 } from "#/server/api/championship-functions";
 import {
+  championshipContextLabel,
   championshipLifecycleLabel,
   championshipLifecycleTone,
+  championshipTargetLabel,
 } from "#/features/championships/championship-labels";
 import { SalaryWorkspace } from "#/features/admin/championships/salary-workspace";
 import { DraftWorkspace } from "#/features/admin/championships/draft-workspace";
@@ -157,7 +159,7 @@ export function ChampionshipWorkspacePage({
   }
 
   return (
-    <div className="-mx-4 -mt-4 min-h-[calc(100vh-7rem)] border-y bg-background sm:-mx-6 lg:-mx-8">
+    <div className="relative left-1/2 -mt-4 min-h-[calc(100vh-7rem)] w-dvw -translate-x-1/2 border-y bg-background">
       <ChampionshipWorkspaceHeader
         data={data}
         inspector={inspector}
@@ -409,16 +411,12 @@ function SetupWorkspace({ data, isAdmin }: { data: ChampionshipWorkspaceData; is
           </AlertDescription>
         </Alert>
       ) : null}
-      <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-6">
-          <ChampionshipDetailsForm data={data} disabled={!isAdmin} />
-          <RulesForm data={data} disabled={!isAdmin} />
-        </div>
-        <div className="space-y-6">
-          <LifecyclePanel data={data} disabled={!isAdmin} />
-          <RoomProgramsPanel data={data} disabled={!isAdmin} />
-        </div>
+      <ChampionshipDetailsForm data={data} disabled={!isAdmin} />
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <LifecyclePanel data={data} disabled={!isAdmin} />
+        <RoomProgramsPanel data={data} disabled={!isAdmin} />
       </div>
+      <RulesForm data={data} disabled={!isAdmin} />
     </div>
   );
 }
@@ -536,6 +534,7 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
   const [salaryEnabled, setSalaryEnabled] = useState(rules.salary.enabled);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [section, setSection] = useState<"match" | "roster" | "salary" | "scheduling">("match");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -624,207 +623,244 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
       <SectionHeader icon={ClipboardCheck} title="Regras da edição" />
       <form className="space-y-6 p-5" onSubmit={submit}>
         {message ? <InlineMessage text={message} /> : null}
-        <RuleGroup title="Partida">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <FormField
-              label="Tempos"
-              name="periods"
-              type="number"
-              min={1}
-              defaultValue={String(rules.match.sequentialRoundCount)}
-              disabled={disabled}
-            />
-            <SelectField
-              label="Empate"
-              name="drawPolicy"
-              defaultValue={rules.match.drawPolicy}
-              disabled={disabled}
-              options={[
-                ["allowed", "Permitido"],
-                ["overtime", "Prorrogação"],
-                ["staff-decision", "Decisão da organização"],
-              ]}
-            />
-            <FormField
-              label="W.O. vencedor"
-              name="forfeitWinner"
-              type="number"
-              min={0}
-              defaultValue={String(rules.match.fullForfeitScore.winner)}
-              disabled={disabled}
-            />
-            <FormField
-              label="W.O. perdedor"
-              name="forfeitLoser"
-              type="number"
-              min={0}
-              defaultValue={String(rules.match.fullForfeitScore.loser)}
-              disabled={disabled}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField
-              label="Prorrogação"
-              name="overtimePolicy"
-              defaultValue={rules.match.overtimePolicy}
-              disabled={disabled}
-              options={[
-                ["disabled", "Desativada"],
-                ["separate-period", "Tempo separado"],
-                ["manual", "Decisão manual"],
-              ]}
-            />
-            <FormField
-              label="Regra da prorrogação"
-              name="overtimeRuleLabel"
-              defaultValue={rules.match.overtimeRuleLabel ?? ""}
-              disabled={disabled}
-            />
-          </div>
-          <ToggleRow
-            name="switchSides"
-            label="Trocar vermelho e azul entre tempos"
-            defaultChecked={rules.match.switchSides}
-            disabled={disabled}
-          />
-        </RuleGroup>
-
-        <RuleGroup title="Elenco e draft">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <FormField
-              label="Mínimo"
-              name="minimumSize"
-              type="number"
-              min={0}
-              defaultValue={String(rules.roster.minimumSize)}
-              disabled={disabled}
-            />
-            <FormField
-              label="Máximo"
-              name="maximumSize"
-              type="number"
-              min={0}
-              defaultValue={String(rules.roster.maximumSize)}
-              disabled={disabled}
-            />
-            <FormField
-              label="Rodadas do draft"
-              name="draftRounds"
-              type="number"
-              min={1}
-              defaultValue={String(rules.draft.rounds)}
-              disabled={disabled}
-            />
-            <FormField
-              label="Contagem (segundos)"
-              name="countdownSeconds"
-              type="number"
-              min={5}
-              defaultValue={String(rules.draft.countdownSeconds)}
-              disabled={disabled}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField
-              label="Travamento do elenco"
-              name="lockPolicy"
-              defaultValue={rules.roster.lockPolicy}
-              disabled={disabled}
-              options={[
-                ["unlocked", "Manual"],
-                ["draft-start", "Ao iniciar o draft"],
-                ["competition-start", "Ao iniciar o campeonato"],
-              ]}
-            />
-            <ToggleRow
-              name="publicPrices"
-              label="Exibir valores publicamente"
-              defaultChecked={rules.draft.publicPrices}
-              disabled={disabled}
-            />
-          </div>
-        </RuleGroup>
-
-        <RuleGroup title="Teto salarial">
-          <div className="flex items-center justify-between border p-3">
-            <div>
-              <Label htmlFor="salaryEnabled">Usar teto salarial</Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Valores inteiros, congelados antes da atividade sujeita ao teto.
-              </p>
+        <div
+          className="flex gap-1 overflow-x-auto border-b"
+          role="tablist"
+          aria-label="Seções das regras"
+        >
+          {(
+            [
+              ["match", "Partida"],
+              ["roster", "Elenco e draft"],
+              ["salary", "Teto salarial"],
+              ["scheduling", "Agendamento"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={section === value}
+              onClick={() => setSection(value)}
+              className={`h-10 shrink-0 border-b-2 px-4 text-sm font-medium transition-colors ${
+                section === value
+                  ? "border-emerald-400 text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div hidden={section !== "match"} role="tabpanel">
+          <RuleGroup title="Partida">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                label="Tempos"
+                name="periods"
+                type="number"
+                min={1}
+                defaultValue={String(rules.match.sequentialRoundCount)}
+                disabled={disabled}
+              />
+              <SelectField
+                label="Empate"
+                name="drawPolicy"
+                defaultValue={rules.match.drawPolicy}
+                disabled={disabled}
+                options={[
+                  ["allowed", "Permitido"],
+                  ["overtime", "Prorrogação"],
+                  ["staff-decision", "Decisão da organização"],
+                ]}
+              />
+              <FormField
+                label="W.O. vencedor"
+                name="forfeitWinner"
+                type="number"
+                min={0}
+                defaultValue={String(rules.match.fullForfeitScore.winner)}
+                disabled={disabled}
+              />
+              <FormField
+                label="W.O. perdedor"
+                name="forfeitLoser"
+                type="number"
+                min={0}
+                defaultValue={String(rules.match.fullForfeitScore.loser)}
+                disabled={disabled}
+              />
             </div>
-            <Switch
-              id="salaryEnabled"
-              checked={salaryEnabled}
-              onCheckedChange={setSalaryEnabled}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Prorrogação"
+                name="overtimePolicy"
+                defaultValue={rules.match.overtimePolicy}
+                disabled={disabled}
+                options={[
+                  ["disabled", "Desativada"],
+                  ["separate-period", "Tempo separado"],
+                  ["manual", "Decisão manual"],
+                ]}
+              />
+              <FormField
+                label="Regra da prorrogação"
+                name="overtimeRuleLabel"
+                defaultValue={rules.match.overtimeRuleLabel ?? ""}
+                disabled={disabled}
+              />
+            </div>
+            <ToggleRow
+              name="switchSides"
+              label="Trocar vermelho e azul entre tempos"
+              defaultChecked={rules.match.switchSides}
               disabled={disabled}
             />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField
-              label="Teto por equipe"
-              name="capUnits"
-              type="number"
-              min={0}
-              defaultValue={String(rules.salary.capUnits)}
-              disabled={disabled || !salaryEnabled}
-            />
-            <FormField
-              label="Rótulo da unidade"
-              name="displayLabel"
-              defaultValue={rules.salary.displayLabel}
-              disabled={disabled || !salaryEnabled}
-            />
-            <FormField
-              label="Diferença máxima em troca"
-              name="maximumTradeDifference"
-              type="number"
-              min={0}
-              defaultValue={String(rules.salary.maximumTradeDifference)}
-              disabled={disabled || !salaryEnabled}
-            />
-          </div>
-        </RuleGroup>
+          </RuleGroup>
+        </div>
 
-        <RuleGroup title="Agendamento">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <SelectField
-              label="Autoridade"
-              name="schedulingAuthority"
-              defaultValue={rules.scheduling.authority}
-              disabled={disabled}
-              options={[
-                ["staff", "Organização"],
-                ["gms", "GMs"],
-                ["staff-and-gms", "Organização e GMs"],
-              ]}
-            />
-            <SelectField
-              label="Propostas"
-              name="proposalMode"
-              defaultValue={rules.scheduling.proposalMode}
-              disabled={disabled}
-              options={[
-                ["exact-time", "Horário exato"],
-                ["availability-range", "Faixa de disponibilidade"],
-                ["both", "Ambos"],
-              ]}
-            />
-            <SelectField
-              label="Jogo atrasado"
-              name="latePlayPolicy"
-              defaultValue={rules.scheduling.latePlayPolicy}
-              disabled={disabled}
-              options={[
-                ["forbidden", "Proibido"],
-                ["staff-approval", "Com autorização"],
-                ["allowed", "Permitido"],
-              ]}
-            />
-          </div>
-        </RuleGroup>
+        <div hidden={section !== "roster"} role="tabpanel">
+          <RuleGroup title="Elenco e draft">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                label="Mínimo"
+                name="minimumSize"
+                type="number"
+                min={0}
+                defaultValue={String(rules.roster.minimumSize)}
+                disabled={disabled}
+              />
+              <FormField
+                label="Máximo"
+                name="maximumSize"
+                type="number"
+                min={0}
+                defaultValue={String(rules.roster.maximumSize)}
+                disabled={disabled}
+              />
+              <FormField
+                label="Rodadas do draft"
+                name="draftRounds"
+                type="number"
+                min={1}
+                defaultValue={String(rules.draft.rounds)}
+                disabled={disabled}
+              />
+              <FormField
+                label="Contagem (segundos)"
+                name="countdownSeconds"
+                type="number"
+                min={5}
+                defaultValue={String(rules.draft.countdownSeconds)}
+                disabled={disabled}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Travamento do elenco"
+                name="lockPolicy"
+                defaultValue={rules.roster.lockPolicy}
+                disabled={disabled}
+                options={[
+                  ["unlocked", "Manual"],
+                  ["draft-start", "Ao iniciar o draft"],
+                  ["competition-start", "Ao iniciar o campeonato"],
+                ]}
+              />
+              <ToggleRow
+                name="publicPrices"
+                label="Exibir valores publicamente"
+                defaultChecked={rules.draft.publicPrices}
+                disabled={disabled}
+              />
+            </div>
+          </RuleGroup>
+        </div>
 
-        <div className="flex justify-end">
+        <div hidden={section !== "salary"} role="tabpanel">
+          <RuleGroup title="Teto salarial">
+            <div className="flex items-center justify-between border p-3">
+              <div>
+                <Label htmlFor="salaryEnabled">Usar teto salarial</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Valores inteiros, congelados antes da atividade sujeita ao teto.
+                </p>
+              </div>
+              <Switch
+                id="salaryEnabled"
+                checked={salaryEnabled}
+                onCheckedChange={setSalaryEnabled}
+                disabled={disabled}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                label="Teto por equipe"
+                name="capUnits"
+                type="number"
+                min={0}
+                defaultValue={String(rules.salary.capUnits)}
+                disabled={disabled || !salaryEnabled}
+              />
+              <FormField
+                label="Rótulo da unidade"
+                name="displayLabel"
+                defaultValue={rules.salary.displayLabel}
+                disabled={disabled || !salaryEnabled}
+              />
+              <FormField
+                label="Diferença máxima em troca"
+                name="maximumTradeDifference"
+                type="number"
+                min={0}
+                defaultValue={String(rules.salary.maximumTradeDifference)}
+                disabled={disabled || !salaryEnabled}
+              />
+            </div>
+          </RuleGroup>
+        </div>
+
+        <div hidden={section !== "scheduling"} role="tabpanel">
+          <RuleGroup title="Agendamento">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Autoridade"
+                name="schedulingAuthority"
+                defaultValue={rules.scheduling.authority}
+                disabled={disabled}
+                options={[
+                  ["staff", "Organização"],
+                  ["gms", "GMs"],
+                  ["staff-and-gms", "Organização e GMs"],
+                ]}
+              />
+              <SelectField
+                label="Propostas"
+                name="proposalMode"
+                defaultValue={rules.scheduling.proposalMode}
+                disabled={disabled}
+                options={[
+                  ["exact-time", "Horário exato"],
+                  ["availability-range", "Faixa de disponibilidade"],
+                  ["both", "Ambos"],
+                ]}
+              />
+              <SelectField
+                label="Jogo atrasado"
+                name="latePlayPolicy"
+                defaultValue={rules.scheduling.latePlayPolicy}
+                disabled={disabled}
+                options={[
+                  ["forbidden", "Proibido"],
+                  ["staff-approval", "Com autorização"],
+                  ["allowed", "Permitido"],
+                ]}
+              />
+            </div>
+          </RuleGroup>
+        </div>
+
+        <div className="sticky bottom-0 -mx-5 -mb-5 flex justify-end border-t bg-card/95 px-5 py-4 backdrop-blur">
           <Button type="submit" disabled={disabled || busy}>
             <Save />
             {busy ? "Salvando…" : "Salvar regras"}
@@ -1279,7 +1315,8 @@ function ActivityWorkspace({ data }: { data: ChampionshipWorkspaceData }) {
                 <div className="min-w-0">
                   <div className="font-medium">{auditActionLabel(event.action)}</div>
                   <div className="mt-1 truncate text-xs text-muted-foreground">
-                    {event.actor.accountName ?? event.actor.kind} · {event.targetType}
+                    {event.actor.accountName ?? actorKindLabel(event.actor.kind)} ·{" "}
+                    {championshipTargetLabel(event.targetType)}
                     {event.reason ? ` · ${event.reason}` : ""}
                   </div>
                 </div>
@@ -1315,7 +1352,7 @@ function WorkspaceInspector({
                   <span className="size-2 rounded-full bg-emerald-400" />
                   <span className="min-w-0 flex-1 truncate">{person.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {person.contextType ?? "visão geral"}
+                    {championshipContextLabel(person.contextType)}
                   </span>
                 </div>
               ))}
@@ -2183,16 +2220,69 @@ function conflictMessage(result: {
 
 function auditActionLabel(action: string) {
   const labels: Record<string, string> = {
+    "assignment.created": "Responsabilidade atribuída",
     "championship.created": "Campeonato criado",
     "championship.updated": "Configuração atualizada",
     "championship.published": "Campeonato publicado",
+    "championship.unpublished": "Publicação retirada",
     "championship.activated": "Campeonato iniciado",
+    "championship.completed": "Campeonato concluído",
+    "championship.canceled": "Campeonato cancelado",
+    "championship.archived": "Campeonato arquivado",
+    "comment.created": "Comentário publicado",
+    "competition-type.created": "Tipo de competição criado",
+    "competition-type.updated": "Tipo de competição atualizado",
+    "draft.configured": "Draft configurado",
+    "draft.ended": "Draft encerrado",
+    "draft.pick-made": "Escolha realizada no draft",
+    "draft.pick-reversed": "Escolha do draft desfeita",
+    "draft.started": "Draft iniciado",
+    "draft.turn-overdue": "Tempo de escolha esgotado",
+    "format.classification.applied": "Classificação aplicada",
+    "format.group.created": "Grupo criado",
+    "format.round-robin.generated": "Jogos da fase gerados",
+    "format.standings.configured": "Critérios de classificação atualizados",
+    "history.award.corrected": "Premiação corrigida",
+    "history.award.created": "Premiação registrada",
+    "history.import.applied": "Importação histórica aplicada",
+    "history.import.rolled-back": "Importação histórica desfeita",
+    "history.placements.replaced": "Classificação final atualizada",
+    "history.player.linked": "Jogador histórico vinculado",
+    "match.attributions.updated": "Atribuições do jogo atualizadas",
+    "match.evidence.attached": "Registro de sala associado",
+    "match.evidence.detached": "Registro de sala desvinculado",
+    "participant.self-registered": "Jogador inscrito",
+    "participant.self-withdrew": "Inscrição retirada pelo jogador",
+    "participant.staff-registered": "Jogador inscrito pela organização",
+    "participant.status-changed": "Situação do participante atualizada",
+    "roster.staff-moved": "Elenco alterado pela organização",
+    "salary.prices-frozen": "Valores salariais congelados",
+    "salary.prices-upserted": "Valores salariais atualizados",
+    "schedule.late-play.authorized": "Jogo atrasado autorizado",
+    "schedule.late-play.revoked": "Autorização de jogo atrasado retirada",
+    "schedule.proposal.created": "Proposta de horário criada",
+    "schedule.reminder.sent": "Lembrete de agendamento enviado",
+    "statistics.metric-mappings.replaced": "Mapeamento de estatísticas atualizado",
     "team.created": "Equipe criada",
     "team.updated": "Equipe atualizada",
+    "team-identity.created": "Identidade de equipe criada",
+    "team-identity.updated": "Identidade de equipe atualizada",
     "thread.created": "Discussão iniciada",
-    "assignment.created": "Responsabilidade atribuída",
+    "trade.accepted": "Troca aceita",
+    "trade.proposed": "Troca proposta",
+    "trades.expired": "Trocas expiradas",
   };
-  return labels[action] ?? action.replaceAll(".", " · ");
+  return labels[action] ?? "Atividade registrada";
+}
+
+function actorKindLabel(kind: string) {
+  return (
+    {
+      account: "Conta",
+      system: "Sistema",
+      migration: "Importação",
+    }[kind] ?? "Sistema"
+  );
 }
 
 function assignmentStateLabel(

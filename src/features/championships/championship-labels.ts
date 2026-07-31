@@ -71,3 +71,62 @@ export function championshipDateRange(startsAt: string | null, endsAt: string | 
   if (end) return `Até ${end}`;
   return "Datas a definir";
 }
+
+export function championshipContextLabel(contextType: string | null | undefined) {
+  if (!contextType) return "Visão geral";
+
+  return (
+    {
+      setup: "Configuração",
+      teams: "Equipes",
+      salary: "Elencos e teto",
+      draft: "Draft e trocas",
+      format: "Formato",
+      matches: "Jogos",
+      statistics: "Estatísticas",
+      archive: "Títulos e acervo",
+      activity: "Atividade",
+      championship: "Campeonato",
+      "championship-match": "Jogo",
+      thread: "Discussão",
+    }[contextType] ?? "Visão geral"
+  );
+}
+
+export function championshipTargetLabel(targetType: string) {
+  return (
+    {
+      account: "Conta",
+      assignment: "Responsabilidade",
+      championship: "Campeonato",
+      "championship-award": "Premiação",
+      "championship-match": "Jogo",
+      "championship-placements": "Classificação final",
+      "championship-statistics": "Estatísticas",
+      "classification-run": "Classificação",
+      comment: "Comentário",
+      "competition-round": "Período da competição",
+      draft: "Draft",
+      "draft-turn": "Escolha do draft",
+      group: "Grupo",
+      "historical-import": "Importação histórica",
+      "historical-player": "Jogador histórico",
+      "late-play-authorization": "Autorização de jogo atrasado",
+      participant: "Participante",
+      "permission-grant": "Permissão",
+      registration: "Inscrição",
+      "room-program": "Programa de sala",
+      "roster-membership": "Vínculo de elenco",
+      route: "Rota",
+      "salary-prices": "Valores salariais",
+      "schedule-proposal": "Proposta de horário",
+      spot: "Vaga",
+      stage: "Etapa",
+      team: "Equipe",
+      "team-identity": "Identidade de equipe",
+      thread: "Discussão",
+      trade: "Troca",
+      "trade-set": "Conjunto de trocas",
+    }[targetType] ?? "Registro relacionado"
+  );
+}

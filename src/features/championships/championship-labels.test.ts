@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   cadenceLabel,
+  championshipContextLabel,
   championshipDateRange,
   championshipLifecycleLabel,
+  championshipTargetLabel,
   matchFormatLabel,
   registrationLabel,
 } from "./championship-labels";
@@ -91,5 +93,18 @@ describe("championship labels", () => {
     expect(championshipDateRange(null, null)).toBe("Datas a definir");
     expect(championshipDateRange("2026-08-01T12:00:00.000Z", null)).toMatch(/^A partir de /);
     expect(championshipDateRange(null, "2026-08-08T12:00:00.000Z")).toMatch(/^Até /);
+  });
+
+  it("localizes workspace and collaboration contexts", () => {
+    expect(championshipContextLabel("championship")).toBe("Campeonato");
+    expect(championshipContextLabel("draft")).toBe("Draft e trocas");
+    expect(championshipContextLabel(null)).toBe("Visão geral");
+    expect(championshipContextLabel("future-context")).toBe("Visão geral");
+  });
+
+  it("localizes audit targets without exposing storage identifiers", () => {
+    expect(championshipTargetLabel("championship")).toBe("Campeonato");
+    expect(championshipTargetLabel("draft-turn")).toBe("Escolha do draft");
+    expect(championshipTargetLabel("future-target")).toBe("Registro relacionado");
   });
 });
