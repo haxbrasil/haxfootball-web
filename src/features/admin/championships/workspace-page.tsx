@@ -159,7 +159,7 @@ export function ChampionshipWorkspacePage({
   }
 
   return (
-    <div className="relative left-1/2 -mt-4 min-h-[calc(100vh-7rem)] w-dvw -translate-x-1/2 border-y bg-background">
+    <div className="relative left-1/2 -mt-4 min-h-[calc(100vh-7rem)] w-dvw -translate-x-1/2 overflow-x-clip border-y bg-background">
       <ChampionshipWorkspaceHeader
         data={data}
         inspector={inspector}
