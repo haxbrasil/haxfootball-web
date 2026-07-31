@@ -59,7 +59,7 @@ export function ChampionshipAdminIndexPage({ data }: { data: ChampionshipAdminIn
         }
       />
 
-      <div className="mb-6 grid border-y bg-card/50 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <AttentionMetric
           icon={Trophy}
           value={active}
@@ -80,7 +80,7 @@ export function ChampionshipAdminIndexPage({ data }: { data: ChampionshipAdminIn
         />
       </div>
 
-      <section className="border-y bg-card/60">
+      <section className="bfl-panel overflow-hidden rounded-xl border">
         <div className="flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold">Edições</h2>
@@ -115,7 +115,7 @@ export function ChampionshipAdminIndexPage({ data }: { data: ChampionshipAdminIn
             </TableHeader>
             <TableBody>
               {data.championships.items.map((championship) => (
-                <TableRow key={championship.uuid}>
+                <TableRow key={championship.uuid} className="hover:bg-muted/35">
                   <TableCell>
                     <div className="font-medium">{championship.name}</div>
                     <div className="mt-0.5 text-xs text-muted-foreground">
@@ -172,7 +172,7 @@ function AttentionMetric({
   tone: string;
 }) {
   return (
-    <div className="flex items-center gap-4 border-b px-5 py-4 sm:border-r sm:border-b-0">
+    <div className="bfl-panel flex items-center gap-4 rounded-xl border px-5 py-4">
       <Icon className={`size-5 ${tone}`} />
       <div>
         <div className="text-xl font-semibold tabular-nums">{value}</div>

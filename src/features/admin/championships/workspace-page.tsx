@@ -276,18 +276,19 @@ function ChampionshipWorkspaceHeader({
               {championshipLifecycleLabel(championship.lifecycle)}
             </Badge>
           </div>
-          <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-            <span>{championship.competitionType.name}</span>
-            <span>revisão {championship.revision}</span>
-            <span>evento {championship.changeSequence}</span>
-            {!isAdmin ? <span>modo operação</span> : null}
-            <span
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <Badge variant="secondary">{championship.competitionType.name}</Badge>
+            <Badge variant="outline">revisão {championship.revision}</Badge>
+            <Badge variant="outline">evento {championship.changeSequence}</Badge>
+            {!isAdmin ? <Badge variant="outline">modo operação</Badge> : null}
+            <Badge
+              variant="outline"
               className={
                 liveStatus === "live"
-                  ? "text-emerald-300"
+                  ? "border-emerald-500/50 text-emerald-300"
                   : liveStatus === "offline"
-                    ? "text-red-300"
-                    : ""
+                    ? "border-red-500/50 text-red-300"
+                    : "text-muted-foreground"
               }
             >
               {liveStatus === "live"
@@ -295,7 +296,7 @@ function ChampionshipWorkspaceHeader({
                 : liveStatus === "offline"
                   ? "reconectando"
                   : "conectando"}
-            </span>
+            </Badge>
           </div>
         </div>
         <div className="hidden items-center gap-2 sm:flex">

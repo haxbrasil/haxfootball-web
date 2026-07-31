@@ -24,10 +24,12 @@ export function MatchSummaryLink({
   match,
   size = "md",
   showPlayers = true,
+  showPlayerTeams = true,
 }: {
   match: MatchSummaryLinkMatch;
   size?: MatchSummaryLinkSize;
   showPlayers?: boolean;
+  showPlayerTeams?: boolean;
 }) {
   const players = matchSummaryPlayers(match);
 
@@ -50,7 +52,9 @@ export function MatchSummaryLink({
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">{formatDateTime(match.initiatedAt)}</p>
-        {showPlayers && players.length > 0 ? <MatchPlayerBadges players={players} /> : null}
+        {showPlayers && players.length > 0 ? (
+          <MatchPlayerBadges players={players} showTeams={showPlayerTeams} />
+        ) : null}
       </div>
 
       <Scoreline red={match.score?.red} blue={match.score?.blue} compact />
@@ -58,7 +62,13 @@ export function MatchSummaryLink({
   );
 }
 
-function MatchPlayerBadges({ players }: { players: MatchSummaryPlayer[] }) {
+function MatchPlayerBadges({
+  players,
+  showTeams,
+}: {
+  players: MatchSummaryPlayer[];
+  showTeams: boolean;
+}) {
   const visiblePlayers = players.slice(0, 8);
   const remainingPlayers = players.length - visiblePlayers.length;
 
@@ -69,19 +79,23 @@ function MatchPlayerBadges({ players }: { players: MatchSummaryPlayer[] }) {
           key={player.id}
           variant="outline"
           className={cn(
-            "max-w-40 gap-1.5 rounded-full px-2.5 py-1 font-medium shadow-sm",
-            player.team === "red"
-              ? "border-red-400/25 bg-red-500/10 text-red-200"
-              : "border-blue-400/25 bg-blue-500/10 text-blue-200",
+            "max-w-40 rounded-full px-2.5 py-1 font-medium shadow-sm",
+            showTeams
+              ? player.team === "red"
+                ? "gap-1.5 border-red-400/25 bg-red-500/10 text-red-200"
+                : "gap-1.5 border-blue-400/25 bg-blue-500/10 text-blue-200"
+              : "border-border/70 bg-muted/45 text-foreground",
           )}
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-1.5 shrink-0 rounded-full",
-              player.team === "red" ? "bg-red-400" : "bg-blue-400",
-            )}
-          />
+          {showTeams ? (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                player.team === "red" ? "bg-red-400" : "bg-blue-400",
+              )}
+            />
+          ) : null}
           <span className="truncate">{player.name}</span>
         </Badge>
       ))}

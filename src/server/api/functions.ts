@@ -213,7 +213,10 @@ export const getAdminOverviewFn = createServerFn({ method: "GET" }).handler(asyn
   const sections = visibleAdminSections(session);
   const resources = await listAdminOverviewResources({
     accounts: sections.some((section) => section.key === "accounts"),
+    championships: sections.some((section) => section.key === "championships"),
+    matches: sections.some((section) => section.key === "matches"),
     roles: sections.some((section) => section.key === "roles"),
+    roomPrograms: sections.some((section) => section.key === "room-programs"),
     rooms: sections.some((section) => section.key === "rooms"),
   });
 

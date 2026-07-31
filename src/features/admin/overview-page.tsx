@@ -1,17 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  Layers3,
-  PackageOpen,
-  ShieldCheck,
-  Trophy,
-  Users,
-  Volleyball,
-} from "lucide-react";
+import { Layers3, PackageOpen, ShieldCheck, Trophy, Users, Volleyball } from "lucide-react";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
 import { Badge } from "#/components/ui/badge";
-import { Button } from "#/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import { Card, CardHeader, CardTitle } from "#/components/ui/card";
 import type { AdminSection, AdminSectionKey } from "#/features/admin/admin-sections";
 import type { AdminOverviewResources } from "#/server/api/haxfootball";
 
@@ -34,7 +25,7 @@ export function AdminPage({
   return (
     <>
       <PageHeader
-        title="Admin"
+        title="Painel administrativo"
         description="Painel operacional para gerenciar a liga e acessar as áreas disponíveis."
       />
 
@@ -55,28 +46,28 @@ function AdminSectionCard({ section, summary }: { section: AdminSection; summary
   const Icon = sectionIcons[section.key];
 
   return (
-    <Card className="h-full gap-4 rounded-lg">
-      <CardHeader className="gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="grid size-10 place-items-center rounded-md border bg-muted">
-            <Icon className="size-5" />
+    <Link
+      to={section.href}
+      aria-label={`Abrir ${section.title}`}
+      className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Card className="h-full gap-4 rounded-lg transition group-hover:border-primary/45 group-hover:bg-muted/30 group-focus-visible:border-primary/60">
+        <CardHeader className="gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="grid size-10 place-items-center rounded-md border bg-muted transition group-hover:border-primary/35 group-hover:text-primary">
+              <Icon className="size-5" />
+            </div>
+            <Badge variant="secondary">{summary}</Badge>
           </div>
-          <Badge variant="secondary">{summary}</Badge>
-        </div>
-        <div className="space-y-1">
-          <CardTitle className="text-base">{section.title}</CardTitle>
-          <p className="text-sm leading-6 text-muted-foreground">{section.description}</p>
-        </div>
-      </CardHeader>
-      <CardContent className="mt-auto">
-        <Button asChild variant="outline" className="w-full justify-between">
-          <Link to={section.href}>
-            Abrir
-            <ArrowRight className="size-4" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
+          <div className="space-y-1">
+            <CardTitle className="text-base transition group-hover:text-primary">
+              {section.title}
+            </CardTitle>
+            <p className="text-sm leading-6 text-muted-foreground">{section.description}</p>
+          </div>
+        </CardHeader>
+      </Card>
+    </Link>
   );
 }
 
@@ -86,7 +77,7 @@ function sectionSummary(section: AdminSectionKey, resources: AdminOverviewResour
   }
 
   if (section === "room-programs") {
-    return "programas";
+    return pageCountLabel(resources.roomPrograms, "programa", "programas");
   }
 
   if (section === "accounts") {
@@ -94,11 +85,11 @@ function sectionSummary(section: AdminSectionKey, resources: AdminOverviewResour
   }
 
   if (section === "matches") {
-    return "partidas";
+    return pageCountLabel(resources.matches, "partida", "partidas");
   }
 
   if (section === "championships") {
-    return "competições";
+    return pageCountLabel(resources.championships, "campeonato", "campeonatos");
   }
 
   return pageCountLabel(resources.roles, "cargo", "cargos");

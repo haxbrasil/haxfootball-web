@@ -250,7 +250,10 @@ export type AdminRoleResources = {
 
 export type AdminOverviewResources = {
   accounts?: ListAccountsResponse;
+  championships?: ListChampionshipsResponse;
+  matches?: ListMatchesResponse;
   roles?: ListRolesResponse;
+  roomPrograms?: WebListRoomProgramsResponse;
   rooms?: ListRoomsResponse;
 };
 
@@ -846,28 +849,52 @@ export async function listAdminRoleResources(): Promise<AdminRoleResources> {
 
 export async function listAdminOverviewResources(input: {
   accounts: boolean;
+  championships: boolean;
+  matches: boolean;
   roles: boolean;
+  roomPrograms: boolean;
   rooms: boolean;
 }): Promise<AdminOverviewResources> {
   const client = getApiClient();
+  const env = getServerEnv();
 
   if (!client) {
     return {
       accounts: input.accounts ? emptyPage<Account>() : undefined,
+      championships: input.championships ? emptyPage<Championship>() : undefined,
+      matches: input.matches ? emptyPage<Match>() : undefined,
       roles: input.roles ? emptyPage() : undefined,
+      roomPrograms: input.roomPrograms ? emptyPage<WebRoomProgram>() : undefined,
       rooms: input.rooms ? emptyPage<Room>() : undefined,
     };
   }
 
-  const [accounts, roles, rooms] = await Promise.all([
+  const [accounts, championships, matches, roles, roomPrograms, rooms] = await Promise.all([
     input.accounts ? unwrap(client.accounts.list({ limit: 100 })) : Promise.resolve(null),
+    input.championships
+      ? unwrap(client.championships.list({ visibility: "all", limit: 100 }))
+      : Promise.resolve(null),
+    input.matches
+      ? unwrap(client.matches.list({ gameMode: env.GAME_MODE_NAME, limit: 100 }))
+      : Promise.resolve(null),
     input.roles ? unwrap(client.roles.list({ limit: 100 })) : Promise.resolve(null),
+    input.roomPrograms
+      ? unwrap(
+          client.rooms.programs.list({
+            language: env.LANGUAGE,
+            limit: 100,
+          } as PaginationQuery),
+        )
+      : Promise.resolve(null),
     input.rooms ? unwrap(client.rooms.list({ state: "open", limit: 100 })) : Promise.resolve(null),
   ]);
 
   return {
     accounts: input.accounts ? (accounts ?? emptyPage<Account>()) : undefined,
+    championships: input.championships ? (championships ?? emptyPage<Championship>()) : undefined,
+    matches: input.matches ? (matches ?? emptyPage<Match>()) : undefined,
     roles: input.roles ? (roles ?? emptyPage()) : undefined,
+    roomPrograms: input.roomPrograms ? normalizeRoomProgramPage(roomPrograms) : undefined,
     rooms: input.rooms ? (rooms ?? emptyPage<Room>()) : undefined,
   };
 }
