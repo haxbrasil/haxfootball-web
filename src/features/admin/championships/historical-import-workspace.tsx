@@ -234,7 +234,7 @@ export function HistoricalImportWorkspace({ data }: { data: HistoricalImportWork
   }
 
   return (
-    <section className="border-y">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b bg-card/25 px-4 py-4 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center border bg-background">

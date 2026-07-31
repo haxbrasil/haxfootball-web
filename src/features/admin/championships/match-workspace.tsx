@@ -161,7 +161,7 @@ export function MatchWorkspace({
 
   if (!selected) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center border-y">
+      <div className="bfl-panel flex min-h-[60vh] items-center justify-center rounded-xl border">
         <div className="max-w-md px-6 text-center">
           <CircleDot className="mx-auto size-8 text-muted-foreground" />
           <h2 className="mt-4 font-semibold">Nenhum jogo criado</h2>
@@ -250,7 +250,7 @@ function MatchQueue({
               type="button"
               className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b px-3 py-3 text-left transition-colors ${
                 match.uuid === selectedUuid
-                  ? "border-l-2 border-l-emerald-400 bg-emerald-400/8"
+                  ? "border-l-2 border-l-primary bg-primary/8"
                   : "border-l-2 border-l-transparent hover:bg-muted/45"
               }`}
               onClick={() => onSelect(match.uuid)}
@@ -505,7 +505,7 @@ function EvidencePanel({
                   aria-selected={period.id === selectedPeriod?.id}
                   className={`min-w-32 border px-3 py-2 text-left text-xs ${
                     period.id === selectedPeriod?.id
-                      ? "border-emerald-400 bg-emerald-400/8"
+                      ? "border-primary bg-primary/8"
                       : "bg-card/30 text-muted-foreground"
                   }`}
                   onClick={() => setSelectedPeriodId(period.id)}
@@ -1019,13 +1019,10 @@ function EvidenceCompositionBuilder({
       : { a: logicalScore.blue, b: logicalScore.red };
 
   return (
-    <section
-      className="-mx-6 border-b bg-emerald-400/5 px-6 py-4"
-      aria-label="Composição de tempos"
-    >
+    <section className="-mx-6 border-b bg-primary/5 px-6 py-4" aria-label="Composição de tempos">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Layers3 className="size-4 text-emerald-300" />
+          <Layers3 className="size-4 text-primary" />
           <div>
             <h3 className="text-sm font-semibold">Composição de tempos</h3>
             <p className="text-xs text-muted-foreground">{games.length} jogos registrados</p>
@@ -1952,7 +1949,7 @@ function SectionBar({
   return (
     <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
       <div className="flex min-w-0 items-center gap-3">
-        <Icon className="size-4 text-emerald-300" />
+        <Icon className="size-4 text-primary" />
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">{title}</h2>
           <p className="truncate text-xs text-muted-foreground">{description}</p>

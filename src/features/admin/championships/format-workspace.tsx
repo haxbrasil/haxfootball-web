@@ -250,11 +250,11 @@ function FormatToolbar({
   const focusSelectId = useId();
 
   return (
-    <header className="border-y bg-card/45">
+    <header className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex flex-col gap-4 px-4 py-4 xl:flex-row xl:items-end sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <GitBranch className="size-4 text-emerald-300" />
+            <GitBranch className="size-4 text-primary" />
             <h2 className="font-semibold">Formato e classificação</h2>
             <Badge variant="outline">{engineLabel(stage.engine)}</Badge>
           </div>
@@ -375,7 +375,7 @@ function BracketCanvas({
 
   if (layout.nodes.length === 0) {
     return (
-      <div className="border-y px-6 py-16 text-center text-sm text-muted-foreground">
+      <div className="bfl-panel rounded-xl border px-6 py-16 text-center text-sm text-muted-foreground">
         Esta etapa é manual e ainda não tem partidas posicionadas.
       </div>
     );
@@ -383,10 +383,10 @@ function BracketCanvas({
 
   return (
     <>
-      <section className="relative overflow-auto border-y bg-card/20">
+      <section className="bfl-panel relative overflow-auto rounded-xl border">
         <div className="sticky top-0 left-0 z-10 flex w-fit gap-4 p-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            <span className="h-px w-5 bg-emerald-400" /> vencedor
+            <span className="h-px w-5 bg-primary" /> vencedor
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-px w-5 border-t border-dashed border-amber-400" /> perdedor
@@ -533,10 +533,8 @@ function BracketMatchNode({
           ? "border-l-amber-400"
           : match.bracket === "grand-final"
             ? "border-l-cyan-400"
-            : "border-l-emerald-400"
-      } ${
-        focused ? "border-emerald-400 ring-1 ring-emerald-400/40" : ""
-      } ${muted ? "opacity-35" : ""}`}
+            : "border-l-primary"
+      } ${focused ? "border-primary ring-1 ring-primary/40" : ""} ${muted ? "opacity-35" : ""}`}
       style={style}
     >
       <div className="flex h-8 items-center justify-between border-b px-2.5">
@@ -574,7 +572,7 @@ function BracketMatchNode({
         onProjection={onProjection}
       />
       {isBye ? (
-        <span className="absolute right-2 bottom-1 text-[10px] font-semibold uppercase text-emerald-300">
+        <span className="absolute right-2 bottom-1 text-[10px] font-semibold uppercase text-primary">
           bye
         </span>
       ) : null}
@@ -1015,7 +1013,7 @@ function TeamBench({
 
   return (
     <>
-      <section className="border-y bg-card/35">
+      <section className="bfl-panel overflow-hidden rounded-xl border">
         <div className="flex items-center justify-between border-b px-4 py-3 sm:px-6">
           <div>
             <h3 className="text-sm font-semibold">Equipes da chave</h3>
@@ -1168,10 +1166,10 @@ function CompetitionRoundRail({
   return (
     <section>
       <div className="mb-2 flex items-center gap-2 px-1">
-        <CalendarClock className="size-4 text-emerald-300" />
+        <CalendarClock className="size-4 text-primary" />
         <h3 className="text-xs font-semibold uppercase">Períodos da competição</h3>
       </div>
-      <div className="grid border-y bg-card/35 md:grid-cols-2 xl:grid-cols-4">
+      <div className="bfl-panel grid overflow-hidden rounded-xl border md:grid-cols-2 xl:grid-cols-4">
         {rounds.map((round) => (
           <div key={round.uuid} className="border-b px-4 py-4 md:border-r">
             <div className="text-sm font-semibold">{round.name}</div>
@@ -1500,7 +1498,7 @@ function GeneratorPreview({
     const rounds = bracketSize ? Math.log2(bracketSize) : 0;
 
     return (
-      <section className="border-y bg-card/35">
+      <section className="bfl-panel overflow-hidden rounded-xl border">
         <div className="border-b px-4 py-3">
           <h3 className="text-sm font-semibold">Prévia da estrutura</h3>
           <p className="mt-1 text-xs text-muted-foreground">Seed padrão, sem reseeding.</p>
@@ -1515,7 +1513,7 @@ function GeneratorPreview({
   }
 
   return (
-    <section className="min-h-80 border-y bg-card/35">
+    <section className="bfl-panel min-h-80 overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold">Prévia completa</h3>
@@ -1887,7 +1885,7 @@ function ScheduleMatchDialog({
         {!readOnly ? (
           <section className="space-y-3 border-b pb-5">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-emerald-300" />
+              <ShieldCheck className="size-4 text-primary" />
               <h3 className="text-sm font-semibold">Intervenção da organização</h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
@@ -2085,7 +2083,7 @@ function ScheduleMatchDialog({
                             type="button"
                             className={`h-9 px-3 text-xs font-medium ${
                               proposalMode === mode
-                                ? "bg-emerald-500/15 text-emerald-200"
+                                ? "bg-primary/15 text-primary"
                                 : "text-muted-foreground"
                             }`}
                             onClick={() => setProposalMode(mode)}
@@ -2244,7 +2242,7 @@ function ScheduleFact({ label, value }: { label: string; value: string }) {
 
 function FormatEmptyState({ admin, onGenerate }: { admin: boolean; onGenerate: () => void }) {
   return (
-    <div className="border-y bg-card/35 px-6 py-16 text-center">
+    <div className="bfl-panel rounded-xl border px-6 py-16 text-center">
       <GitBranch className="mx-auto size-8 text-muted-foreground" />
       <h2 className="mt-4 text-lg font-semibold">Formato ainda não construído</h2>
       <p className="mx-auto mt-1 max-w-xl text-sm text-muted-foreground">

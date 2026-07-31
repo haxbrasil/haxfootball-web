@@ -240,11 +240,11 @@ function DraftSetup({ data, draft }: { data: DraftData; draft: Draft | null }) {
   }
 
   return (
-    <section className="border-y bg-card/45">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="grid gap-6 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_310px] sm:px-6">
         <div>
           <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-emerald-300" />
+            <Sparkles className="size-4 text-primary" />
             <h2 className="font-semibold">Preparação do draft</h2>
             <Badge variant="outline">Serpentina</Badge>
           </div>
@@ -371,7 +371,7 @@ function DraftStatusBand({
   const remaining = secondsUntil(turn?.deadlineAt, nowMs);
 
   return (
-    <section className="border-y bg-foreground text-background">
+    <section className="overflow-hidden rounded-xl border bg-foreground text-background">
       <div className="grid min-h-36 gap-5 px-5 py-6 md:grid-cols-[1fr_auto] md:items-center sm:px-7">
         <div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase">
@@ -690,7 +690,7 @@ function DraftFeed({
   }
 
   return (
-    <aside className="border-y bg-card/35">
+    <aside className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold">Linha do tempo</h3>
@@ -865,11 +865,11 @@ function TradeDesk({
   }
 
   return (
-    <section className="border-y bg-card/40">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex flex-col gap-2 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <div className="flex items-center gap-2">
-            <ArrowLeftRight className="size-4 text-emerald-300" />
+            <ArrowLeftRight className="size-4 text-primary" />
             <h3 className="font-semibold">Central de trocas</h3>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1071,7 +1071,7 @@ function TradeTeam({
 
 function DraftEmptyState() {
   return (
-    <div className="border-y bg-card/45 px-6 py-16 text-center">
+    <div className="bfl-panel rounded-xl border px-6 py-16 text-center">
       <Crown className="mx-auto size-7 text-muted-foreground" />
       <h2 className="mt-3 font-semibold">Draft ainda não configurado</h2>
       <p className="mt-1 text-sm text-muted-foreground">

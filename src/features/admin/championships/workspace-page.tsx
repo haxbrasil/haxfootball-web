@@ -276,9 +276,7 @@ function ChampionshipWorkspaceHeader({
             </Badge>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge variant="secondary" className="text-muted-foreground">
-              {championship.competitionType.name}
-            </Badge>
+            <Badge variant="secondary">{championship.competitionType.name}</Badge>
             <MetadataBadge label="Revisão" value={championship.revision} />
             <MetadataBadge label="Evento" value={championship.changeSequence} />
             {!isAdmin ? (
@@ -290,7 +288,7 @@ function ChampionshipWorkspaceHeader({
               variant="outline"
               className={
                 liveStatus === "live"
-                  ? "border-emerald-600/50 bg-emerald-500/5 text-emerald-400"
+                  ? "border-primary/50 bg-primary/5 text-primary"
                   : liveStatus === "offline"
                     ? "border-red-600/50 bg-red-500/5 text-red-400"
                     : "text-muted-foreground"
@@ -669,7 +667,7 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
               onClick={() => setSection(value)}
               className={`h-10 shrink-0 border-b-2 px-4 text-sm font-medium transition-colors ${
                 section === value
-                  ? "border-emerald-400 text-foreground"
+                  ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -1093,7 +1091,7 @@ function TeamsWorkspace({ data, isAdmin }: { data: ChampionshipWorkspaceData; is
         }
       />
       {data.teams.items.length === 0 ? (
-        <div className="border-y bg-card/50 px-6 py-16 text-center">
+        <div className="bfl-panel rounded-xl border px-6 py-16 text-center">
           <Shield className="mx-auto size-8 text-muted-foreground" />
           <h3 className="mt-4 font-semibold">Nenhuma equipe colocada</h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1101,7 +1099,7 @@ function TeamsWorkspace({ data, isAdmin }: { data: ChampionshipWorkspaceData; is
           </p>
         </div>
       ) : (
-        <section className="border-y bg-card/55">
+        <section className="bfl-panel overflow-hidden rounded-xl border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -1144,7 +1142,7 @@ function TeamsWorkspace({ data, isAdmin }: { data: ChampionshipWorkspaceData; is
           </Table>
         </section>
       )}
-      <section className="border bg-card/40">
+      <section className="bfl-panel overflow-hidden rounded-xl border">
         <SectionHeader icon={Trophy} title="Identidades de equipe" />
         <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-3">
           {data.teamIdentities.items.length === 0 ? (
@@ -1322,7 +1320,7 @@ function ActivityWorkspace({ data }: { data: ChampionshipWorkspaceData }) {
         title="Atividade auditada"
         description="Toda mudança consequente preserva autoria, correlação, revisão e motivo."
       />
-      <section className="border-y bg-card/55">
+      <section className="bfl-panel overflow-hidden rounded-xl border">
         {data.audit.items.length === 0 ? (
           <p className="px-5 py-12 text-center text-sm text-muted-foreground">
             Nenhuma atividade registrada.
@@ -2005,7 +2003,7 @@ function WorkspaceTitle({
 function SectionHeader({ icon: Icon, title }: { icon: typeof Settings2; title: string }) {
   return (
     <div className="flex items-center gap-2 border-b bg-muted/30 px-5 py-3">
-      <Icon className="size-4 text-emerald-300" />
+      <Icon className="size-4 text-primary" />
       <h3 className="text-sm font-semibold">{title}</h3>
     </div>
   );

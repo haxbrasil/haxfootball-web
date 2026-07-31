@@ -181,7 +181,7 @@ export function StandingsWorkspace({
 
   return (
     <div className="space-y-5">
-      <header className="border-y bg-card/45">
+      <header className="bfl-panel overflow-hidden rounded-xl border">
         <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 xl:flex-row xl:items-end">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export function StandingsWorkspace({
       ) : null}
 
       {groups.length === 0 ? (
-        <section className="border-y px-6 py-16 text-center">
+        <section className="bfl-panel rounded-xl border px-6 py-16 text-center">
           <Users className="mx-auto size-8 text-muted-foreground" />
           <h3 className="mt-4 font-semibold">Esta tabela ainda não tem grupos</h3>
           <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
@@ -348,7 +348,7 @@ function StandingsTable({ standings }: { standings: ChampionshipStandingsData })
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
 
   return (
-    <section className="overflow-hidden border-y bg-background">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
         <div>
           <h3 className="font-semibold">{standings.group.name}</h3>
@@ -521,7 +521,7 @@ function QualificationRail({ standings }: { standings: ChampionshipStandingsData
   if (standings.qualification.length === 0) return null;
 
   return (
-    <section className="border-y">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="border-b px-4 py-3 sm:px-6">
         <h3 className="font-semibold">Destinos da classificação</h3>
         <p className="text-xs text-muted-foreground">

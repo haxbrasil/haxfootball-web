@@ -120,7 +120,7 @@ export function StatisticsWorkspace({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <BarChart3 className="size-4 text-emerald-300" />
+            <BarChart3 className="size-4 text-primary" />
             <h2 className="text-lg font-semibold">Estatísticas oficiais</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -170,7 +170,7 @@ export function StatisticsWorkspace({
       </div>
 
       {statistics.teams.items.length === 0 && statistics.players.items.length === 0 ? (
-        <div className="border-y px-6 py-16 text-center">
+        <div className="bfl-panel rounded-xl border px-6 py-16 text-center">
           <BarChart3 className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">Ainda não há resultados oficiais</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -213,7 +213,7 @@ function StatisticsSummary({ statistics }: { statistics: ChampionshipStatisticsD
   );
 
   return (
-    <section className="grid gap-px border-y bg-border sm:grid-cols-4">
+    <section className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4">
       <SummaryDatum label="Equipes" value={statistics.teams.totalCount} icon={Shield} />
       <SummaryDatum label="Jogadores" value={statistics.players.totalCount} icon={Users} />
       <SummaryDatum label="Jogos por equipe" value={settled} icon={BarChart3} />
@@ -238,7 +238,7 @@ function SummaryDatum({
   return (
     <div className="bg-background px-4 py-4">
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase text-muted-foreground">
-        <Icon className="size-3.5 text-emerald-300" />
+        <Icon className="size-3.5 text-primary" />
         {label}
       </div>
       <div className="mt-2 font-mono text-2xl font-semibold tabular-nums">{value}</div>
@@ -248,7 +248,7 @@ function SummaryDatum({
 
 function TeamStatisticsTable({ statistics }: { statistics: ChampionshipStatisticsData }) {
   return (
-    <div className="overflow-x-auto border-y">
+    <div className="bfl-panel overflow-x-auto rounded-xl border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -322,7 +322,7 @@ function PlayerStatisticsTable({
           </AlertDescription>
         </Alert>
       ) : null}
-      <div className="overflow-x-auto border-y">
+      <div className="bfl-panel overflow-x-auto rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>

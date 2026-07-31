@@ -66,7 +66,7 @@ export function ChampionshipArchiveWorkspace({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Archive className="size-4 text-emerald-300" />
+            <Archive className="size-4 text-primary" />
             <h2 className="text-lg font-semibold">Legado da edição</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -85,7 +85,7 @@ export function ChampionshipArchiveWorkspace({
       {champion ? (
         <PodiumHero champion={champion} runnerUp={runnerUp} />
       ) : (
-        <div className="border-y px-6 py-14 text-center">
+        <div className="bfl-panel rounded-xl border px-6 py-14 text-center">
           <Trophy className="mx-auto size-9 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">O título ainda não foi registrado</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -122,7 +122,7 @@ function PodiumHero({
   runnerUp?: ChampionshipHistoryData["placements"]["items"][number];
 }) {
   return (
-    <section className="grid overflow-hidden border-y bg-card/30 md:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]">
+    <section className="bfl-panel grid overflow-hidden rounded-xl border md:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]">
       <div className="relative px-6 py-8 sm:px-9">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase text-amber-300">
           <Crown className="size-4" />
@@ -162,7 +162,7 @@ function CompletenessBand({ history }: { history: ChampionshipHistoryData }) {
   };
 
   return (
-    <section className="border-y bg-muted/10 px-4 py-4">
+    <section className="bfl-panel rounded-xl border px-4 py-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase">
         <CircleAlert className="size-4 text-amber-300" />
         Profundidade do acervo
@@ -240,7 +240,7 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
   }
 
   return (
-    <section className="border bg-card/30">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold">Colocações oficiais</h3>
@@ -353,7 +353,7 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
 
 function PlacementLedger({ history }: { history: ChampionshipHistoryData }) {
   return (
-    <section className="border-y">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="border-b px-4 py-3">
         <h3 className="text-sm font-semibold">Classificação final</h3>
       </div>
@@ -393,7 +393,7 @@ function AwardLedger({ data, mode }: { data: ArchiveDataWithAccounts; mode: "adm
   );
 
   return (
-    <section className="border bg-card/25">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold">Prêmios e reconhecimentos</h3>
@@ -592,7 +592,7 @@ function RecordCatalog({ history }: { history: ChampionshipHistoryData }) {
   return (
     <section>
       <div className="mb-3 flex items-center gap-2">
-        <Shield className="size-4 text-emerald-300" />
+        <Shield className="size-4 text-primary" />
         <h3 className="text-sm font-semibold">Catálogo de registros</h3>
       </div>
       <div className="grid gap-px border bg-border sm:grid-cols-2 xl:grid-cols-4">

@@ -233,12 +233,12 @@ function RegistrationBand({
   }
 
   return (
-    <section className="border-y bg-card/45">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center">
         <div
           className={`grid size-10 shrink-0 place-items-center border ${
             state === "open"
-              ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-300"
+              ? "border-primary/50 bg-primary/10 text-primary"
               : "text-muted-foreground"
           }`}
         >
@@ -541,10 +541,10 @@ function ValuationGrid({
   }
 
   return (
-    <section className="border-y bg-card/35">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex flex-col gap-3 border-b px-4 py-4 lg:flex-row lg:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="grid size-9 place-items-center border text-emerald-300">
+          <div className="grid size-9 place-items-center rounded-md border text-primary">
             <BadgeDollarSign className="size-4" />
           </div>
           <div>
@@ -1391,7 +1391,7 @@ function TradeSimulation({ data }: { data: ChampionshipWorkspaceData }) {
     : [];
 
   return (
-    <section className="border-y bg-card/35">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center gap-3 border-b px-4 py-4">
         <ArrowRightLeft className="size-5 text-cyan-300" />
         <div>
@@ -1490,7 +1490,7 @@ function simulateTeamAfterSwap(
 
 function RosterHistory({ data }: { data: ChampionshipWorkspaceData }) {
   return (
-    <section className="border-y bg-card/30">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center gap-3 border-b px-4 py-4">
         <History className="size-5 text-muted-foreground" />
         <div>
