@@ -36,10 +36,10 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
-  const { features, session } = Route.useLoaderData();
+  const { session } = Route.useLoaderData();
 
   return (
-    <SessionAwareAppShell initialSession={session} features={features}>
+    <SessionAwareAppShell initialSession={session}>
       <Outlet />
     </SessionAwareAppShell>
   );

@@ -51,7 +51,6 @@ const rulesInput = z.object({
 export const listPublicChampionshipsFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  await requireChampionshipFeature();
   const { listPublicChampionships } = await import("#/server/api/championship-api");
 
   return listPublicChampionships();
@@ -60,7 +59,6 @@ export const listPublicChampionshipsFn = createServerFn({
 export const getPublicChampionshipFn = createServerFn({ method: "GET" })
   .inputValidator(slugInput)
   .handler(async ({ data }) => {
-    await requireChampionshipFeature();
     const { getCurrentSession } = await import("#/server/auth/session");
     const { getPublicChampionshipBySlug } = await import("#/server/api/championship-api");
     const session = await getCurrentSession();
@@ -79,7 +77,6 @@ export const getPublicChampionshipFn = createServerFn({ method: "GET" })
 export const listChampionshipAdminIndexFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  await requireChampionshipFeature();
   const { requireAnyApiPermission } = await import("#/server/auth/session");
   const { listChampionshipAdminIndex } = await import("#/server/api/championship-api");
 
@@ -91,7 +88,6 @@ export const listChampionshipAdminIndexFn = createServerFn({
 export const getChampionshipWorkspaceFn = createServerFn({ method: "GET" })
   .inputValidator(championshipIdInput)
   .handler(async ({ data }) => {
-    await requireChampionshipFeature();
     const { requireAnyApiPermission } = await import("#/server/auth/session");
     const { getChampionshipWorkspace } = await import("#/server/api/championship-api");
     const session = await requireAnyApiPermission(["championship:admin", "championship:operate"]);
@@ -923,30 +919,19 @@ export const heartbeatChampionshipPresenceFn = createServerFn({
     });
   });
 
-async function requireChampionshipFeature() {
-  const { getProductFeatures } = await import("#/server/features");
-
-  if (!getProductFeatures().championships) {
-    throw notFound();
-  }
-}
-
 async function requireChampionshipAdmin() {
-  await requireChampionshipFeature();
   const { requireApiPermission } = await import("#/server/auth/session");
 
   return requireApiPermission("championship:admin");
 }
 
 async function requireChampionshipHistoryAdmin() {
-  await requireChampionshipFeature();
   const { requireAnyApiPermission } = await import("#/server/auth/session");
 
   return requireAnyApiPermission(["championship:admin", "championship-history:admin"]);
 }
 
 async function requireChampionshipAccount() {
-  await requireChampionshipFeature();
   const { getCurrentSession } = await import("#/server/auth/session");
   const session = await getCurrentSession();
 
@@ -958,7 +943,6 @@ async function requireChampionshipAccount() {
 }
 
 async function requireChampionshipOperator() {
-  await requireChampionshipFeature();
   const { requireAnyApiPermission } = await import("#/server/auth/session");
 
   return requireAnyApiPermission(["championship:admin", "championship:operate"]);

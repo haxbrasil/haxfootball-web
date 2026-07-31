@@ -1,4 +1,4 @@
-import { notFound, redirect } from "@tanstack/react-router";
+import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -30,7 +30,6 @@ export const getChampionshipDraftFn = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }) => {
-    await requireChampionshipFeature();
     const { getCurrentSession } = await import("#/server/auth/session");
     const { getChampionshipDraftProjection } = await import("#/server/api/championship-api");
     const session = await getCurrentSession();
@@ -53,7 +52,6 @@ export const getChampionshipTradesFn = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }) => {
-    await requireChampionshipFeature();
     const { getCurrentSession } = await import("#/server/auth/session");
     const { getChampionshipTradesProjection } = await import("#/server/api/championship-api");
     const session = await getCurrentSession();
@@ -227,16 +225,7 @@ export const cancelChampionshipTradeFn = createServerFn({ method: "POST" })
     });
   });
 
-async function requireChampionshipFeature() {
-  const { getProductFeatures } = await import("#/server/features");
-
-  if (!getProductFeatures().championships) {
-    throw notFound();
-  }
-}
-
 async function requireChampionshipAccount() {
-  await requireChampionshipFeature();
   const { getCurrentSession } = await import("#/server/auth/session");
   const session = await getCurrentSession();
 
@@ -248,7 +237,6 @@ async function requireChampionshipAccount() {
 }
 
 async function requireChampionshipOperator() {
-  await requireChampionshipFeature();
   const { requireAnyApiPermission } = await import("#/server/auth/session");
 
   return requireAnyApiPermission(["championship:admin", "championship:operate"]);

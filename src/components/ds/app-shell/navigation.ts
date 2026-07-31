@@ -1,5 +1,3 @@
-import type { ProductFeatures } from "#/server/features";
-
 type InternalNavigationItem = {
   label: string;
   to: "/" | "/admin" | "/championships" | "/matches" | "/pubs" | "/rooms";
@@ -12,13 +10,11 @@ type ExternalNavigationItem = {
 
 export type NavigationItem = InternalNavigationItem | ExternalNavigationItem;
 
-export function getNavigation(features: ProductFeatures): NavigationItem[] {
+export function getNavigation(): NavigationItem[] {
   return [
     { to: "/", label: "Início" },
     { to: "/pubs", label: "Pubs" },
-    ...(features.championships
-      ? ([{ to: "/championships", label: "Campeonatos" }] satisfies NavigationItem[])
-      : []),
+    { to: "/championships", label: "Campeonatos" },
     { to: "/matches", label: "Partidas" },
     { to: "/rooms", label: "Salas" },
     { href: "https://videos.bfl.haxbrasil.com/", label: "Vídeos" },

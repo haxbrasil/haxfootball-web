@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { canAccessImplementedAdmin } from "#/features/admin/admin-sections";
 import type { ApiAccountSession } from "#/server/auth/session";
-import type { ProductFeatures } from "#/server/features";
 import { AccountNavLink } from "./account-nav-link";
 import { AdminNavigationLink } from "./admin-navigation-link";
 import { AppLogoLink } from "./app-logo-link";
@@ -13,15 +12,13 @@ import { adminNavigationItem, getNavigation } from "./navigation";
 
 export function AppShell({
   children,
-  features,
   session,
 }: {
   children: ReactNode;
-  features: ProductFeatures;
   session?: ApiAccountSession | null;
 }) {
-  const canAccessAdmin = canAccessImplementedAdmin(session, features);
-  const visibleNavigation = getNavigation(features);
+  const canAccessAdmin = canAccessImplementedAdmin(session);
+  const visibleNavigation = getNavigation();
   const mobileNavigationItems = canAccessAdmin
     ? [...visibleNavigation, adminNavigationItem]
     : visibleNavigation;

@@ -39,32 +39,29 @@ describe("visibleAdminSections", () => {
   it("shows all implemented sections for wildcard or bypass roles", () => {
     expect(
       visibleAdminSections(session({ permissions: ["*"] })).map((section) => section.key),
-    ).toEqual(["rooms", "room-programs", "matches", "accounts", "roles"]);
+    ).toEqual(["rooms", "room-programs", "matches", "championships", "accounts", "roles"]);
     expect(
       visibleAdminSections(session({ bypassAllPermissions: true })).map((section) => section.key),
-    ).toEqual(["rooms", "room-programs", "matches", "accounts", "roles"]);
+    ).toEqual(["rooms", "room-programs", "matches", "championships", "accounts", "roles"]);
   });
 
-  it("shows championships only when the product flag is enabled", () => {
+  it("shows championships when the account has championship access", () => {
     const operator = session({ permissions: ["championship:operate"] });
 
-    expect(visibleAdminSections(operator)).toEqual([]);
-    expect(
-      visibleAdminSections(operator, { championships: true }).map((section) => section.key),
-    ).toEqual(["championships"]);
-    expect(canAccessImplementedAdmin(operator, { championships: true })).toBe(true);
+    expect(visibleAdminSections(operator).map((section) => section.key)).toEqual(["championships"]);
+    expect(canAccessImplementedAdmin(operator)).toBe(true);
   });
 
   it("accepts either championship administration or operation permission", () => {
     expect(
-      visibleAdminSections(session({ permissions: ["championship:admin"] }), {
-        championships: true,
-      }).map((section) => section.key),
+      visibleAdminSections(session({ permissions: ["championship:admin"] })).map(
+        (section) => section.key,
+      ),
     ).toEqual(["championships"]);
     expect(
-      visibleAdminSections(session({ permissions: ["championship:operate"] }), {
-        championships: true,
-      }).map((section) => section.key),
+      visibleAdminSections(session({ permissions: ["championship:operate"] })).map(
+        (section) => section.key,
+      ),
     ).toEqual(["championships"]);
   });
 

@@ -1,4 +1,3 @@
-import { notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -296,16 +295,7 @@ export const replaceChampionshipMetricMappingsFn = createServerFn({ method: "POS
     });
   });
 
-async function requireChampionshipFeature() {
-  const { getProductFeatures } = await import("#/server/features");
-
-  if (!getProductFeatures().championships) {
-    throw notFound();
-  }
-}
-
 async function requireChampionshipOperator() {
-  await requireChampionshipFeature();
   const { requireAnyApiPermission } = await import("#/server/auth/session");
 
   return requireAnyApiPermission(["championship:admin", "championship:operate"]);

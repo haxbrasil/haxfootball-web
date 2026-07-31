@@ -2,16 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { hasApiPermission } from "#/server/auth/permissions";
 import { getCurrentSession } from "#/server/auth/session";
 import { getApiClient } from "#/server/api/haxfootball";
-import { getProductFeatures } from "#/server/features";
 
 async function proxyChampionshipEvents(
   request: Request,
   championshipId: string,
 ): Promise<Response> {
-  if (!getProductFeatures().championships) {
-    return new Response("Não encontrado.", { status: 404 });
-  }
-
   const session = await getCurrentSession();
 
   if (

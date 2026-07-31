@@ -209,10 +209,8 @@ export const queryStatsFn = createServerFn({ method: "GET" })
   .handler(({ data }) => getStats(data));
 
 export const getAdminOverviewFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { getProductFeatures } = await import("#/server/features");
-  const features = getProductFeatures();
   const session = await requireAnyApiPermission(implementedAdminPermissions);
-  const sections = visibleAdminSections(session, features);
+  const sections = visibleAdminSections(session);
   const resources = await listAdminOverviewResources({
     accounts: sections.some((section) => section.key === "accounts"),
     roles: sections.some((section) => section.key === "roles"),

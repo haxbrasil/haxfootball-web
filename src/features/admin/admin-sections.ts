@@ -1,6 +1,5 @@
 import { hasApiPermission } from "#/server/auth/permissions";
 import type { ApiAccountSession } from "#/server/auth/session";
-import type { ProductFeatures } from "#/server/features";
 
 export type AdminSectionKey =
   | "championships"
@@ -22,7 +21,6 @@ export type AdminSection = {
     | "/admin/accounts"
     | "/admin/roles";
   permissions: string[];
-  feature?: keyof ProductFeatures;
 };
 
 export const adminSections = [
@@ -53,7 +51,6 @@ export const adminSections = [
     description: "Preparar edições, equipes, formatos e operação compartilhada.",
     href: "/admin/championships",
     permissions: ["championship:admin", "championship:operate"],
-    feature: "championships",
   },
   {
     key: "accounts",
@@ -75,24 +72,16 @@ export const implementedAdminPermissions = [
   ...new Set(adminSections.flatMap((section) => section.permissions)),
 ];
 
-export function visibleAdminSections(
-  session: ApiAccountSession | null | undefined,
-  features: ProductFeatures = { championships: false },
-) {
+export function visibleAdminSections(session: ApiAccountSession | null | undefined) {
   if (!session) {
     return [];
   }
 
-  return adminSections.filter(
-    (section) =>
-      (!section.feature || features[section.feature]) &&
-      section.permissions.some((permission) => hasApiPermission(session, permission)),
+  return adminSections.filter((section) =>
+    section.permissions.some((permission) => hasApiPermission(session, permission)),
   );
 }
 
-export function canAccessImplementedAdmin(
-  session: ApiAccountSession | null | undefined,
-  features?: ProductFeatures,
-) {
-  return visibleAdminSections(session, features).length > 0;
+export function canAccessImplementedAdmin(session: ApiAccountSession | null | undefined) {
+  return visibleAdminSections(session).length > 0;
 }

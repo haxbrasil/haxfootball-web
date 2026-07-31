@@ -3,14 +3,6 @@ import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import { getCloudflareEnv } from "#/server/cloudflare";
 
-const booleanFlag = z.preprocess((value) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  return value.toLowerCase() === "true";
-}, z.boolean().default(false));
-
 const serverEnvSchema = z.object({
   API_BASE_URL: z.string().url().optional(),
   API_KEY: z.string().min(1).optional(),
@@ -21,7 +13,6 @@ const serverEnvSchema = z.object({
   GAME_MODE_NAME: z.string().min(1).default("haxfootball"),
   EVENT_SCHEMA_NAME: z.string().min(1).default("haxfootball"),
   LANGUAGE: z.string().min(2).default("pt"),
-  CHAMPIONSHIPS_ENABLED: booleanFlag,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
