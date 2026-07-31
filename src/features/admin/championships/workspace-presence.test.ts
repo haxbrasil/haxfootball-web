@@ -22,7 +22,12 @@ describe("championship workspace presence", () => {
   });
 });
 
-function presence(accountUuid: string, sessionUuid: string, contextType: string, expiresAt: string) {
+function presence(
+  accountUuid: string,
+  sessionUuid: string,
+  contextType: string,
+  expiresAt: string,
+) {
   return {
     accountUuid,
     sessionUuid,

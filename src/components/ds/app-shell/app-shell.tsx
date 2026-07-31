@@ -32,25 +32,23 @@ export function AppShell({
       <div className="min-h-screen text-foreground">
         {isChampionshipEditor ? null : (
           <header className="sticky top-0 z-40 border-b bg-background/92 backdrop-blur">
-          <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
-            <AppLogoLink />
+            <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+              <AppLogoLink />
 
-            <DesktopNavigation items={visibleNavigation} />
+              <DesktopNavigation items={visibleNavigation} />
 
-            <div className="ml-auto flex items-center gap-2">
-              {canAccessAdmin ? <AdminNavigationLink /> : null}
-              <AccountNavLink session={session} />
+              <div className="ml-auto flex items-center gap-2">
+                {canAccessAdmin ? <AdminNavigationLink /> : null}
+                <AccountNavLink session={session} />
+              </div>
             </div>
-          </div>
           </header>
         )}
         {session?.impersonation ? <ImpersonationBanner session={session} /> : null}
 
         <main
           className={
-            isChampionshipEditor
-              ? "w-full"
-              : "mx-auto w-full max-w-7xl px-4 py-6 pb-20 md:pb-8"
+            isChampionshipEditor ? "w-full" : "mx-auto w-full max-w-7xl px-4 py-6 pb-20 md:pb-8"
           }
         >
           {children}
