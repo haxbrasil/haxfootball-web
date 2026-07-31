@@ -15,16 +15,26 @@ export async function cachedJson<T>(
     return load();
   }
 
-  const cached = await cache.get<T>(key, "json");
+  let cached: T | null = null;
+
+  try {
+    cached = await cache.get<T>(key, "json");
+  } catch (error) {
+    console.warn("KV cache read failed; loading from the source instead.", error);
+  }
 
   if (cached !== null) {
     return cached;
   }
 
   const value = await load();
-  await cache.put(key, JSON.stringify(value), {
-    expirationTtl: Math.max(expirationTtl, minimumKvExpirationTtl),
-  });
+  try {
+    await cache.put(key, JSON.stringify(value), {
+      expirationTtl: Math.max(expirationTtl, minimumKvExpirationTtl),
+    });
+  } catch (error) {
+    console.warn("KV cache write failed; returning the source value.", error);
+  }
 
   return value;
 }
@@ -33,6 +43,10 @@ export async function deleteCachedJson(key: string): Promise<void> {
   const cache = getCloudflareEnv()?.CACHE;
 
   if (cache) {
-    await cache.delete(key);
+    try {
+      await cache.delete(key);
+    } catch (error) {
+      console.warn("KV cache invalidation failed; continuing without it.", error);
+    }
   }
 }
