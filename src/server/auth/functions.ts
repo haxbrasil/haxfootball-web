@@ -23,6 +23,15 @@ export const getCurrentSessionFn = createServerFn({ method: "GET" }).handler(() 
   getCurrentSession(),
 );
 
+export const getAppContextFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { getProductFeatures } = await import("#/server/features");
+
+  return {
+    session: await getCurrentSession(),
+    features: getProductFeatures(),
+  };
+});
+
 export const startImpersonationFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ accountUuid: z.string().min(1) }))
   .handler(({ data }) => startImpersonation(data.accountUuid));

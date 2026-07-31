@@ -2,6 +2,8 @@ import type { GetRoomQuery, Room } from "@haxbrasil/haxfootball-api-sdk";
 import { describe, expect, it } from "vitest";
 import {
   isPubliclyAvailableRoom,
+  readRoomChampionshipContextUuid,
+  toPublicRoomChampionship,
   toPublicLiveRoom,
   toPublicRoomBase,
   toPublicRoomSummary,
@@ -94,7 +96,30 @@ describe("public room projection", () => {
       version: "v1.0.83",
       capacity: 30,
       createdAt: "2026-07-25T18:00:00.000Z",
+      championship: null,
     });
+  });
+
+  it("accepts only a well-formed championship context UUID", () => {
+    const uuid = "10000000-0000-4000-8000-000000000001";
+
+    expect(readRoomChampionshipContextUuid({ championshipContextUuid: uuid })).toBe(uuid);
+    expect(readRoomChampionshipContextUuid({ championshipContextUuid: "copa-bfl" })).toBeNull();
+    expect(readRoomChampionshipContextUuid({})).toBeNull();
+  });
+
+  it("publishes room context only for public championships", () => {
+    const championship = {
+      uuid: "10000000-0000-4000-8000-000000000001",
+      slug: "copa-bfl-2026",
+      name: "Copa BFL",
+      editionLabel: "2026",
+    };
+
+    expect(toPublicRoomChampionship({ ...championship, visibility: "public" })).toEqual(
+      championship,
+    );
+    expect(toPublicRoomChampionship({ ...championship, visibility: "private" })).toBeNull();
   });
 
   it("does not expose operational player fields or extension state", () => {

@@ -1,12 +1,12 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { SessionAwareAppShell } from "#/components/ds/app-shell/session-aware-app-shell";
 import { RootDocument } from "#/components/ds/root-document";
-import { getCurrentSessionFn } from "#/server/auth/functions";
+import { getAppContextFn } from "#/server/auth/functions";
 
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
-  loader: () => getCurrentSessionFn(),
+  loader: () => getAppContextFn(),
   head: () => ({
     meta: [
       {
@@ -36,10 +36,10 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
-  const session = Route.useLoaderData();
+  const { features, session } = Route.useLoaderData();
 
   return (
-    <SessionAwareAppShell initialSession={session}>
+    <SessionAwareAppShell initialSession={session} features={features}>
       <Outlet />
     </SessionAwareAppShell>
   );

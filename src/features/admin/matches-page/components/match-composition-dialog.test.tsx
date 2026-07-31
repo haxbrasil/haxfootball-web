@@ -39,6 +39,7 @@ const second = {
 const composition = {
   kind: "composed" as const,
   id: "cmatch001",
+  scoreMode: "cumulative" as const,
   status: "completed" as const,
   initiatedAt: null,
   endedAt: "2026-07-24T21:00:00.000Z",

@@ -12,6 +12,12 @@ const activeRoom: PublicRoomDetail = {
   version: "v1.0.83",
   capacity: 30,
   createdAt: "2026-07-25T18:00:00.000Z",
+  championship: {
+    uuid: "10000000-0000-4000-8000-000000000001",
+    slug: "copa-bfl-2026",
+    name: "Copa BFL",
+    editionLabel: "2026",
+  },
   live: {
     connected: true,
     lastSeenAt: new Date().toISOString(),

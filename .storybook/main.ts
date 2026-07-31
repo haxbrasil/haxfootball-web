@@ -1,4 +1,5 @@
 import type { StorybookConfig } from "@storybook/react-vite";
+import { fileURLToPath } from "node:url";
 import type { PluginOption } from "vite";
 
 function removeAppOnlyPlugins(plugins: PluginOption[] | undefined): PluginOption[] {
@@ -31,6 +32,25 @@ const config: StorybookConfig = {
   viteFinal: (config) => ({
     ...config,
     plugins: removeAppOnlyPlugins(config.plugins),
+    resolve: {
+      ...config.resolve,
+      alias: {
+        ...(!Array.isArray(config.resolve?.alias) ? config.resolve?.alias : {}),
+        "@tanstack/react-start": fileURLToPath(new URL("./mocks/react-start.ts", import.meta.url)),
+        "#/server/api/championship-functions": fileURLToPath(
+          new URL("./mocks/championship-functions.ts", import.meta.url),
+        ),
+        "#/server/api/championship-draft-functions": fileURLToPath(
+          new URL("./mocks/championship-draft-functions.ts", import.meta.url),
+        ),
+        "#/server/api/championship-format-functions": fileURLToPath(
+          new URL("./mocks/championship-format-functions.ts", import.meta.url),
+        ),
+        "#/server/api/championship-match-functions": fileURLToPath(
+          new URL("./mocks/championship-match-functions.ts", import.meta.url),
+        ),
+      },
+    },
   }),
 };
 

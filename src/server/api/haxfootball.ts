@@ -6,9 +6,11 @@ import {
   type Account,
   type components,
   type ConfirmAccountResponse,
+  type Championship,
   type CreateRoleInput,
   type CreateRoomInput,
   type ListAccountsResponse,
+  type ListChampionshipsResponse,
   type ListMatchesResponse,
   type ListPermissionsResponse,
   type ListPlayerMatchesResponse,
@@ -55,6 +57,8 @@ import { createAccountMatchPage } from "#/server/api/utils/create-account-match-
 import { collectAllPages, countAllPages } from "#/server/api/utils/collect-all-pages";
 import {
   isPubliclyAvailableRoom,
+  readRoomChampionshipContextUuid,
+  toPublicRoomChampionship,
   toPublicLiveRoom,
   toPublicRoomBase,
   toPublicRoomSummary,
@@ -257,6 +261,7 @@ export type AdminRoomManagementResources = {
   proxyEndpoints: ListRoomProxyEndpointsResponse;
   versionsByProgramId: Record<string, ListRoomProgramVersionsResponse>;
   aliasesByProgramId: Record<string, Page<RoomProgramVersionAlias>>;
+  championships: ListChampionshipsResponse;
 };
 
 export type AdminRoomProgramResources = {
@@ -373,7 +378,19 @@ async function getPublicRoomBase(id: string): Promise<PublicRoomBase | null> {
     ? cachedJson(`public:v2:rooms:${id}:open-only`, 15, async () => {
         const room = await unwrap(client.rooms.get(id));
 
-        return room && isPubliclyAvailableRoom(room) ? toPublicRoomBase(room) : null;
+        if (!room || !isPubliclyAvailableRoom(room)) return null;
+
+        const base = toPublicRoomBase(room);
+        const contextUuid = readRoomChampionshipContextUuid(room.launchConfig);
+
+        if (!contextUuid) return base;
+
+        const championship = await unwrap(client.championships.get(contextUuid));
+
+        return {
+          ...base,
+          championship: toPublicRoomChampionship(championship),
+        };
       })
     : null;
 }
@@ -591,7 +608,9 @@ export async function listAccountLinkedMatches(
   query: PaginationQuery = {},
 ): Promise<ListMatchesResponse> {
   const env = getServerEnv();
-  const sessionEntries = await listAccountLinkedSessionEntries(accountUuid, { limit: 100 });
+  const sessionEntries = await listAccountLinkedSessionEntries(accountUuid, {
+    limit: 100,
+  });
 
   if (sessionEntries.items.length === 0) {
     return createAccountMatchPage([], query);
@@ -865,14 +884,20 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
       proxyEndpoints: emptyPage(),
       versionsByProgramId: {},
       aliasesByProgramId: {},
+      championships: emptyPage<Championship>(),
     };
   }
 
-  const [rooms, roomHistory, roomPrograms, proxyEndpoints] = await Promise.all([
+  const [rooms, roomHistory, roomPrograms, proxyEndpoints, championships] = await Promise.all([
     unwrap(client.rooms.list({ state: "open" })),
     unwrap(client.rooms.list({ state: "all" })),
-    unwrap(client.rooms.programs.list({ language: env.LANGUAGE } as PaginationQuery)),
+    unwrap(
+      client.rooms.programs.list({
+        language: env.LANGUAGE,
+      } as PaginationQuery),
+    ),
     unwrap(client.rooms.proxyEndpoints.list()),
+    unwrap(client.championships.list({ visibility: "all", limit: 100 })),
   ]);
 
   const programs = normalizeRoomProgramPage(roomPrograms);
@@ -898,6 +923,7 @@ export async function listAdminRoomManagementResources(): Promise<AdminRoomManag
     aliasesByProgramId: Object.fromEntries(
       programEntries.map(([programId, _versions, aliases]) => [programId, aliases]),
     ),
+    championships: championships ?? emptyPage<Championship>(),
   };
 }
 

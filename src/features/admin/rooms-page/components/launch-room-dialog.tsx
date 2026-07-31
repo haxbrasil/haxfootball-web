@@ -101,7 +101,11 @@ export function LaunchRoomDialog({ resources }: { resources: AdminRoomManagement
                     <fieldset key={group.category} className="space-y-3">
                       <legend className="text-sm font-medium text-foreground">{group.label}</legend>
                       {group.fields.map((field) => (
-                        <LaunchConfigField key={field.key} field={field} />
+                        <LaunchConfigField
+                          key={field.key}
+                          field={field}
+                          championships={resources.championships.items}
+                        />
                       ))}
                     </fieldset>
                   ))}

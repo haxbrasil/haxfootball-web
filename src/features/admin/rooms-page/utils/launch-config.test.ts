@@ -76,6 +76,19 @@ const geoFields: WebRoomLaunchConfigField[] = [
   },
 ];
 
+const championshipContextField: WebRoomLaunchConfigField = {
+  label: {
+    value: "room.launch.field.championship-context",
+    label: "Campeonato",
+  },
+  category: "room",
+  envVar: "CHAMPIONSHIP_CONTEXT_UUID",
+  key: "championshipContextUuid",
+  required: false,
+  secret: false,
+  valueType: "string",
+};
+
 describe("readLaunchConfig", () => {
   it("coerces launch config fields from form data", () => {
     const formData = new FormData();
@@ -115,6 +128,17 @@ describe("readLaunchConfig", () => {
       geoCode: "BR",
       geoLat: -23.55,
       geoLon: -46.63,
+    });
+  });
+
+  it("preserves an optional championship context for staff-side evidence filtering", () => {
+    const formData = new FormData();
+    const championshipUuid = "10000000-0000-4000-8000-000000000001";
+
+    formData.set("launchConfig.championshipContextUuid", championshipUuid);
+
+    expect(readLaunchConfig(formData, [championshipContextField])).toEqual({
+      championshipContextUuid: championshipUuid,
     });
   });
 });

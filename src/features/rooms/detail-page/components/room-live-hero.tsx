@@ -1,4 +1,5 @@
-import { ExternalLink, Users } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ExternalLink, Trophy, Users } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
@@ -80,14 +81,24 @@ export function RoomLiveHero({
           </p>
         </div>
 
-        {room.roomLink ? (
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <a href={room.roomLink}>
-              Entrar na sala
-              <ExternalLink className="size-4" aria-hidden="true" />
-            </a>
-          </Button>
-        ) : null}
+        <div className="grid gap-2">
+          {room.roomLink ? (
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <a href={room.roomLink}>
+                Entrar na sala
+                <ExternalLink className="size-4" aria-hidden="true" />
+              </a>
+            </Button>
+          ) : null}
+          {room.championship ? (
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/championships/$slug" params={{ slug: room.championship.slug }}>
+                <Trophy />
+                {room.championship.name}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
     </header>
   );

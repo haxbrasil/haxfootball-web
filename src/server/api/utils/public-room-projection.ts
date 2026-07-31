@@ -1,4 +1,4 @@
-import type { GetRoomQuery, Room } from "@haxbrasil/haxfootball-api-sdk";
+import type { Championship, GetRoomQuery, Room } from "@haxbrasil/haxfootball-api-sdk";
 import type {
   PublicLivePlayer,
   PublicLiveRoom,
@@ -37,7 +37,29 @@ export function toPublicRoomBase(
     ...toPublicRoomSummary(room),
     capacity: typeof capacity === "number" ? capacity : null,
     createdAt: room.createdAt,
+    championship: null,
   };
+}
+
+export function readRoomChampionshipContextUuid(
+  launchConfig: Record<string, unknown>,
+): string | null {
+  const value = launchConfig.championshipContextUuid;
+
+  return typeof value === "string" && isUuid(value) ? value : null;
+}
+
+export function toPublicRoomChampionship(
+  championship: Pick<Championship, "editionLabel" | "name" | "slug" | "uuid" | "visibility"> | null,
+): PublicRoomBase["championship"] {
+  return championship?.visibility === "public"
+    ? {
+        uuid: championship.uuid,
+        slug: championship.slug,
+        name: championship.name,
+        editionLabel: championship.editionLabel,
+      }
+    : null;
 }
 
 export function toPublicLiveRoom(liveRoom: LiveRoomResult): PublicLiveRoom {
@@ -78,4 +100,8 @@ function toPublicTeam(
     case "SPECTATORS":
       return "spectators";
   }
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

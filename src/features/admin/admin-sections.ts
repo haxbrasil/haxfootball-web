@@ -1,7 +1,14 @@
 import { hasApiPermission } from "#/server/auth/permissions";
 import type { ApiAccountSession } from "#/server/auth/session";
+import type { ProductFeatures } from "#/server/features";
 
-export type AdminSectionKey = "rooms" | "room-programs" | "matches" | "accounts" | "roles";
+export type AdminSectionKey =
+  | "championships"
+  | "rooms"
+  | "room-programs"
+  | "matches"
+  | "accounts"
+  | "roles";
 
 export type AdminSection = {
   key: AdminSectionKey;
@@ -9,11 +16,13 @@ export type AdminSection = {
   description: string;
   href:
     | "/admin/rooms"
+    | "/admin/championships"
     | "/admin/room-programs"
     | "/admin/matches"
     | "/admin/accounts"
     | "/admin/roles";
-  permission: string;
+  permissions: string[];
+  feature?: keyof ProductFeatures;
 };
 
 export const adminSections = [
@@ -22,48 +31,68 @@ export const adminSections = [
     title: "Salas",
     description: "Lançar salas, acompanhar salas abertas e consultar histórico.",
     href: "/admin/rooms",
-    permission: "room-launch:operate",
+    permissions: ["room-launch:operate"],
   },
   {
     key: "room-programs",
     title: "Programas de sala",
     description: "Gerenciar programas, campos de lançamento, versões e aliases.",
     href: "/admin/room-programs",
-    permission: "room-program:admin",
+    permissions: ["room-program:admin"],
   },
   {
     key: "matches",
     title: "Partidas",
     description: "Consultar partidas e executar operações administrativas.",
     href: "/admin/matches",
-    permission: "match:admin",
+    permissions: ["match:admin"],
+  },
+  {
+    key: "championships",
+    title: "Campeonatos",
+    description: "Preparar edições, equipes, formatos e operação compartilhada.",
+    href: "/admin/championships",
+    permissions: ["championship:admin", "championship:operate"],
+    feature: "championships",
   },
   {
     key: "accounts",
     title: "Contas",
     description: "Consultar contas e trocar cargos.",
     href: "/admin/accounts",
-    permission: "account:admin",
+    permissions: ["account:admin"],
   },
   {
     key: "roles",
     title: "Cargos",
     description: "Criar cargos e gerenciar permissões.",
     href: "/admin/roles",
-    permission: "role:admin",
+    permissions: ["role:admin"],
   },
 ] satisfies AdminSection[];
 
-export const implementedAdminPermissions = adminSections.map((section) => section.permission);
+export const implementedAdminPermissions = [
+  ...new Set(adminSections.flatMap((section) => section.permissions)),
+];
 
-export function visibleAdminSections(session: ApiAccountSession | null | undefined) {
+export function visibleAdminSections(
+  session: ApiAccountSession | null | undefined,
+  features: ProductFeatures = { championships: false },
+) {
   if (!session) {
     return [];
   }
 
-  return adminSections.filter((section) => hasApiPermission(session, section.permission));
+  return adminSections.filter(
+    (section) =>
+      (!section.feature || features[section.feature]) &&
+      section.permissions.some((permission) => hasApiPermission(session, permission)),
+  );
 }
 
-export function canAccessImplementedAdmin(session: ApiAccountSession | null | undefined) {
-  return visibleAdminSections(session).length > 0;
+export function canAccessImplementedAdmin(
+  session: ApiAccountSession | null | undefined,
+  features?: ProductFeatures,
+) {
+  return visibleAdminSections(session, features).length > 0;
 }

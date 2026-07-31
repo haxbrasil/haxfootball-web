@@ -45,6 +45,29 @@ describe("visibleAdminSections", () => {
     ).toEqual(["rooms", "room-programs", "matches", "accounts", "roles"]);
   });
 
+  it("shows championships only when the product flag is enabled", () => {
+    const operator = session({ permissions: ["championship:operate"] });
+
+    expect(visibleAdminSections(operator)).toEqual([]);
+    expect(
+      visibleAdminSections(operator, { championships: true }).map((section) => section.key),
+    ).toEqual(["championships"]);
+    expect(canAccessImplementedAdmin(operator, { championships: true })).toBe(true);
+  });
+
+  it("accepts either championship administration or operation permission", () => {
+    expect(
+      visibleAdminSections(session({ permissions: ["championship:admin"] }), {
+        championships: true,
+      }).map((section) => section.key),
+    ).toEqual(["championships"]);
+    expect(
+      visibleAdminSections(session({ permissions: ["championship:operate"] }), {
+        championships: true,
+      }).map((section) => section.key),
+    ).toEqual(["championships"]);
+  });
+
   it("does not treat unimplemented admin permissions as admin access", () => {
     const unrelatedSession = session({ permissions: ["event-schema:admin"] });
 

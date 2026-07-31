@@ -27,6 +27,12 @@ export type PublicRoomDetail = PublicRoomSummary & {
   capacity: number | null;
   createdAt: string;
   live: PublicLiveRoom | null;
+  championship: {
+    uuid: string;
+    slug: string;
+    name: string;
+    editionLabel: string | null;
+  } | null;
 };
 
 export type PublicRoomLiveResult =
