@@ -421,7 +421,15 @@ export const updateChampionshipFn = createServerFn({ method: "POST" })
 export const transitionChampionshipFn = createServerFn({ method: "POST" })
   .inputValidator(
     commandInput.extend({
-      transition: z.enum(["publish", "unpublish", "activate", "complete", "archive", "cancel"]),
+      transition: z.enum([
+        "publish",
+        "unpublish",
+        "activate",
+        "complete",
+        "archive",
+        "cancel",
+        "delete",
+      ]),
       reason: z.string().max(1_000).optional(),
     }),
   )

@@ -18,7 +18,7 @@ export const defaultChampionshipRules = {
     lockPolicy: "draft-start",
   },
   salary: {
-    enabled: true,
+    enabled: false,
     capUnits: 100,
     displayLabel: "M",
     maximumTradeDifference: 10,

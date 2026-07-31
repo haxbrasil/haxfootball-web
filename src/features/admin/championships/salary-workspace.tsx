@@ -96,18 +96,20 @@ export function SalaryWorkspace({
       {!salary.enabled ? (
         <Alert>
           <CircleDollarSign />
-          <AlertTitle>Teto salarial desativado</AlertTitle>
+          <AlertTitle>Esta edição não usa salários</AlertTitle>
           <AlertDescription>
-            A edição ainda pode usar inscrições e montagem manual de elencos. Ative o teto nas
-            regras antes da primeira movimentação de elenco para usar valores e projeções.
+            Inscrições, GMs e elencos continuam disponíveis normalmente. Para usar valores, teto e
+            regras financeiras, ative o sistema em Configuração, Regras da edição, Teto salarial.
           </AlertDescription>
         </Alert>
       ) : null}
 
       <RegistrationBand data={data} isAdmin={isAdmin} />
-      <ValuationGrid data={data} isAdmin={isAdmin} onMoveRequest={setMoveRequest} />
+      {salary.enabled ? (
+        <ValuationGrid data={data} isAdmin={isAdmin} onMoveRequest={setMoveRequest} />
+      ) : null}
       <TeamCapComparison data={data} onMoveRequest={setMoveRequest} />
-      <TradeSimulation data={data} />
+      {salary.enabled ? <TradeSimulation data={data} /> : null}
       <RosterHistory data={data} />
 
       <RosterMoveDialog
@@ -130,12 +132,18 @@ function SalaryWorkspaceHeading({
 }) {
   const salary = data.salary;
   const locked = salary.priceState === "locked";
+  const activeParticipants = data.participants.items.filter(({ status }) => status === "active");
+  const unassigned = salary.participants.items.filter(
+    ({ membership, status }) => status === "active" && !membership,
+  ).length;
 
   return (
     <div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold">Participantes e teto salarial</h2>
+          <h2 className="text-xl font-semibold">
+            {salary.enabled ? "Participantes e teto salarial" : "Inscrições e elencos"}
+          </h2>
           <Badge variant={locked ? "default" : "outline"}>
             {locked ? <LockKeyhole className="mr-1 size-3" /> : null}
             {salary.priceState === "disabled"
@@ -146,21 +154,28 @@ function SalaryWorkspaceHeading({
           </Badge>
         </div>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Inscrições, avaliação, composição de elencos e conformidade financeira em uma única
-          operação revisionada.
+          {salary.enabled
+            ? "Inscrições, avaliação, composição de elencos e conformidade financeira em uma única operação revisionada."
+            : "Gerencie participantes, GMs e composição dos elencos sem atribuir valores financeiros."}
         </p>
       </div>
       <div className="grid grid-cols-3 divide-x border bg-card/45 text-center">
-        <Metric
-          label="Inscritos"
-          value={data.participants.items.filter(({ status }) => status === "active").length}
-        />
-        <Metric label="Teto" value={formatSalaryUnits(salary.capUnits, salary.displayLabel)} />
-        <Metric
-          label="Pendências"
-          value={salary.validation.missingPriceCount}
-          danger={numberValue(salary.validation.missingPriceCount) > 0}
-        />
+        <Metric label="Inscritos" value={activeParticipants.length} />
+        {salary.enabled ? (
+          <>
+            <Metric label="Teto" value={formatSalaryUnits(salary.capUnits, salary.displayLabel)} />
+            <Metric
+              label="Pendências"
+              value={salary.validation.missingPriceCount}
+              danger={numberValue(salary.validation.missingPriceCount) > 0}
+            />
+          </>
+        ) : (
+          <>
+            <Metric label="Equipes" value={salary.teams.items.length} />
+            <Metric label="Sem equipe" value={unassigned} />
+          </>
+        )}
       </div>
       {!isAdmin ? (
         <span className="text-xs text-muted-foreground">Visualização operacional</span>
@@ -254,7 +269,7 @@ function RegistrationBand({
           <p className="mt-1 text-sm text-muted-foreground">
             {state === "open"
               ? "Jogadores autenticados podem se inscrever pela página pública."
-              : "A organização ainda pode incluir uma conta manualmente com justificativa."}
+              : "A organização ainda pode incluir uma conta manualmente."}
           </p>
           {message ? <p className="mt-2 text-xs text-red-300">{message}</p> : null}
         </div>
@@ -1053,6 +1068,7 @@ function TeamCapComparison({
   onMoveRequest: (request: RosterMoveRequest) => void;
 }) {
   const participants = data.salary.participants.items;
+  const salaryEnabled = data.salary.enabled;
   const unassigned = participants.filter(
     ({ membership, status }) => !membership && status === "active",
   );
@@ -1074,9 +1090,11 @@ function TeamCapComparison({
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold">Comparação de equipes</h3>
+          <h3 className="font-semibold">
+            {salaryEnabled ? "Comparação de equipes" : "Elencos por equipe"}
+          </h3>
           <p className="text-xs text-muted-foreground">
-            Arraste participantes entre as colunas ou use os seletores da tabela.
+            Arraste participantes entre as colunas ou use os seletores de alocação.
           </p>
         </div>
         <Badge variant="outline">{data.salary.teams.items.length} equipes</Badge>
@@ -1086,6 +1104,7 @@ function TeamCapComparison({
           title="Disponíveis"
           subtitle={`${unassigned.length} participante(s)`}
           participants={unassigned}
+          salaryEnabled={salaryEnabled}
           onDrop={(event) => dropOnTeam(null, event)}
         />
         {data.salary.teams.items.map((team) => {
@@ -1097,7 +1116,7 @@ function TeamCapComparison({
             <div
               key={team.uuid}
               className={`w-full border bg-card/45 sm:w-72 sm:shrink-0 sm:snap-start ${
-                team.overCap ? "border-red-400/60" : ""
+                salaryEnabled && team.overCap ? "border-red-400/60" : ""
               }`}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => dropOnTeam(team.uuid, event)}
@@ -1110,7 +1129,7 @@ function TeamCapComparison({
                       elenco r{team.rosterRevision} · {team.rosterSize} pessoas
                     </div>
                   </div>
-                  {team.approvedOverCap ? (
+                  {!salaryEnabled ? null : team.approvedOverCap ? (
                     <Badge variant="destructive" className="bg-red-800 text-white">
                       Exceção
                     </Badge>
@@ -1120,39 +1139,50 @@ function TeamCapComparison({
                     <Check className="size-5 text-emerald-300" />
                   )}
                 </div>
-                <Progress
-                  aria-label={`Uso do teto salarial de ${team.name}`}
-                  value={Math.min(100, salaryCapPercentage(team.usageUnits, data.salary.capUnits))}
-                  className={`mt-3 ${team.overCap ? "[&_[data-slot=progress-indicator]]:bg-red-400" : ""}`}
-                />
-                <div className="mt-2 flex justify-between text-xs tabular-nums">
-                  <span>
-                    {formatSalaryUnits(team.usageUnits, data.salary.displayLabel)} /{" "}
-                    {formatSalaryUnits(data.salary.capUnits, data.salary.displayLabel)}
-                  </span>
-                  <span
-                    className={
-                      numberValue(team.remainingUnits) < 0
-                        ? "text-red-300"
-                        : "text-muted-foreground"
-                    }
-                  >
-                    {numberValue(team.remainingUnits) >= 0
-                      ? `${team.remainingUnits} livres`
-                      : `${-numberValue(team.remainingUnits)} acima`}
-                  </span>
-                </div>
+                {salaryEnabled ? (
+                  <>
+                    <Progress
+                      aria-label={`Uso do teto salarial de ${team.name}`}
+                      value={Math.min(
+                        100,
+                        salaryCapPercentage(team.usageUnits, data.salary.capUnits),
+                      )}
+                      className={`mt-3 ${team.overCap ? "[&_[data-slot=progress-indicator]]:bg-red-400" : ""}`}
+                    />
+                    <div className="mt-2 flex justify-between text-xs tabular-nums">
+                      <span>
+                        {formatSalaryUnits(team.usageUnits, data.salary.displayLabel)} /{" "}
+                        {formatSalaryUnits(data.salary.capUnits, data.salary.displayLabel)}
+                      </span>
+                      <span
+                        className={
+                          numberValue(team.remainingUnits) < 0
+                            ? "text-red-300"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {numberValue(team.remainingUnits) >= 0
+                          ? `${team.remainingUnits} livres`
+                          : `${-numberValue(team.remainingUnits)} acima`}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </div>
               <div className="min-h-32 divide-y">
                 {teamParticipants.length === 0 ? (
                   <p className="p-4 text-sm text-muted-foreground">Solte um participante aqui.</p>
                 ) : (
                   teamParticipants.map((participant) => (
-                    <RosterPerson key={participant.uuid} participant={participant} />
+                    <RosterPerson
+                      key={participant.uuid}
+                      participant={participant}
+                      salaryEnabled={salaryEnabled}
+                    />
                   ))
                 )}
               </div>
-              {team.activeException ? (
+              {salaryEnabled && team.activeException ? (
                 <div className="border-t bg-red-400/5 px-4 py-3 text-xs">
                   <div className="font-medium text-red-200">Exceção aprovada</div>
                   <div className="mt-1 text-muted-foreground">
@@ -1172,11 +1202,13 @@ function RosterColumn({
   title,
   subtitle,
   participants,
+  salaryEnabled,
   onDrop,
 }: {
   title: string;
   subtitle: string;
   participants: SalaryParticipant[];
+  salaryEnabled: boolean;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
   return (
@@ -1194,7 +1226,11 @@ function RosterColumn({
           <p className="p-4 text-sm text-muted-foreground">Nenhum participante nesta coluna.</p>
         ) : (
           participants.map((participant) => (
-            <RosterPerson key={participant.uuid} participant={participant} />
+            <RosterPerson
+              key={participant.uuid}
+              participant={participant}
+              salaryEnabled={salaryEnabled}
+            />
           ))
         )}
       </div>
@@ -1202,7 +1238,13 @@ function RosterColumn({
   );
 }
 
-function RosterPerson({ participant }: { participant: SalaryParticipant }) {
+function RosterPerson({
+  participant,
+  salaryEnabled,
+}: {
+  participant: SalaryParticipant;
+  salaryEnabled: boolean;
+}) {
   return (
     <div
       draggable
@@ -1221,7 +1263,9 @@ function RosterPerson({ participant }: { participant: SalaryParticipant }) {
           {participant.membership?.role === "gm" ? "GM" : "Jogador"}
         </div>
       </div>
-      <span className="text-xs tabular-nums">{participant.priceUnits ?? "—"}</span>
+      {salaryEnabled ? (
+        <span className="text-xs tabular-nums">{participant.priceUnits ?? "—"}</span>
+      ) : null}
     </div>
   );
 }
@@ -1320,9 +1364,14 @@ function RosterMoveDialog({
             <div className="flex items-center gap-3 border-y px-3 py-4">
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">{preview.participant.displayName}</div>
-                <div className="text-xs text-muted-foreground">
-                  {formatSalaryUnits(preview.participant.priceUnits ?? 0, data.salary.displayLabel)}
-                </div>
+                {data.salary.enabled ? (
+                  <div className="text-xs text-muted-foreground">
+                    {formatSalaryUnits(
+                      preview.participant.priceUnits ?? 0,
+                      data.salary.displayLabel,
+                    )}
+                  </div>
+                ) : null}
               </div>
               <div className="text-right text-sm">
                 <div>{preview.source?.teamName ?? "Sem equipe"}</div>
@@ -1335,7 +1384,11 @@ function RosterMoveDialog({
               {preview.affectedTeams.map((team) => (
                 <div
                   key={team.teamUuid}
-                  className="grid gap-3 px-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+                  className={`grid gap-3 px-3 py-3 text-sm ${
+                    data.salary.enabled
+                      ? "sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+                      : "sm:grid-cols-1"
+                  }`}
                 >
                   <div>
                     <div className="font-medium">{team.teamName}</div>
@@ -1343,12 +1396,16 @@ function RosterMoveDialog({
                       elenco r{team.rosterRevision} → r{numberValue(team.rosterRevision) + 1}
                     </div>
                   </div>
-                  <div className="tabular-nums">
-                    {team.usageBeforeUnits} → {team.usageAfterUnits}
-                  </div>
-                  <Badge variant={team.overCapAfter ? "destructive" : "outline"}>
-                    {team.overCapAfter ? "Acima do teto" : `${team.remainingAfterUnits} livres`}
-                  </Badge>
+                  {data.salary.enabled ? (
+                    <>
+                      <div className="tabular-nums">
+                        {team.usageBeforeUnits} → {team.usageAfterUnits}
+                      </div>
+                      <Badge variant={team.overCapAfter ? "destructive" : "outline"}>
+                        {team.overCapAfter ? "Acima do teto" : `${team.remainingAfterUnits} livres`}
+                      </Badge>
+                    </>
+                  ) : null}
                 </div>
               ))}
             </div>

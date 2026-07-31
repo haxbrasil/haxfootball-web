@@ -30,6 +30,7 @@ import {
   Settings2,
   Shield,
   Trophy,
+  Trash2,
   Users,
 } from "lucide-react";
 import { Alert, AlertDescription } from "#/components/ui/alert";
@@ -361,9 +362,9 @@ function WorkspaceNavigation({
     { value: "teams", label: "Equipes", icon: Users, count: data.teams.items.length },
     {
       value: "salary",
-      label: "Elencos e teto",
+      label: "Inscrições e elencos",
       icon: CircleDollarSign,
-      count: Number(data.salary.validation.missingPriceCount),
+      count: data.salary.enabled ? Number(data.salary.validation.missingPriceCount) : undefined,
     },
     {
       value: "draft",
@@ -595,9 +596,15 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
             },
             salary: {
               enabled: salaryEnabled,
-              capUnits: formNumber(form, "capUnits"),
-              displayLabel: formString(form, "displayLabel"),
-              maximumTradeDifference: formNumber(form, "maximumTradeDifference"),
+              capUnits: salaryEnabled
+                ? formNumber(form, "capUnits")
+                : Number(rules.salary.capUnits),
+              displayLabel: salaryEnabled
+                ? formString(form, "displayLabel")
+                : rules.salary.displayLabel,
+              maximumTradeDifference: salaryEnabled
+                ? formNumber(form, "maximumTradeDifference")
+                : Number(rules.salary.maximumTradeDifference),
             },
             draft: {
               rounds: formNumber(form, "draftRounds"),
@@ -789,7 +796,7 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
                 name="publicPrices"
                 label="Exibir valores publicamente"
                 defaultChecked={rules.draft.publicPrices}
-                disabled={disabled}
+                disabled={disabled || !salaryEnabled}
               />
             </div>
           </RuleGroup>
@@ -894,6 +901,8 @@ function LifecycleMenu({ data, disabled }: { data: ChampionshipWorkspaceData; di
   const router = useRouter();
   const championship = data.championship;
   const [busy, setBusy] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   const actions = lifecycleActions(championship.lifecycle, championship.visibility);
 
@@ -925,46 +934,130 @@ function LifecycleMenu({ data, disabled }: { data: ChampionshipWorkspaceData; di
     }
   }
 
+  async function remove() {
+    setBusy(true);
+    try {
+      const result = await transition({
+        data: {
+          championshipUuid: championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision: Number(championship.revision),
+          transition: "delete",
+          reason: "Exclusão solicitada pela administração",
+        },
+      });
+
+      if (!result.ok) {
+        toast.error(conflictMessage(result));
+        return;
+      }
+
+      toast.success("Campeonato excluído.");
+      setDeleteOpen(false);
+      await router.navigate({ to: "/admin/championships" });
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="min-w-44 justify-between">
-          <span className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-emerald-400" />
-            {championshipLifecycleLabel(championship.lifecycle)}
-          </span>
-          <ChevronDown />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel className="space-y-1">
-          <span className="block">Ciclo de vida</span>
-          <span className="block text-xs font-normal text-muted-foreground">
-            {championship.visibility === "public"
-              ? "Página pública visível"
-              : "Visível apenas para a organização"}
-          </span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {actions.map((action) => (
-          <DropdownMenuItem
-            key={action.transition}
-            variant={action.transition === "cancel" ? "destructive" : "default"}
-            disabled={disabled || busy}
-            onSelect={(event) => {
-              event.preventDefault();
-              void run(action);
-            }}
-          >
-            {action.transition === "publish" ? <Eye /> : null}
-            {action.transition === "unpublish" ? <EyeOff /> : null}
-            {action.transition === "activate" ? <Radio /> : null}
-            {action.transition === "complete" ? <CheckCircle2 /> : null}
-            {action.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="min-w-44 justify-between">
+            <span className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-emerald-400" />
+              {championshipLifecycleLabel(championship.lifecycle)}
+            </span>
+            <ChevronDown />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-72">
+          <DropdownMenuLabel className="space-y-1">
+            <span className="block">Ciclo de vida</span>
+            <span className="block text-xs font-normal text-muted-foreground">
+              {championship.visibility === "public"
+                ? "Página pública visível"
+                : "Visível apenas para a organização"}
+            </span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {actions.map((action) => (
+            <DropdownMenuItem
+              key={action.transition}
+              variant={action.transition === "cancel" ? "destructive" : "default"}
+              disabled={disabled || busy}
+              onSelect={(event) => {
+                event.preventDefault();
+                void run(action);
+              }}
+            >
+              {action.transition === "publish" ? <Eye /> : null}
+              {action.transition === "unpublish" ? <EyeOff /> : null}
+              {action.transition === "activate" ? <Radio /> : null}
+              {action.transition === "complete" ? <CheckCircle2 /> : null}
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+          {!disabled ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={busy}
+                onSelect={() => setDeleteOpen(true)}
+              >
+                <Trash2 />
+                Excluir campeonato
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteConfirmation("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir {championship.name}?</DialogTitle>
+            <DialogDescription>
+              O campeonato desaparecerá das áreas públicas e administrativas. Seus dados e a
+              auditoria serão preservados internamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="deleteChampionshipConfirmation">
+              Digite <strong>{championship.name}</strong> para confirmar
+            </Label>
+            <Input
+              id="deleteChampionshipConfirmation"
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy || deleteConfirmation !== championship.name}
+              onClick={() => void remove()}
+            >
+              <Trash2 />
+              {busy ? "Excluindo…" : "Excluir campeonato"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
