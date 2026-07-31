@@ -83,6 +83,7 @@ import {
   updateChampionshipThreadFn,
   upsertChampionshipSavedViewFn,
 } from "#/server/api/championship-functions";
+import { deduplicateChampionshipPresence } from "./workspace-presence";
 import {
   championshipContextLabel,
   championshipLifecycleLabel,
@@ -159,7 +160,7 @@ export function ChampionshipWorkspacePage({
   }
 
   return (
-    <div className="relative left-1/2 -mt-4 min-h-[calc(100vh-7rem)] w-dvw -translate-x-1/2 overflow-x-clip border-y bg-background">
+    <div className="min-h-dvh w-full overflow-x-clip bg-background">
       <ChampionshipWorkspaceHeader
         data={data}
         inspector={inspector}
@@ -1339,15 +1340,17 @@ function WorkspaceInspector({
   session: ApiAccountSession;
   view: ChampionshipWorkspaceView;
 }) {
+  const presence = deduplicateChampionshipPresence(data.presence);
+
   return (
     <aside className="border-t bg-card/35 xl:border-t-0 xl:border-l">
       <div className="sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto">
         <InspectorSection title="Agora" icon={Radio}>
-          {data.presence.length === 0 ? (
+          {presence.length === 0 ? (
             <p className="text-xs text-muted-foreground">Só você neste contexto.</p>
           ) : (
             <div className="space-y-2">
-              {data.presence.map((person) => (
+              {presence.map((person) => (
                 <div key={person.sessionUuid} className="flex items-center gap-2 text-sm">
                   <span className="size-2 rounded-full bg-emerald-400" />
                   <span className="min-w-0 flex-1 truncate">{person.name}</span>
