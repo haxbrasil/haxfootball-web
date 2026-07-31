@@ -1,7 +1,7 @@
 import type { Permission, Role } from "@haxbrasil/haxfootball-api-sdk";
 import { Languages, RotateCcw, Save } from "lucide-react";
 import { DataCard } from "#/components/ds/app-shell";
-import { InlineFormMessage } from "#/components/ds/forms/form-message";
+import { FormMessageToast } from "#/components/ds/forms/form-message";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import type { Language, LocalizedValue } from "#/server/api/haxfootball";
@@ -101,7 +101,7 @@ export function RolePermissionsCard({
             Descartar
           </Button>
 
-          {form.message ? <InlineFormMessage message={form.message} /> : null}
+          {form.message ? <FormMessageToast message={form.message} /> : null}
         </div>
       </form>
     </DataCard>

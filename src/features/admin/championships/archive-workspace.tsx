@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import {
   Archive,
   Award,
@@ -15,7 +16,6 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
-import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -198,7 +198,6 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
   );
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const sorted = [...drafts].sort((left, right) => left.rank - right.rank);
   const availableTeams = data.teams.items.filter(
     (team) => !drafts.some((draft) => draft.teamUuid === team.uuid),
@@ -206,7 +205,6 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
 
   async function save() {
     setBusy(true);
-    setMessage(null);
     try {
       const result = await replace({
         data: {
@@ -218,13 +216,13 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
         },
       });
       if (!result.ok) {
-        setMessage(result.message);
+        toast.error(result.message);
         return;
       }
-      setMessage("Colocações registradas.");
+      toast.success("Colocações registradas.");
       await router.invalidate();
     } catch (cause) {
-      setMessage(errorMessage(cause));
+      toast.error(errorMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -326,7 +324,6 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
         ) : null}
       </div>
       <div className="space-y-3 border-t p-4">
-        {message ? <InlineMessage message={message} /> : null}
         <div>
           <Label htmlFor="placement-reason">Motivo da atualização</Label>
           <Textarea
@@ -468,7 +465,6 @@ function AwardDialog({
   const update = useServerFn(updateChampionshipAwardFn);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const initialTargetType = award?.target.type ?? "participant";
   const [targetType, setTargetType] = useState<AwardTargetType>(initialTargetType);
   const targetOptions = useMemo(() => awardTargets(data, targetType), [data, targetType]);
@@ -477,7 +473,6 @@ function AwardDialog({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setBusy(true);
-    setMessage(null);
     const common = {
       championshipUuid: data.championship.uuid,
       commandUuid: crypto.randomUUID(),
@@ -502,13 +497,14 @@ function AwardDialog({
           })
         : await create({ data: common });
       if (!result.ok) {
-        setMessage(result.message);
+        toast.error(result.message);
         return;
       }
+      toast.success(award ? "Prêmio corrigido." : "Prêmio registrado.");
       onOpenChange(false);
       await router.invalidate();
     } catch (cause) {
-      setMessage(errorMessage(cause));
+      toast.error(errorMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -524,7 +520,6 @@ function AwardDialog({
           </DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={submit}>
-          {message ? <InlineMessage message={message} /> : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Chave">
               <Input name="kind" required defaultValue={award?.kind ?? "mvp"} />
@@ -658,14 +653,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="font-medium">{label}</span>
       {children}
     </label>
-  );
-}
-
-function InlineMessage({ message }: { message: string }) {
-  return (
-    <Alert>
-      <AlertDescription>{message}</AlertDescription>
-    </Alert>
   );
 }
 

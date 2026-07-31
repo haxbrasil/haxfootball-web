@@ -1,5 +1,5 @@
 import type { Account, ListRolesResponse } from "@haxbrasil/haxfootball-api-sdk";
-import { InlineFormMessage } from "#/components/ds/forms/form-message";
+import { FormMessageToast } from "#/components/ds/forms/form-message";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import { Spinner } from "#/components/ui/spinner";
 import { localizedTextLabel } from "#/lib/localization/localized-text";
@@ -38,7 +38,7 @@ export function AccountRoleForm({
       {form.isSubmitting ? (
         <Spinner className="text-muted-foreground" aria-label="Salvando cargo" />
       ) : form.message ? (
-        <InlineFormMessage message={form.message} />
+        <FormMessageToast message={form.message} />
       ) : null}
     </div>
   );

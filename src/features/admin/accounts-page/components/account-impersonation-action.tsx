@@ -1,6 +1,6 @@
 import type { Account } from "@haxbrasil/haxfootball-api-sdk";
 import { Eye } from "lucide-react";
-import { FormMessageAlert } from "#/components/ds/forms/form-message";
+import { FormMessageToast } from "#/components/ds/forms/form-message";
 import { Button } from "#/components/ui/button";
 import { useImpersonateAccountAction } from "../hooks/use-impersonate-account-action";
 
@@ -20,7 +20,7 @@ export function AccountImpersonationAction({ account }: { account: Account }) {
         <Eye className="size-4" />
         Visualizar
       </Button>
-      {action.message ? <FormMessageAlert message={action.message} /> : null}
+      {action.message ? <FormMessageToast message={action.message} /> : null}
     </div>
   );
 }

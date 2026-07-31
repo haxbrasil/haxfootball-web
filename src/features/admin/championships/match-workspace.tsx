@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowDown,
@@ -416,7 +417,6 @@ function EvidencePanel({
   const [detachOpen, setDetachOpen] = useState(false);
   const detach = useServerFn(detachChampionshipMatchEvidenceFn);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const evidence = operations.evidence;
   const periods = useMemo(() => evidencePeriodScores(evidence), [evidence]);
   const [selectedPeriodId, setSelectedPeriodId] = useState(periods[0]?.id ?? "");
@@ -426,7 +426,6 @@ function EvidencePanel({
 
   async function confirmDetach() {
     setBusy(true);
-    setMessage(null);
     const result = await detach({
       data: {
         championshipUuid: operations.championshipUuid,
@@ -443,7 +442,7 @@ function EvidencePanel({
       onOperations(result.data);
       setDetachOpen(false);
     } else {
-      setMessage(result.message);
+      toast.error(result.message);
     }
   }
 
@@ -587,7 +586,6 @@ function EvidencePanel({
               no histórico.
             </DialogDescription>
           </DialogHeader>
-          {message ? <InlineError message={message} /> : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetachOpen(false)}>
               Cancelar
@@ -631,10 +629,10 @@ function EvidenceSearchDialog({
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">(
     initialCandidates ? "ready" : "idle",
   );
-  const [message, setMessage] = useState<string | null>(null);
   const [compositionGames, setCompositionGames] = useState<CompositionGame[]>([]);
   const [lastGameIsOvertime, setLastGameIsOvertime] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const runSearch = useCallback(
     async (event?: FormEvent) => {
@@ -1170,14 +1168,12 @@ function EligibilityPanel({
 }) {
   const update = useServerFn(updateChampionshipMatchAttributionsFn);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const hasFindings = operations.appearances.items.some(
     (appearance) => appearance.findings.length > 0,
   );
 
   async function save() {
     setBusy(true);
-    setMessage(null);
     const result = await update({
       data: {
         championshipUuid: operations.championshipUuid,
@@ -1192,9 +1188,9 @@ function EligibilityPanel({
 
     if (result.ok) {
       onOperations(result.data);
-      setMessage("Atribuições atualizadas.");
+      toast.success("Atribuições atualizadas.");
     } else {
-      setMessage(result.message);
+      toast.error(result.message);
     }
   }
 
@@ -1213,11 +1209,6 @@ function EligibilityPanel({
           ) : null
         }
       />
-      {message ? (
-        <div className="px-4 pb-3">
-          <InlineMessage message={message} />
-        </div>
-      ) : null}
       {hasFindings ? (
         <div className="border-y border-amber-400/25 bg-amber-400/5 px-4 py-3 text-xs text-amber-100">
           <ShieldAlert className="mr-2 inline size-4" />

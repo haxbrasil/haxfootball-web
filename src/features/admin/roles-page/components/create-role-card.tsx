@@ -2,7 +2,7 @@ import type { Permission } from "@haxbrasil/haxfootball-api-sdk";
 import type { Role } from "@haxbrasil/haxfootball-api-sdk";
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { InlineFormMessage } from "#/components/ds/forms/form-message";
+import { FormMessageToast } from "#/components/ds/forms/form-message";
 import { Button } from "#/components/ui/button";
 import {
   Dialog,
@@ -88,7 +88,7 @@ export function CreateRoleCard({
               <Button disabled={form.isSubmitting} type="submit">
                 Criar cargo
               </Button>
-              {form.message ? <InlineFormMessage message={form.message} /> : null}
+              {form.message ? <FormMessageToast message={form.message} /> : null}
             </div>
           </form>
         </ScrollArea>

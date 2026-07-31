@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import {
   CalendarClock,
   Bell,
@@ -1778,11 +1779,11 @@ function ScheduleMatchDialog({
     });
     setBusy(false);
     if (!result.ok) {
-      setMessage(result.message);
+      toast.error(result.message);
       return;
     }
     applyScheduling(result.data);
-    setMessage("Lembrete enviado no site para o outro GM.");
+    toast.success("Lembrete enviado no site para o outro GM.");
   }
 
   async function authorizeLatePlay() {

@@ -2,8 +2,8 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CircleAlert, Plus, Settings2, ShieldCheck, Trophy } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "#/components/ds/app-shell";
-import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -187,13 +187,11 @@ function CreateChampionshipDialog({ data }: { data: ChampionshipAdminIndexData }
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const programs = data.roomPrograms.items;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
     const form = new FormData(event.currentTarget);
     const startsAt = optionalIso(form.get("startsAt"));
     const endsAt = optionalIso(form.get("endsAt"));
@@ -218,7 +216,7 @@ function CreateChampionshipDialog({ data }: { data: ChampionshipAdminIndexData }
       });
 
       if (!result.ok) {
-        setMessage(result.message);
+        toast.error(result.message);
         return;
       }
 
@@ -229,7 +227,7 @@ function CreateChampionshipDialog({ data }: { data: ChampionshipAdminIndexData }
         search: { view: "setup", inspector: true },
       });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível criar o campeonato.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o campeonato.");
     } finally {
       setBusy(false);
     }
@@ -251,11 +249,6 @@ function CreateChampionshipDialog({ data }: { data: ChampionshipAdminIndexData }
           </DialogDescription>
         </DialogHeader>
         <form className="bfl-scrollbar space-y-5 overflow-y-auto pr-1" onSubmit={submit}>
-          {message ? (
-            <Alert variant="destructive">
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nome" name="name" placeholder="Copa de Inverno" required />
             <Field label="Identificador" name="slug" placeholder="copa-de-inverno-2026" required />
@@ -326,7 +319,6 @@ function CompetitionTypesDialog({ data }: { data: ChampionshipAdminIndexData }) 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const sortedTypes = useMemo(
     () => [...data.competitionTypes.items].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
     [data.competitionTypes.items],
@@ -335,7 +327,6 @@ function CompetitionTypesDialog({ data }: { data: ChampionshipAdminIndexData }) 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
     const form = new FormData(event.currentTarget);
 
     try {
@@ -355,15 +346,15 @@ function CompetitionTypesDialog({ data }: { data: ChampionshipAdminIndexData }) 
       });
 
       if (!result.ok) {
-        setMessage(result.message);
+        toast.error(result.message);
         return;
       }
 
       (event.currentTarget as HTMLFormElement).reset();
-      setMessage("Tipo criado. Ele já pode ser usado por novas edições.");
+      toast.success("Tipo criado. Ele já pode ser usado por novas edições.");
       await router.invalidate();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível criar o tipo.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o tipo.");
     } finally {
       setBusy(false);
     }
@@ -411,11 +402,6 @@ function CompetitionTypesDialog({ data }: { data: ChampionshipAdminIndexData }) 
                 Começa com regras adequadas para copas de dois tempos.
               </p>
             </div>
-            {message ? (
-              <Alert>
-                <AlertDescription>{message}</AlertDescription>
-              </Alert>
-            ) : null}
             <Field label="Nome" name="name" placeholder="Copa" required />
             <Field label="Identificador" name="slug" placeholder="copa" required />
             <div className="space-y-2">

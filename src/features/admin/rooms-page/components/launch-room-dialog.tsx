@@ -1,7 +1,7 @@
 import { DoorOpen, Rocket } from "lucide-react";
 import { useState } from "react";
 import { EmptyState } from "#/components/ds/app-shell/empty-state";
-import { FormMessageAlert } from "#/components/ds/forms/form-message-alert";
+import { FormMessageToast } from "#/components/ds/forms/form-message-toast";
 import { NativeSelectField } from "#/components/ds/forms/native-select-field";
 import { Button } from "#/components/ui/button";
 import {
@@ -53,7 +53,7 @@ export function LaunchRoomDialog({ resources }: { resources: AdminRoomManagement
             <EmptyState title="Nenhum programa disponível" />
           ) : (
             <form className="space-y-4" onSubmit={form.submit}>
-              {form.message ? <FormMessageAlert message={form.message} /> : null}
+              {form.message ? <FormMessageToast message={form.message} /> : null}
 
               <NativeSelectField
                 id="programId"

@@ -8,7 +8,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { PackageOpen, Plus, Save, Search, Upload } from "lucide-react";
 import { EmptyState, PageHeader } from "#/components/ds/app-shell";
-import { FormMessageAlert } from "#/components/ds/forms/form-message-alert";
+import { FormMessageToast } from "#/components/ds/forms/form-message-toast";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import { Badge } from "#/components/ui/badge";
@@ -317,7 +317,7 @@ function CreateProgramCard() {
           <Button disabled={isSubmitting} type="submit">
             Criar programa
           </Button>
-          {message ? <FormMessageAlert message={message} /> : null}
+          {message ? <FormMessageToast message={message} /> : null}
         </form>
       </CardContent>
     </Card>
@@ -396,7 +396,7 @@ function ProgramDetailsForm({ program }: { program: RoomProgram }) {
             <Save className="size-4" />
             Salvar dados
           </Button>
-          {message ? <FormMessageAlert message={message} /> : null}
+          {message ? <FormMessageToast message={message} /> : null}
         </form>
       </CardContent>
     </Card>
@@ -500,7 +500,7 @@ function LaunchFieldsForm({ program }: { program: RoomProgram }) {
             <Save className="size-4" />
             Salvar campos
           </Button>
-          {message ? <FormMessageAlert message={message} /> : null}
+          {message ? <FormMessageToast message={message} /> : null}
         </form>
       </CardContent>
     </Card>
@@ -777,7 +777,7 @@ function CreateVersionForm({
           </div>
           {message ? (
             <div className="md:col-span-2">
-              <FormMessageAlert message={message} />
+              <FormMessageToast message={message} />
             </div>
           ) : null}
         </form>
@@ -845,7 +845,7 @@ function DiscoverVersionsForm({ program }: { program: RoomProgram }) {
           </div>
           {message ? (
             <div className="md:col-span-3">
-              <FormMessageAlert message={message} />
+              <FormMessageToast message={message} />
             </div>
           ) : null}
         </form>
@@ -916,7 +916,7 @@ function AliasesPanel({
             </div>
             {message ? (
               <div className="md:col-span-3">
-                <FormMessageAlert message={message} />
+                <FormMessageToast message={message} />
               </div>
             ) : null}
           </form>
@@ -1024,7 +1024,7 @@ function ArtifactsPanel({
           </div>
           {message ? (
             <div className="md:col-span-2">
-              <FormMessageAlert message={message} />
+              <FormMessageToast message={message} />
             </div>
           ) : null}
         </form>

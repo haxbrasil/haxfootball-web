@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ApiAccountSession } from "#/server/auth/session";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import {
   Activity,
   Archive,
@@ -455,13 +456,11 @@ function ChampionshipDetailsForm({
   const router = useRouter();
   const championship = data.championship;
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setBusy(true);
-    setMessage(null);
 
     try {
       const result = await updateChampionship({
@@ -479,14 +478,14 @@ function ChampionshipDetailsForm({
       });
 
       if (!result.ok) {
-        setMessage(conflictMessage(result));
+        toast.error(conflictMessage(result));
         return;
       }
 
-      setMessage("Configuração salva.");
+      toast.success("Configuração salva.");
       await router.invalidate();
     } catch (error) {
-      setMessage(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -496,7 +495,6 @@ function ChampionshipDetailsForm({
     <section className="bfl-panel overflow-hidden rounded-xl border">
       <SectionHeader icon={Settings2} title="Identidade e calendário" />
       <form className="space-y-5 p-5" onSubmit={submit}>
-        {message ? <InlineMessage text={message} /> : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             label="Nome"
@@ -556,14 +554,12 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
   const rules = championship.rules;
   const [salaryEnabled, setSalaryEnabled] = useState(rules.salary.enabled);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [section, setSection] = useState<"match" | "roster" | "salary" | "scheduling">("match");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setBusy(true);
-    setMessage(null);
 
     try {
       const result = await updateChampionship({
@@ -628,14 +624,14 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
       });
 
       if (!result.ok) {
-        setMessage(conflictMessage(result));
+        toast.error(conflictMessage(result));
         return;
       }
 
-      setMessage("Regras atualizadas e nova revisão criada.");
+      toast.success("Regras atualizadas e nova revisão criada.");
       await router.invalidate();
     } catch (error) {
-      setMessage(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -645,7 +641,6 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
     <section className="bfl-panel overflow-hidden rounded-xl border">
       <SectionHeader icon={ClipboardCheck} title="Regras da edição" />
       <form className="space-y-6 p-5" onSubmit={submit}>
-        {message ? <InlineMessage text={message} /> : null}
         <div
           className="flex gap-1 overflow-x-auto border-b"
           role="tablist"
@@ -899,13 +894,11 @@ function LifecycleMenu({ data, disabled }: { data: ChampionshipWorkspaceData; di
   const router = useRouter();
   const championship = data.championship;
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const actions = lifecycleActions(championship.lifecycle, championship.visibility);
 
   async function run(next: (typeof actions)[number]) {
     setBusy(true);
-    setMessage(null);
 
     try {
       const result = await transition({
@@ -919,13 +912,14 @@ function LifecycleMenu({ data, disabled }: { data: ChampionshipWorkspaceData; di
       });
 
       if (!result.ok) {
-        setMessage(conflictMessage(result));
+        toast.error(conflictMessage(result));
         return;
       }
 
+      toast.success(`${next.label}.`);
       await router.invalidate();
     } catch (error) {
-      setMessage(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -951,7 +945,6 @@ function LifecycleMenu({ data, disabled }: { data: ChampionshipWorkspaceData; di
               : "Visível apenas para a organização"}
           </span>
         </DropdownMenuLabel>
-        {message ? <div className="mx-2 my-1 text-xs text-muted-foreground">{message}</div> : null}
         <DropdownMenuSeparator />
         {actions.map((action) => (
           <DropdownMenuItem
@@ -987,12 +980,10 @@ function RoomProgramsPanel({
   const championship = data.championship;
   const linkedIds = new Set(championship.roomPrograms.map((item) => item.uuid));
   const available = data.roomPrograms.items.filter((item) => !linkedIds.has(item.id));
-  const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function change(roomProgramId: string, operation: "add" | "set-default") {
     setBusy(true);
-    setMessage(null);
 
     try {
       const result = await changeProgram({
@@ -1006,13 +997,14 @@ function RoomProgramsPanel({
       });
 
       if (!result.ok) {
-        setMessage(conflictMessage(result));
+        toast.error(conflictMessage(result));
         return;
       }
 
+      toast.success(operation === "add" ? "Programa autorizado." : "Programa padrão atualizado.");
       await router.invalidate();
     } catch (error) {
-      setMessage(errorMessage(error));
+      toast.error(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -1022,7 +1014,6 @@ function RoomProgramsPanel({
     <section className="bfl-panel overflow-hidden rounded-xl border">
       <SectionHeader icon={Radio} title="Programas de sala" />
       <div className="space-y-3 p-5">
-        {message ? <InlineMessage text={message} /> : null}
         {championship.roomPrograms.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum programa autorizado.</p>
         ) : (

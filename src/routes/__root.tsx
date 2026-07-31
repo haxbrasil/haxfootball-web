@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { SessionAwareAppShell } from "#/components/ds/app-shell/session-aware-app-shell";
 import { RootDocument } from "#/components/ds/root-document";
+import { Toaster } from "#/components/ui/sonner";
 import { getAppContextFn } from "#/server/auth/functions";
 
 import appCss from "../styles.css?url";
@@ -41,6 +42,7 @@ function RootLayout() {
   return (
     <SessionAwareAppShell initialSession={session}>
       <Outlet />
+      <Toaster richColors closeButton />
     </SessionAwareAppShell>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import {
   BarChart3,
   Check,
@@ -70,13 +71,12 @@ export function StatisticsWorkspace({
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">(
     initialStatistics ? "ready" : "idle",
   );
-  const [message, setMessage] = useState<string | null>(null);
   const [view, setView] = useState<"teams" | "players">("teams");
   const [mappingOpen, setMappingOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState("loading");
-    setMessage(null);
 
     try {
       const [nextStatistics, nextMappings] = await Promise.all([
@@ -411,7 +411,6 @@ function MetricMappingsDialog({
   const replace = useServerFn(replaceChampionshipMetricMappingsFn);
   const [drafts, setDrafts] = useState(() => metricMappingDrafts(statistics, mappings));
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const issues = useMemo(() => validateMetricMappingDrafts(drafts), [drafts]);
 
   useEffect(() => setDrafts(metricMappingDrafts(statistics, mappings)), [mappings, statistics]);
@@ -425,7 +424,6 @@ function MetricMappingsDialog({
   async function save() {
     if (issues.length) return;
     setBusy(true);
-    setMessage(null);
     const result = await replace({
       data: {
         championshipUuid,
@@ -446,8 +444,10 @@ function MetricMappingsDialog({
     });
     setBusy(false);
 
-    if (result.ok) onMappings(result.data);
-    else setMessage(result.message);
+    if (result.ok) {
+      onMappings(result.data);
+      toast.success("Compatibilidade de métricas salva.");
+    } else toast.error(result.message);
   }
 
   return (
@@ -460,11 +460,6 @@ function MetricMappingsDialog({
             separadas.
           </DialogDescription>
         </DialogHeader>
-        {message ? (
-          <Alert variant="destructive">
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        ) : null}
         <div className="overflow-auto border">
           <Table>
             <TableHeader>

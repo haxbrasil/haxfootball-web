@@ -278,6 +278,8 @@ function AccountRegistrationDialog({ data }: { data: ChampionshipWorkspaceData }
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [accounts, setAccounts] = useState(data.accounts.items);
+  const [query, setQuery] = useState("");
+  const [selectedAccountUuid, setSelectedAccountUuid] = useState("");
   const [busy, setBusy] = useState(false);
   const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -288,30 +290,34 @@ function AccountRegistrationDialog({ data }: { data: ChampionshipWorkspaceData }
   );
   const availableAccounts = accounts.filter(({ uuid }) => !registered.has(uuid));
 
-  async function search(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setSearching(true);
+  useEffect(() => {
+    if (!open) return;
 
-    try {
-      const result = await searchAccounts({
-        data: {
-          search: String(form.get("accountSearch") ?? "").trim() || undefined,
-          limit: 50,
-        },
-      });
-      setAccounts(result.items);
-    } catch (error) {
-      setMessage(messageFor(error));
-    } finally {
-      setSearching(false);
-    }
-  }
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const result = await searchAccounts({
+          data: { search: query.trim() || undefined, limit: 20 },
+        });
+        if (active) setAccounts(result.items);
+      } catch (error) {
+        if (active) setMessage(messageFor(error));
+      } finally {
+        if (active) setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [open, query, searchAccounts]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const accountUuid = String(form.get("accountUuid") ?? "");
+    const accountUuid = selectedAccountUuid;
 
     if (!accountUuid) {
       setMessage("Selecione uma conta.");
@@ -341,6 +347,8 @@ function AccountRegistrationDialog({ data }: { data: ChampionshipWorkspaceData }
       }
 
       setOpen(false);
+      setQuery("");
+      setSelectedAccountUuid("");
       await router.invalidate();
     } catch (error) {
       setMessage(messageFor(error));
@@ -364,24 +372,65 @@ function AccountRegistrationDialog({ data }: { data: ChampionshipWorkspaceData }
             Use para correções, substituições e inscrições autorizadas fora da janela pública.
           </DialogDescription>
         </DialogHeader>
-        <form className="flex gap-2" onSubmit={search}>
-          <Input name="accountSearch" placeholder="Buscar conta por nome" />
-          <Button type="submit" variant="outline" size="icon" disabled={searching} title="Buscar">
-            <Search />
-          </Button>
-        </form>
         <form className="space-y-4" onSubmit={submit}>
           {message ? <InlineError message={message} /> : null}
           <div className="space-y-2">
-            <Label htmlFor="accountUuid">Conta</Label>
-            <NativeSelect id="accountUuid" name="accountUuid" required>
-              <NativeSelectOption value="">Selecione</NativeSelectOption>
-              {availableAccounts.map((account) => (
-                <NativeSelectOption key={account.uuid} value={account.uuid}>
-                  {account.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+            <Label htmlFor="accountSearch">Conta</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="accountSearch"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setMessage(null);
+                }}
+                className="pl-9"
+                placeholder="Digite o nome da conta"
+                autoComplete="off"
+              />
+            </div>
+            <div
+              className="bfl-scrollbar max-h-56 overflow-y-auto border"
+              role="radiogroup"
+              aria-label="Contas encontradas"
+              aria-busy={searching}
+            >
+              {searching ? (
+                <p className="px-3 py-5 text-center text-sm text-muted-foreground">Buscando…</p>
+              ) : availableAccounts.length > 0 ? (
+                availableAccounts.map((account) => {
+                  const selected = selectedAccountUuid === account.uuid;
+                  return (
+                    <label
+                      key={account.uuid}
+                      className={`flex w-full cursor-pointer items-center justify-between border-b px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-muted/60 has-focus-visible:ring-2 has-focus-visible:ring-ring ${
+                        selected ? "bg-primary/10 text-foreground" : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="accountUuid"
+                        value={account.uuid}
+                        aria-label={`Selecionar ${account.name}`}
+                        checked={selected}
+                        onChange={() => {
+                          setSelectedAccountUuid(account.uuid);
+                          setMessage(null);
+                        }}
+                        className="sr-only"
+                      />
+                      <span className="font-medium">{account.name}</span>
+                      {selected ? <Check className="size-4 text-primary" /> : null}
+                    </label>
+                  );
+                })
+              ) : (
+                <p className="px-3 py-5 text-center text-sm text-muted-foreground">
+                  Nenhuma conta disponível encontrada.
+                </p>
+              )}
+            </div>
           </div>
           {data.championship.priceState === "locked" ? (
             <div className="space-y-2">
@@ -393,16 +442,18 @@ function AccountRegistrationDialog({ data }: { data: ChampionshipWorkspaceData }
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label htmlFor="registrationReason">Justificativa</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="registrationReason">Justificativa</Label>
+              <span className="text-xs text-muted-foreground">Opcional</span>
+            </div>
             <Textarea
               id="registrationReason"
               name="reason"
-              required={data.championship.registrationState !== "open"}
-              placeholder="Motivo visível na auditoria"
+              placeholder="Adicione um motivo à auditoria, se necessário"
             />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy || !selectedAccountUuid}>
               {busy ? "Incluindo…" : "Confirmar inscrição"}
             </Button>
           </DialogFooter>

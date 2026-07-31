@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import type { FormMessage } from "#/components/ds/forms/form-message";
 import type { AdminRoomManagementResources } from "#/server/api/haxfootball";
 import {
@@ -77,11 +78,10 @@ export function useLaunchRoomForm(
 
     form.reset();
     await router.invalidate();
+    toast.success("Sala lançada.");
 
     if (options.onLaunched) {
       options.onLaunched();
-    } else {
-      setMessage({ kind: "success", text: "Sala lançada." });
     }
   }
 
