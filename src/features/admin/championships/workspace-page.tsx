@@ -265,7 +265,6 @@ function ChampionshipWorkspaceHeader({
             <ArrowLeft />
           </Link>
         </Button>
-        <div className="h-10 w-1 bg-emerald-400" />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h1 className="truncate text-lg font-semibold">{championship.name}</h1>
@@ -277,25 +276,31 @@ function ChampionshipWorkspaceHeader({
             </Badge>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge variant="secondary">{championship.competitionType.name}</Badge>
-            <Badge variant="outline">revisão {championship.revision}</Badge>
-            <Badge variant="outline">evento {championship.changeSequence}</Badge>
-            {!isAdmin ? <Badge variant="outline">modo operação</Badge> : null}
+            <Badge variant="secondary" className="text-muted-foreground">
+              {championship.competitionType.name}
+            </Badge>
+            <MetadataBadge label="Revisão" value={championship.revision} />
+            <MetadataBadge label="Evento" value={championship.changeSequence} />
+            {!isAdmin ? (
+              <Badge variant="outline" className="text-muted-foreground">
+                Modo operação
+              </Badge>
+            ) : null}
             <Badge
               variant="outline"
               className={
                 liveStatus === "live"
-                  ? "border-emerald-500/50 text-emerald-300"
+                  ? "border-emerald-600/50 bg-emerald-500/5 text-emerald-400"
                   : liveStatus === "offline"
-                    ? "border-red-500/50 text-red-300"
+                    ? "border-red-600/50 bg-red-500/5 text-red-400"
                     : "text-muted-foreground"
               }
             >
               {liveStatus === "live"
-                ? "colaboração ao vivo"
+                ? "Colaboração ao vivo"
                 : liveStatus === "offline"
-                  ? "reconectando"
-                  : "conectando"}
+                  ? "Reconectando"
+                  : "Conectando"}
             </Badge>
           </div>
         </div>
@@ -324,6 +329,17 @@ function ChampionshipWorkspaceHeader({
         </div>
       </div>
     </header>
+  );
+}
+
+function MetadataBadge({ label, value }: { label: string; value: string | number }) {
+  return (
+    <Badge variant="outline" className="gap-1.5 pr-1 text-muted-foreground">
+      {label}
+      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-foreground tabular-nums">
+        {value}
+      </span>
+    </Badge>
   );
 }
 
@@ -389,9 +405,9 @@ function WorkspaceNavigation({
             key={item.value}
             type="button"
             onClick={() => onSelect(item.value)}
-            className={`flex h-10 shrink-0 items-center gap-2 border-l-2 px-3 text-sm transition-colors xl:w-full ${
+            className={`flex h-10 shrink-0 items-center gap-2 rounded-md border px-3 text-sm transition-colors xl:w-full ${
               view === item.value
-                ? "border-emerald-400 bg-emerald-400/10 text-foreground"
+                ? "border-border bg-muted text-foreground"
                 : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             }`}
           >
@@ -479,7 +495,7 @@ function ChampionshipDetailsForm({
   }
 
   return (
-    <section className="border bg-card/55">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <SectionHeader icon={Settings2} title="Identidade e calendário" />
       <form className="space-y-5 p-5" onSubmit={submit}>
         {message ? <InlineMessage text={message} /> : null}
@@ -628,7 +644,7 @@ function RulesForm({ data, disabled }: { data: ChampionshipWorkspaceData; disabl
   }
 
   return (
-    <section className="border bg-card/55">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <SectionHeader icon={ClipboardCheck} title="Regras da edição" />
       <form className="space-y-6 p-5" onSubmit={submit}>
         {message ? <InlineMessage text={message} /> : null}
@@ -1005,7 +1021,7 @@ function RoomProgramsPanel({
   }
 
   return (
-    <section className="border bg-card/55">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
       <SectionHeader icon={Radio} title="Programas de sala" />
       <div className="space-y-3 p-5">
         {message ? <InlineMessage text={message} /> : null}

@@ -38,8 +38,8 @@ describe("AdminPage", () => {
     expect(screen.getByRole("heading", { name: "Painel administrativo" })).not.toBeNull();
     expect(screen.getByText("2 programas")).not.toBeNull();
     expect(screen.queryByText("Abrir")).toBeNull();
-    expect(screen.getByRole("link", { name: "Abrir Programas de sala" }).getAttribute("href")).toBe(
-      "/admin/room-programs",
-    );
+    const cardLink = screen.getByRole("link", { name: "Abrir Programas de sala" });
+    expect(cardLink.getAttribute("href")).toBe("/admin/room-programs");
+    expect(cardLink.className).toContain("h-full");
   });
 });

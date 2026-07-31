@@ -29,7 +29,7 @@ export function AdminPage({
         description="Painel operacional para gerenciar a liga e acessar as áreas disponíveis."
       />
 
-      <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sections.map((section) => (
           <AdminSectionCard
             key={section.key}
@@ -49,7 +49,7 @@ function AdminSectionCard({ section, summary }: { section: AdminSection; summary
     <Link
       to={section.href}
       aria-label={`Abrir ${section.title}`}
-      className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Card className="h-full gap-4 rounded-lg transition group-hover:border-primary/45 group-hover:bg-muted/30 group-focus-visible:border-primary/60">
         <CardHeader className="gap-3">
