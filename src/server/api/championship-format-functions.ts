@@ -70,6 +70,20 @@ export const updateChampionshipStageFn = createServerFn({ method: "POST" })
     });
   });
 
+export const deleteChampionshipStageFn = createServerFn({ method: "POST" })
+  .inputValidator(command.extend({ stageUuid: uuid }))
+  .handler(async ({ data }) => {
+    const { requireApiPermission } = await import("#/server/auth/session");
+    const session = await requireApiPermission("championship:admin");
+    const { deleteChampionshipStage } = await import("#/server/api/championship-api");
+    const { championshipUuid, stageUuid, ...input } = data;
+
+    return deleteChampionshipStage(championshipUuid, stageUuid, {
+      ...input,
+      actorAccountUuid: session.account.uuid,
+    });
+  });
+
 export const createChampionshipGroupFn = createServerFn({ method: "POST" })
   .inputValidator(
     command.extend({
@@ -268,7 +282,17 @@ export const generateChampionshipSingleEliminationFn = createServerFn({
   .inputValidator(
     command.extend({
       name: z.string().trim().min(1).max(120),
-      teamIds: z.array(uuid).min(2).max(64),
+      teamIds: z.array(uuid).max(64).optional(),
+      qualificationSources: z
+        .array(
+          z.object({
+            groupId: uuid,
+            rank: z.number().int().min(1).max(64),
+            label: z.string().trim().min(1).max(160).optional(),
+          }),
+        )
+        .max(64)
+        .optional(),
       createCompetitionRounds: z.boolean().optional(),
       competitionRoundMode: z.enum(["per-bracket-round", "single-period"]).optional(),
       firstRoundStartsAt: z.string().datetime().nullable().optional(),

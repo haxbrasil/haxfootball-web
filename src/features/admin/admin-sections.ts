@@ -5,6 +5,8 @@ export type AdminSectionKey =
   | "championships"
   | "rooms"
   | "room-programs"
+  | "modes-statistics"
+  | "honors"
   | "matches"
   | "accounts"
   | "roles";
@@ -17,6 +19,8 @@ export type AdminSection = {
     | "/admin/rooms"
     | "/admin/championships"
     | "/admin/room-programs"
+    | "/admin/modes-statistics"
+    | "/admin/honors"
     | "/admin/matches"
     | "/admin/accounts"
     | "/admin/roles";
@@ -24,6 +28,20 @@ export type AdminSection = {
 };
 
 export const adminSections = [
+  {
+    key: "honors",
+    title: "Títulos e prêmios",
+    description: "Definir conquistas reutilizáveis e suas regras de atribuição.",
+    href: "/admin/honors",
+    permissions: ["honor-definition:admin"],
+  },
+  {
+    key: "modes-statistics",
+    title: "Modos e estatísticas",
+    description: "Definir modos de jogo, métricas e visualizações públicas.",
+    href: "/admin/modes-statistics",
+    permissions: ["game-mode:admin", "event-schema:admin", "visualization:admin"],
+  },
   {
     key: "rooms",
     title: "Salas",

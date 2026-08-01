@@ -10,62 +10,34 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as StatsIndexRouteImport } from './routes/stats/index'
-import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
-import { Route as PubsIndexRouteImport } from './routes/pubs/index'
-import { Route as MatchesIndexRouteImport } from './routes/matches/index'
-import { Route as ChampionshipsIndexRouteImport } from './routes/championships/index'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
-import { Route as RoomsRoomIdRouteImport } from './routes/rooms/$roomId'
-import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
-import { Route as ChampionshipsSlugRouteImport } from './routes/championships/$slug'
-import { Route as AdminRoomsRouteImport } from './routes/admin/rooms'
-import { Route as AdminRoomProgramsRouteImport } from './routes/admin/room-programs'
-import { Route as AdminRolesRouteImport } from './routes/admin/roles'
-import { Route as AdminMatchesRouteImport } from './routes/admin/matches'
-import { Route as AdminChampionshipsRouteImport } from './routes/admin/championships'
-import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AccountLoginRouteImport } from './routes/account/login'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AdminRoomsRoomIdRouteImport } from './routes/admin.rooms_.$roomId'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
+import { Route as AdminChampionshipsRouteImport } from './routes/admin/championships'
+import { Route as AdminHonorsRouteImport } from './routes/admin/honors'
+import { Route as AdminMatchesRouteImport } from './routes/admin/matches'
+import { Route as AdminModesStatisticsRouteImport } from './routes/admin/modes-statistics'
+import { Route as AdminRolesRouteImport } from './routes/admin/roles'
+import { Route as AdminRoomProgramsRouteImport } from './routes/admin/room-programs'
+import { Route as AdminRoomsRouteImport } from './routes/admin/rooms'
+import { Route as ChampionshipsIndexRouteImport } from './routes/championships/index'
+import { Route as ChampionshipsSlugRouteImport } from './routes/championships/$slug'
+import { Route as MatchesIndexRouteImport } from './routes/matches/index'
+import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
+import { Route as PubsIndexRouteImport } from './routes/pubs/index'
+import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
+import { Route as RoomsRoomIdRouteImport } from './routes/rooms/$roomId'
+import { Route as StatsIndexRouteImport } from './routes/stats/index'
 import { Route as AdminChampionshipsChampionshipIdRouteImport } from './routes/admin.championships_.$championshipId'
-import { Route as ApiChampionshipsChampionshipIdEventsRouteImport } from './routes/api/championships/$championshipId/events'
+import { Route as AdminRoomsRoomIdRouteImport } from './routes/admin.rooms_.$roomId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAuthSignInDiscordRouteImport } from './routes/api/auth/sign-in/discord'
+import { Route as ApiChampionshipsChampionshipIdEventsRouteImport } from './routes/api/championships/$championshipId/events'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatsIndexRoute = StatsIndexRouteImport.update({
-  id: '/stats/',
-  path: '/stats/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RoomsIndexRoute = RoomsIndexRouteImport.update({
-  id: '/rooms/',
-  path: '/rooms/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PubsIndexRoute = PubsIndexRouteImport.update({
-  id: '/pubs/',
-  path: '/pubs/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MatchesIndexRoute = MatchesIndexRouteImport.update({
-  id: '/matches/',
-  path: '/matches/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChampionshipsIndexRoute = ChampionshipsIndexRouteImport.update({
-  id: '/championships/',
-  path: '/championships/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountIndexRoute = AccountIndexRouteImport.update({
@@ -73,44 +45,14 @@ const AccountIndexRoute = AccountIndexRouteImport.update({
   path: '/account/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RoomsRoomIdRoute = RoomsRoomIdRouteImport.update({
-  id: '/rooms/$roomId',
-  path: '/rooms/$roomId',
+const AccountLoginRoute = AccountLoginRouteImport.update({
+  id: '/account/login',
+  path: '/account/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MatchesMatchIdRoute = MatchesMatchIdRouteImport.update({
-  id: '/matches/$matchId',
-  path: '/matches/$matchId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChampionshipsSlugRoute = ChampionshipsSlugRouteImport.update({
-  id: '/championships/$slug',
-  path: '/championships/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoomsRoute = AdminRoomsRouteImport.update({
-  id: '/admin/rooms',
-  path: '/admin/rooms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoomProgramsRoute = AdminRoomProgramsRouteImport.update({
-  id: '/admin/room-programs',
-  path: '/admin/room-programs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRolesRoute = AdminRolesRouteImport.update({
-  id: '/admin/roles',
-  path: '/admin/roles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminMatchesRoute = AdminMatchesRouteImport.update({
-  id: '/admin/matches',
-  path: '/admin/matches',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminChampionshipsRoute = AdminChampionshipsRouteImport.update({
-  id: '/admin/championships',
-  path: '/admin/championships',
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAccountsRoute = AdminAccountsRouteImport.update({
@@ -118,19 +60,79 @@ const AdminAccountsRoute = AdminAccountsRouteImport.update({
   path: '/admin/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountLoginRoute = AccountLoginRouteImport.update({
-  id: '/account/login',
-  path: '/account/login',
+const AdminChampionshipsRoute = AdminChampionshipsRouteImport.update({
+  id: '/admin/championships',
+  path: '/admin/championships',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+const AdminHonorsRoute = AdminHonorsRouteImport.update({
+  id: '/admin/honors',
+  path: '/admin/honors',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoomsRoomIdRoute = AdminRoomsRoomIdRouteImport.update({
-  id: '/admin/rooms_/$roomId',
-  path: '/admin/rooms/$roomId',
+const AdminMatchesRoute = AdminMatchesRouteImport.update({
+  id: '/admin/matches',
+  path: '/admin/matches',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminModesStatisticsRoute = AdminModesStatisticsRouteImport.update({
+  id: '/admin/modes-statistics',
+  path: '/admin/modes-statistics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRolesRoute = AdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/admin/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoomProgramsRoute = AdminRoomProgramsRouteImport.update({
+  id: '/admin/room-programs',
+  path: '/admin/room-programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoomsRoute = AdminRoomsRouteImport.update({
+  id: '/admin/rooms',
+  path: '/admin/rooms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChampionshipsIndexRoute = ChampionshipsIndexRouteImport.update({
+  id: '/championships/',
+  path: '/championships/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChampionshipsSlugRoute = ChampionshipsSlugRouteImport.update({
+  id: '/championships/$slug',
+  path: '/championships/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchesIndexRoute = MatchesIndexRouteImport.update({
+  id: '/matches/',
+  path: '/matches/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchesMatchIdRoute = MatchesMatchIdRouteImport.update({
+  id: '/matches/$matchId',
+  path: '/matches/$matchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PubsIndexRoute = PubsIndexRouteImport.update({
+  id: '/pubs/',
+  path: '/pubs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomsIndexRoute = RoomsIndexRouteImport.update({
+  id: '/rooms/',
+  path: '/rooms/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomsRoomIdRoute = RoomsRoomIdRouteImport.update({
+  id: '/rooms/$roomId',
+  path: '/rooms/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsIndexRoute = StatsIndexRouteImport.update({
+  id: '/stats/',
+  path: '/stats/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminChampionshipsChampionshipIdRoute =
@@ -139,24 +141,36 @@ const AdminChampionshipsChampionshipIdRoute =
     path: '/admin/championships/$championshipId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminRoomsRoomIdRoute = AdminRoomsRoomIdRouteImport.update({
+  id: '/admin/rooms_/$roomId',
+  path: '/admin/rooms/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSignInDiscordRoute = ApiAuthSignInDiscordRouteImport.update({
+  id: '/api/auth/sign-in/discord',
+  path: '/api/auth/sign-in/discord',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChampionshipsChampionshipIdEventsRoute =
   ApiChampionshipsChampionshipIdEventsRouteImport.update({
     id: '/api/championships/$championshipId/events',
     path: '/api/championships/$championshipId/events',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiAuthSignInDiscordRoute = ApiAuthSignInDiscordRouteImport.update({
-  id: '/api/auth/sign-in/discord',
-  path: '/api/auth/sign-in/discord',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/championships': typeof AdminChampionshipsRoute
+  '/admin/honors': typeof AdminHonorsRoute
   '/admin/matches': typeof AdminMatchesRoute
+  '/admin/modes-statistics': typeof AdminModesStatisticsRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
@@ -181,7 +195,9 @@ export interface FileRoutesByTo {
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/championships': typeof AdminChampionshipsRoute
+  '/admin/honors': typeof AdminHonorsRoute
   '/admin/matches': typeof AdminMatchesRoute
+  '/admin/modes-statistics': typeof AdminModesStatisticsRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
@@ -207,7 +223,9 @@ export interface FileRoutesById {
   '/account/login': typeof AccountLoginRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/championships': typeof AdminChampionshipsRoute
+  '/admin/honors': typeof AdminHonorsRoute
   '/admin/matches': typeof AdminMatchesRoute
+  '/admin/modes-statistics': typeof AdminModesStatisticsRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
@@ -234,7 +252,9 @@ export interface FileRouteTypes {
     | '/account/login'
     | '/admin/accounts'
     | '/admin/championships'
+    | '/admin/honors'
     | '/admin/matches'
+    | '/admin/modes-statistics'
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
@@ -259,7 +279,9 @@ export interface FileRouteTypes {
     | '/account/login'
     | '/admin/accounts'
     | '/admin/championships'
+    | '/admin/honors'
     | '/admin/matches'
+    | '/admin/modes-statistics'
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
@@ -284,7 +306,9 @@ export interface FileRouteTypes {
     | '/account/login'
     | '/admin/accounts'
     | '/admin/championships'
+    | '/admin/honors'
     | '/admin/matches'
+    | '/admin/modes-statistics'
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
@@ -310,7 +334,9 @@ export interface RootRouteChildren {
   AccountLoginRoute: typeof AccountLoginRoute
   AdminAccountsRoute: typeof AdminAccountsRoute
   AdminChampionshipsRoute: typeof AdminChampionshipsRoute
+  AdminHonorsRoute: typeof AdminHonorsRoute
   AdminMatchesRoute: typeof AdminMatchesRoute
+  AdminModesStatisticsRoute: typeof AdminModesStatisticsRoute
   AdminRolesRoute: typeof AdminRolesRoute
   AdminRoomProgramsRoute: typeof AdminRoomProgramsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
@@ -340,116 +366,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stats/': {
-      id: '/stats/'
-      path: '/stats'
-      fullPath: '/stats/'
-      preLoaderRoute: typeof StatsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rooms/': {
-      id: '/rooms/'
-      path: '/rooms'
-      fullPath: '/rooms/'
-      preLoaderRoute: typeof RoomsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pubs/': {
-      id: '/pubs/'
-      path: '/pubs'
-      fullPath: '/pubs/'
-      preLoaderRoute: typeof PubsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/matches/': {
-      id: '/matches/'
-      path: '/matches'
-      fullPath: '/matches/'
-      preLoaderRoute: typeof MatchesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/championships/': {
-      id: '/championships/'
-      path: '/championships'
-      fullPath: '/championships/'
-      preLoaderRoute: typeof ChampionshipsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/': {
-      id: '/admin/'
-      path: '/admin'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/account/': {
       id: '/account/'
       path: '/account'
       fullPath: '/account/'
       preLoaderRoute: typeof AccountIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rooms/$roomId': {
-      id: '/rooms/$roomId'
-      path: '/rooms/$roomId'
-      fullPath: '/rooms/$roomId'
-      preLoaderRoute: typeof RoomsRoomIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/matches/$matchId': {
-      id: '/matches/$matchId'
-      path: '/matches/$matchId'
-      fullPath: '/matches/$matchId'
-      preLoaderRoute: typeof MatchesMatchIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/championships/$slug': {
-      id: '/championships/$slug'
-      path: '/championships/$slug'
-      fullPath: '/championships/$slug'
-      preLoaderRoute: typeof ChampionshipsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/rooms': {
-      id: '/admin/rooms'
-      path: '/admin/rooms'
-      fullPath: '/admin/rooms'
-      preLoaderRoute: typeof AdminRoomsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/room-programs': {
-      id: '/admin/room-programs'
-      path: '/admin/room-programs'
-      fullPath: '/admin/room-programs'
-      preLoaderRoute: typeof AdminRoomProgramsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/roles': {
-      id: '/admin/roles'
-      path: '/admin/roles'
-      fullPath: '/admin/roles'
-      preLoaderRoute: typeof AdminRolesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/matches': {
-      id: '/admin/matches'
-      path: '/admin/matches'
-      fullPath: '/admin/matches'
-      preLoaderRoute: typeof AdminMatchesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/championships': {
-      id: '/admin/championships'
-      path: '/admin/championships'
-      fullPath: '/admin/championships'
-      preLoaderRoute: typeof AdminChampionshipsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/accounts': {
-      id: '/admin/accounts'
-      path: '/admin/accounts'
-      fullPath: '/admin/accounts'
-      preLoaderRoute: typeof AdminAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/login': {
@@ -459,18 +380,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/rooms_/$roomId': {
-      id: '/admin/rooms_/$roomId'
-      path: '/admin/rooms/$roomId'
-      fullPath: '/admin/rooms/$roomId'
-      preLoaderRoute: typeof AdminRoomsRoomIdRouteImport
+    '/admin/accounts': {
+      id: '/admin/accounts'
+      path: '/admin/accounts'
+      fullPath: '/admin/accounts'
+      preLoaderRoute: typeof AdminAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/championships': {
+      id: '/admin/championships'
+      path: '/admin/championships'
+      fullPath: '/admin/championships'
+      preLoaderRoute: typeof AdminChampionshipsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/honors': {
+      id: '/admin/honors'
+      path: '/admin/honors'
+      fullPath: '/admin/honors'
+      preLoaderRoute: typeof AdminHonorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/matches': {
+      id: '/admin/matches'
+      path: '/admin/matches'
+      fullPath: '/admin/matches'
+      preLoaderRoute: typeof AdminMatchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/modes-statistics': {
+      id: '/admin/modes-statistics'
+      path: '/admin/modes-statistics'
+      fullPath: '/admin/modes-statistics'
+      preLoaderRoute: typeof AdminModesStatisticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/roles': {
+      id: '/admin/roles'
+      path: '/admin/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AdminRolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/room-programs': {
+      id: '/admin/room-programs'
+      path: '/admin/room-programs'
+      fullPath: '/admin/room-programs'
+      preLoaderRoute: typeof AdminRoomProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/rooms': {
+      id: '/admin/rooms'
+      path: '/admin/rooms'
+      fullPath: '/admin/rooms'
+      preLoaderRoute: typeof AdminRoomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/championships/': {
+      id: '/championships/'
+      path: '/championships'
+      fullPath: '/championships/'
+      preLoaderRoute: typeof ChampionshipsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/championships/$slug': {
+      id: '/championships/$slug'
+      path: '/championships/$slug'
+      fullPath: '/championships/$slug'
+      preLoaderRoute: typeof ChampionshipsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/matches/': {
+      id: '/matches/'
+      path: '/matches'
+      fullPath: '/matches/'
+      preLoaderRoute: typeof MatchesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/matches/$matchId': {
+      id: '/matches/$matchId'
+      path: '/matches/$matchId'
+      fullPath: '/matches/$matchId'
+      preLoaderRoute: typeof MatchesMatchIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pubs/': {
+      id: '/pubs/'
+      path: '/pubs'
+      fullPath: '/pubs/'
+      preLoaderRoute: typeof PubsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rooms/': {
+      id: '/rooms/'
+      path: '/rooms'
+      fullPath: '/rooms/'
+      preLoaderRoute: typeof RoomsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rooms/$roomId': {
+      id: '/rooms/$roomId'
+      path: '/rooms/$roomId'
+      fullPath: '/rooms/$roomId'
+      preLoaderRoute: typeof RoomsRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats/': {
+      id: '/stats/'
+      path: '/stats'
+      fullPath: '/stats/'
+      preLoaderRoute: typeof StatsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/championships_/$championshipId': {
@@ -480,11 +506,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminChampionshipsChampionshipIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/championships/$championshipId/events': {
-      id: '/api/championships/$championshipId/events'
-      path: '/api/championships/$championshipId/events'
-      fullPath: '/api/championships/$championshipId/events'
-      preLoaderRoute: typeof ApiChampionshipsChampionshipIdEventsRouteImport
+    '/admin/rooms_/$roomId': {
+      id: '/admin/rooms_/$roomId'
+      path: '/admin/rooms/$roomId'
+      fullPath: '/admin/rooms/$roomId'
+      preLoaderRoute: typeof AdminRoomsRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/sign-in/discord': {
@@ -492,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/sign-in/discord'
       fullPath: '/api/auth/sign-in/discord'
       preLoaderRoute: typeof ApiAuthSignInDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/championships/$championshipId/events': {
+      id: '/api/championships/$championshipId/events'
+      path: '/api/championships/$championshipId/events'
+      fullPath: '/api/championships/$championshipId/events'
+      preLoaderRoute: typeof ApiChampionshipsChampionshipIdEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -502,7 +542,9 @@ const rootRouteChildren: RootRouteChildren = {
   AccountLoginRoute: AccountLoginRoute,
   AdminAccountsRoute: AdminAccountsRoute,
   AdminChampionshipsRoute: AdminChampionshipsRoute,
+  AdminHonorsRoute: AdminHonorsRoute,
   AdminMatchesRoute: AdminMatchesRoute,
+  AdminModesStatisticsRoute: AdminModesStatisticsRoute,
   AdminRolesRoute: AdminRolesRoute,
   AdminRoomProgramsRoute: AdminRoomProgramsRoute,
   AdminRoomsRoute: AdminRoomsRoute,

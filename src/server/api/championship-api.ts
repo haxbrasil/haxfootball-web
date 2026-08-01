@@ -25,14 +25,21 @@ import type {
   ChampionshipMetricMappings,
   ChampionshipMetricMappingsQuery,
   ChampionshipHistory,
+  ChampionshipHonor,
+  ChampionshipHonorDefinition,
+  ChampionshipHonorResolutionPreview,
+  ArchiveChampionshipHonorDefinitionInput,
+  CreateChampionshipHonorDefinitionInput,
+  CreateChampionshipHonorGrantInput,
+  CreateChampionshipHonorInput,
+  PublishChampionshipHonorDefinitionInput,
+  RevokeChampionshipHonorGrantInput,
+  ResolveChampionshipHonorInput,
+  UpdateChampionshipHonorDefinitionDraftInput,
+  UpdateChampionshipHonorInput,
+  ListChampionshipHonorDefinitionsResponse,
+  ListChampionshipHonorsResponse,
   ChampionshipAward,
-  ChampionshipHistoricalImportBatch,
-  ChampionshipHistoricalPlayer,
-  ListChampionshipHistoricalImportsResponse,
-  PreviewChampionshipHistoricalImportInput,
-  ApplyChampionshipHistoricalImportInput,
-  RollbackChampionshipHistoricalImportInput,
-  LinkChampionshipHistoricalPlayerInput,
   CreateChampionshipAwardInput,
   UpdateChampionshipAwardInput,
   ReplaceChampionshipPlacementsInput,
@@ -65,6 +72,7 @@ import type {
   CreateChampionshipInput,
   CreateChampionshipTeamInput,
   ConfigureChampionshipDraftInput,
+  CancelChampionshipDraftInput,
   CreateChampionshipCompetitionRoundInput,
   CreateChampionshipLogicalMatchInput,
   CreateChampionshipScheduleProposalInput,
@@ -76,6 +84,7 @@ import type {
   CreateCompetitionTypeInput,
   CreateTeamIdentityInput,
   ExecuteChampionshipRosterMoveInput,
+  ReorderChampionshipRosterInput,
   EndChampionshipDraftInput,
   GenerateSingleEliminationInput,
   GenerateDoubleEliminationInput,
@@ -136,7 +145,12 @@ export type PublicChampionshipDetail = {
   format: Serializable<ChampionshipFormat>;
   statistics: ChampionshipStatisticsData;
   history: ChampionshipHistoryData;
+  honors: ChampionshipHonorsData;
   selfRegistration: Serializable<ChampionshipParticipant> | null;
+  visualizations: {
+    overview: import("#/features/visualizations/types").VisualizationDashboard;
+    statistics: import("#/features/visualizations/types").VisualizationDashboard;
+  };
 };
 
 export type ChampionshipAdminIndexData = {
@@ -163,7 +177,8 @@ export type ChampionshipWorkspaceData = {
   trades: Serializable<ListChampionshipTradesResponse>;
   format: Serializable<ChampionshipFormat>;
   history: ChampionshipHistoryData;
-  historicalImports: ListChampionshipHistoricalImportsData;
+  honors: ChampionshipHonorsData;
+  honorDefinitions: ChampionshipHonorDefinitionsData;
   accounts: ChampionshipAccountOptions;
 };
 
@@ -195,10 +210,13 @@ export type ChampionshipStatisticsData = Serializable<ChampionshipStatistics>;
 export type ChampionshipMetricMappingsData = Serializable<ChampionshipMetricMappings>;
 export type ChampionshipHistoryData = Serializable<ChampionshipHistory>;
 export type ChampionshipAwardData = Serializable<ChampionshipAward>;
-export type ChampionshipHistoricalImportBatchData = Serializable<ChampionshipHistoricalImportBatch>;
-export type ListChampionshipHistoricalImportsData =
-  Serializable<ListChampionshipHistoricalImportsResponse>;
-export type ChampionshipHistoricalPlayerData = Serializable<ChampionshipHistoricalPlayer>;
+export type ChampionshipHonorData = Serializable<ChampionshipHonor>;
+export type ChampionshipHonorDefinitionData = Serializable<ChampionshipHonorDefinition>;
+export type ChampionshipHonorResolutionPreviewData =
+  Serializable<ChampionshipHonorResolutionPreview>;
+export type ChampionshipHonorsData = Serializable<ListChampionshipHonorsResponse>;
+export type ChampionshipHonorDefinitionsData =
+  Serializable<ListChampionshipHonorDefinitionsResponse>;
 
 type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -255,7 +273,10 @@ export async function getPublicChampionshipBySlug(
     format,
     statistics,
     history,
+    honors,
     selfRegistration,
+    overviewVisualizations,
+    statisticsVisualizations,
   ] = await Promise.all([
     requireResult(client.championships.get(summary.uuid)),
     requireResult(client.championships.teams.list(summary.uuid, { limit: 64 })),
@@ -295,6 +316,7 @@ export async function getPublicChampionshipBySlug(
     requireResult(
       client.championships.history.get(summary.uuid, { limit: championshipHistoryPageLimit }),
     ),
+    requireResult(client.championships.honors.list(summary.uuid, { limit: 100 })),
     actorAccountUuid
       ? requireResult(
           client.championships.registration.getSelf(summary.uuid, {
@@ -302,6 +324,18 @@ export async function getPublicChampionshipBySlug(
           }),
         ).then(({ participant }) => participant)
       : Promise.resolve(null),
+    requireResult(
+      client.request({
+        path: `/visualizations/championships/${summary.uuid}`,
+        query: { surface: "overview" },
+      }),
+    ) as Promise<import("#/features/visualizations/types").VisualizationDashboard>,
+    requireResult(
+      client.request({
+        path: `/visualizations/championships/${summary.uuid}`,
+        query: { surface: "statistics" },
+      }),
+    ) as Promise<import("#/features/visualizations/types").VisualizationDashboard>,
   ]);
 
   return serialize({
@@ -314,7 +348,9 @@ export async function getPublicChampionshipBySlug(
     format,
     statistics,
     history,
+    honors,
     selfRegistration,
+    visualizations: { overview: overviewVisualizations, statistics: statisticsVisualizations },
   });
 }
 
@@ -342,7 +378,6 @@ export async function listChampionshipAdminIndex(): Promise<ChampionshipAdminInd
 export async function getChampionshipWorkspace(
   championshipUuid: string,
   actorAccountUuid: string,
-  includeHistoricalImports = false,
 ): Promise<ChampionshipWorkspaceData> {
   const client = requireClient();
   const [
@@ -362,7 +397,8 @@ export async function getChampionshipWorkspace(
     trades,
     format,
     history,
-    historicalImports,
+    honors,
+    honorDefinitions,
     accounts,
   ] = await Promise.all([
     requireResult(client.championships.get(championshipUuid)),
@@ -435,17 +471,14 @@ export async function getChampionshipWorkspace(
         limit: championshipHistoryPageLimit,
       }),
     ),
-    includeHistoricalImports
-      ? requireResult(
-          client.championships.history.imports.list(championshipUuid, {
-            actorAccountUuid,
-            limit: 20,
-          }),
-        )
-      : Promise.resolve({
-          items: [],
-          page: { limit: 20, nextCursor: null },
-        }),
+    requireResult(
+      client.championships.honors.list(championshipUuid, {
+        actorAccountUuid,
+        includeDrafts: true,
+        limit: 100,
+      }),
+    ),
+    requireResult(client.championships.honorDefinitions.list({ state: "active", limit: 100 })),
     listChampionshipAccountOptions({ limit: 100 }),
   ]);
   const presence = await requireResult(
@@ -472,7 +505,8 @@ export async function getChampionshipWorkspace(
     trades,
     format,
     history,
-    historicalImports,
+    honors,
+    honorDefinitions,
     accounts,
   });
 }
@@ -503,46 +537,106 @@ export async function updateChampionshipAward(
   );
 }
 
-export async function previewChampionshipHistoricalImport(
-  championshipUuid: string,
-  input: PreviewChampionshipHistoricalImportInput,
-): Promise<ChampionshipMutationResult<ChampionshipHistoricalImportBatchData>> {
-  return mutationResult(
-    requireClient().championships.history.imports.preview(championshipUuid, input),
-  );
-}
-
-export async function applyChampionshipHistoricalImport(
-  championshipUuid: string,
-  batchUuid: string,
-  input: ApplyChampionshipHistoricalImportInput,
-): Promise<ChampionshipMutationResult<ChampionshipHistoricalImportBatchData>> {
-  return mutationResult(
-    requireClient().championships.history.imports.apply(championshipUuid, batchUuid, input),
-  );
-}
-
-export async function rollbackChampionshipHistoricalImport(
-  championshipUuid: string,
-  batchUuid: string,
-  input: RollbackChampionshipHistoricalImportInput,
-): Promise<ChampionshipMutationResult<ChampionshipHistoricalImportBatchData>> {
-  return mutationResult(
-    requireClient().championships.history.imports.rollback(championshipUuid, batchUuid, input),
-  );
-}
-
-export async function linkChampionshipHistoricalPlayer(
-  championshipUuid: string,
-  historicalPlayerUuid: string,
-  input: LinkChampionshipHistoricalPlayerInput,
-): Promise<ChampionshipMutationResult<ChampionshipHistoricalPlayerData>> {
-  return mutationResult(
-    requireClient().championships.history.linkHistoricalPlayer(
-      championshipUuid,
-      historicalPlayerUuid,
-      input,
+export async function listChampionshipHonorCatalog(): Promise<ChampionshipHonorDefinitionsData> {
+  return serialize(
+    await requireResult(
+      requireClient().championships.honorDefinitions.list({ state: "all", limit: 100 }),
     ),
+  );
+}
+
+export async function createChampionshipHonorDefinition(
+  input: CreateChampionshipHonorDefinitionInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorDefinitionData>> {
+  return mutationResult(requireClient().championships.honorDefinitions.create(input));
+}
+
+export async function updateChampionshipHonorDefinitionDraft(
+  definitionUuid: string,
+  input: UpdateChampionshipHonorDefinitionDraftInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorDefinitionData>> {
+  return mutationResult(
+    requireClient().championships.honorDefinitions.updateDraft(definitionUuid, input),
+  );
+}
+
+export async function publishChampionshipHonorDefinition(
+  definitionUuid: string,
+  input: PublishChampionshipHonorDefinitionInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorDefinitionData & { published: boolean }>> {
+  return mutationResult(
+    requireClient().championships.honorDefinitions.publish(definitionUuid, input),
+  );
+}
+
+export async function archiveChampionshipHonorDefinition(
+  definitionUuid: string,
+  input: ArchiveChampionshipHonorDefinitionInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorDefinitionData>> {
+  return mutationResult(
+    requireClient().championships.honorDefinitions.archive(definitionUuid, input),
+  );
+}
+
+export async function createChampionshipHonor(
+  championshipUuid: string,
+  input: CreateChampionshipHonorInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorData>> {
+  return mutationResult(requireClient().championships.honors.create(championshipUuid, input));
+}
+
+export async function updateChampionshipHonor(
+  championshipUuid: string,
+  honorUuid: string,
+  input: UpdateChampionshipHonorInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorData>> {
+  return mutationResult(
+    requireClient().championships.honors.update(championshipUuid, honorUuid, input),
+  );
+}
+
+export async function createChampionshipHonorGrant(
+  championshipUuid: string,
+  honorUuid: string,
+  input: CreateChampionshipHonorGrantInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorData>> {
+  return mutationResult(
+    requireClient().championships.honors.grant(championshipUuid, honorUuid, input),
+  );
+}
+
+export async function previewChampionshipHonorResolution(
+  championshipUuid: string,
+  honorUuid: string,
+  actorAccountUuid: string,
+): Promise<ChampionshipHonorResolutionPreviewData> {
+  return serialize(
+    await requireResult(
+      requireClient().championships.honors.previewResolution(championshipUuid, honorUuid, {
+        actorAccountUuid,
+      }),
+    ),
+  );
+}
+
+export async function resolveChampionshipHonor(
+  championshipUuid: string,
+  honorUuid: string,
+  input: ResolveChampionshipHonorInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorData>> {
+  return mutationResult(
+    requireClient().championships.honors.resolve(championshipUuid, honorUuid, input),
+  );
+}
+
+export async function revokeChampionshipHonorGrant(
+  championshipUuid: string,
+  honorUuid: string,
+  grantUuid: string,
+  input: RevokeChampionshipHonorGrantInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorData>> {
+  return mutationResult(
+    requireClient().championships.honors.revokeGrant(championshipUuid, honorUuid, grantUuid, input),
   );
 }
 
@@ -905,6 +999,13 @@ export async function executeChampionshipRosterMove(
   return mutationResult(requireClient().championships.rosters.executeMove(championshipUuid, input));
 }
 
+export async function reorderChampionshipRoster(
+  championshipUuid: string,
+  input: ReorderChampionshipRosterInput,
+) {
+  return mutationResult(requireClient().championships.rosters.reorder(championshipUuid, input));
+}
+
 export async function configureChampionshipDraft(
   championshipUuid: string,
   input: ConfigureChampionshipDraftInput,
@@ -931,6 +1032,13 @@ export async function endChampionshipDraft(
   input: EndChampionshipDraftInput,
 ): Promise<ChampionshipMutationResult<Serializable<ChampionshipDraft>>> {
   return mutationResult(requireClient().championships.draft.end(championshipUuid, input));
+}
+
+export async function cancelChampionshipDraft(
+  championshipUuid: string,
+  input: CancelChampionshipDraftInput,
+): Promise<ChampionshipMutationResult<Serializable<ChampionshipDraft>>> {
+  return mutationResult(requireClient().championships.draft.cancel(championshipUuid, input));
 }
 
 export async function previewChampionshipDraftCorrection(
@@ -989,6 +1097,16 @@ export async function updateChampionshipStage(
 ): Promise<ChampionshipMutationResult<Serializable<ChampionshipFormat>>> {
   return mutationResult(
     requireClient().championships.format.updateStage(championshipUuid, stageUuid, input),
+  );
+}
+
+export async function deleteChampionshipStage(
+  championshipUuid: string,
+  stageUuid: string,
+  input: { actorAccountUuid: string; commandUuid: string; expectedRevision: number },
+): Promise<ChampionshipMutationResult<Serializable<ChampionshipFormat>>> {
+  return mutationResult(
+    requireClient().championships.format.deleteStage(championshipUuid, stageUuid, input),
   );
 }
 

@@ -1,4 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -66,6 +75,7 @@ import {
   updateChampionshipMatchAttributionsFn,
 } from "#/server/api/championship-match-functions";
 import {
+  appearanceFindingLabel,
   correctionImpactLabel,
   defaultSettlementDraft,
   durationLabel,
@@ -303,8 +313,8 @@ function MatchCockpit({
   return (
     <div>
       <MatchScoreHeader operations={operations} />
-      <div className="grid items-start 2xl:grid-cols-[minmax(0,1.45fr)_minmax(380px,0.8fr)]">
-        <div className="min-w-0 border-b 2xl:border-r 2xl:border-b-0">
+      <div>
+        <div className="min-w-0 border-b">
           <EvidencePanel
             data={data}
             operations={operations}
@@ -336,7 +346,7 @@ function MatchScoreHeader({ operations }: { operations: MatchOperations }) {
 
   return (
     <header className="border-b bg-card/20 px-4 py-5 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="space-y-5">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{match.label}</Badge>
@@ -365,7 +375,7 @@ function MatchScoreHeader({ operations }: { operations: MatchOperations }) {
             <span>{match.expectedProgram?.name ?? "Programa herdado"}</span>
           </div>
         </div>
-        <div className="grid min-w-[280px] grid-cols-[1fr_auto_1fr] items-center gap-4">
+        <div className="grid w-full max-w-2xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4">
           <TeamScore
             team={match.sideA}
             score={result ? numberValue(result.sideAOfficialScore) : null}
@@ -625,6 +635,7 @@ function EvidenceSearchDialog({
     "all",
   );
   const [includeAllPrograms, setIncludeAllPrograms] = useState(false);
+  const [showClaimed, setShowClaimed] = useState(false);
   const [orientation, setOrientation] = useState<"aligned" | "swapped">("aligned");
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">(
     initialCandidates ? "ready" : "idle",
@@ -632,42 +643,120 @@ function EvidenceSearchDialog({
   const [compositionGames, setCompositionGames] = useState<CompositionGame[]>([]);
   const [lastGameIsOvertime, setLastGameIsOvertime] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
+  const [attachingId, setAttachingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const resultsScrollRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const queryRevisionRef = useRef(0);
+
+  const fetchCandidates = useCallback(
+    (cursor?: string) =>
+      list({
+        data: {
+          championshipUuid: operations.championshipUuid,
+          championshipMatchUuid: operations.match.uuid,
+          ...(search.trim()
+            ? /^[A-Za-z0-9_-]{8,9}$/.test(search.trim())
+              ? { logicalMatchId: search.trim() }
+              : { playerSearch: search.trim() }
+            : {}),
+          ...(quality === "all" ? {} : { quality }),
+          claimState: showClaimed ? "all" : "available",
+          includeAllPrograms,
+          limit: 25,
+          ...(cursor ? { cursor } : {}),
+        },
+      }),
+    [
+      includeAllPrograms,
+      list,
+      operations.championshipUuid,
+      operations.match.uuid,
+      quality,
+      search,
+      showClaimed,
+    ],
+  );
 
   const runSearch = useCallback(
     async (event?: FormEvent) => {
       event?.preventDefault();
+      const queryRevision = ++queryRevisionRef.current;
       setState("loading");
+      setLoadingMore(false);
       setMessage(null);
 
       try {
-        const result = await list({
-          data: {
-            championshipUuid: operations.championshipUuid,
-            championshipMatchUuid: operations.match.uuid,
-            ...(search.trim() ? { playerSearch: search.trim() } : {}),
-            ...(quality === "all" ? {} : { quality }),
-            claimState: "all",
-            includeAllPrograms,
-            limit: 25,
-          },
-        });
+        const result = await fetchCandidates();
+        if (queryRevision !== queryRevisionRef.current) return;
         setCandidates(result);
         setState("ready");
       } catch (cause) {
+        if (queryRevision !== queryRevisionRef.current) return;
         setMessage(errorMessage(cause));
         setState("error");
       }
     },
-    [includeAllPrograms, list, operations.championshipUuid, operations.match.uuid, quality, search],
+    [fetchCandidates],
   );
 
+  const loadMore = useCallback(async () => {
+    const cursor = candidates?.nextCursor;
+    if (!cursor || loadingMore || state === "loading") return;
+
+    const queryRevision = queryRevisionRef.current;
+    setLoadingMore(true);
+    setMessage(null);
+
+    try {
+      const result = await fetchCandidates(cursor);
+      if (queryRevision !== queryRevisionRef.current) return;
+
+      setCandidates((current) => {
+        if (!current) return result;
+
+        const existingIds = new Set(current.items.map((item) => item.evidence.id));
+        return {
+          ...result,
+          items: [
+            ...current.items,
+            ...result.items.filter((item) => !existingIds.has(item.evidence.id)),
+          ],
+          totalInspected: numberValue(current.totalInspected) + numberValue(result.totalInspected),
+        };
+      });
+    } catch (cause) {
+      if (queryRevision === queryRevisionRef.current) setMessage(errorMessage(cause));
+    } finally {
+      if (queryRevision === queryRevisionRef.current) setLoadingMore(false);
+    }
+  }, [candidates?.nextCursor, fetchCandidates, loadingMore, state]);
+
   useEffect(() => {
-    if (open && !candidates && state === "idle") void runSearch();
-  }, [candidates, open, runSearch, state]);
+    if (!open) return;
+    const timeout = window.setTimeout(() => void runSearch(), candidates ? 300 : 0);
+    return () => window.clearTimeout(timeout);
+  }, [open, runSearch]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    const root = resultsScrollRef.current;
+    if (!open || !candidates?.nextCursor || !target || !root) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) void loadMore();
+      },
+      { root, rootMargin: "240px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [candidates?.nextCursor, loadMore, open]);
 
   async function selectCandidate(logicalMatchId: string) {
     setMessage(null);
+    setAttachingId(logicalMatchId);
     const result = await attach({
       data: {
         championshipUuid: operations.championshipUuid,
@@ -680,9 +769,13 @@ function EvidenceSearchDialog({
         note: "Selecionada manualmente no cockpit do campeonato",
       },
     });
+    setAttachingId(null);
 
-    if (result.ok) onOperations(result.data);
-    else setMessage(result.message);
+    if (result.ok) {
+      onOperations(result.data);
+      onOpenChange(false);
+      toast.success("Partida registrada vinculada.");
+    } else setMessage(result.message);
   }
 
   function toggleCompositionGame(candidate: EvidenceCandidate) {
@@ -774,7 +867,7 @@ function EvidenceSearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-hidden sm:max-w-5xl">
+      <DialogContent className="max-h-[92vh] grid-rows-[auto_auto_auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Buscar partida registrada</DialogTitle>
           <DialogDescription>
@@ -821,6 +914,13 @@ function EvidenceSearchDialog({
             />
             Incluir programas diferentes do esperado
           </label>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Checkbox
+              checked={showClaimed}
+              onCheckedChange={(value) => setShowClaimed(value === true)}
+            />
+            Mostrar partidas já vinculadas
+          </label>
           <div className="flex items-center justify-end gap-1 text-xs">
             <span className="mr-1 text-muted-foreground">Orientação</span>
             <Button
@@ -858,7 +958,10 @@ function EvidenceSearchDialog({
           />
         ) : null}
         {message ? <InlineError message={message} /> : null}
-        <div className="min-h-72 overflow-y-auto">
+        <div
+          ref={resultsScrollRef}
+          className="min-h-72 overflow-y-auto rounded-md border bg-background/30"
+        >
           {state === "loading" ? (
             <div className="space-y-2 py-2">
               {Array.from({ length: 4 }, (_, index) => (
@@ -866,11 +969,11 @@ function EvidenceSearchDialog({
               ))}
             </div>
           ) : candidates?.items.length ? (
-            <div className="divide-y border">
+            <div className="divide-y">
               {candidates.items.map((candidate) => (
                 <article
                   key={candidate.evidence.id}
-                  className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  className="grid gap-4 p-4 transition-colors hover:bg-muted/25 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -908,6 +1011,21 @@ function EvidenceSearchDialog({
                         {numberValue(candidate.evidence.score?.blue)}
                       </span>
                       <span>{candidate.evidence.rounds.length} tempos</span>
+                      {candidate.evidence.rounds[0]?.initiatedAt ? (
+                        <span>
+                          <CalendarClock className="mr-1 inline size-3" />
+                          {formatDateTime(candidate.evidence.rounds[0].initiatedAt)}
+                        </span>
+                      ) : null}
+                      <span>
+                        {Array.from(
+                          new Set(
+                            candidate.evidence.rounds
+                              .map((round) => round.provenance?.program.name)
+                              .filter((name): name is string => !!name),
+                          ),
+                        ).join(", ") || "Programa desconhecido"}
+                      </span>
                       <span>
                         {candidate.evidence.rounds
                           .flatMap((round) =>
@@ -930,7 +1048,7 @@ function EvidenceSearchDialog({
                             ? "secondary"
                             : "outline"
                         }
-                        disabled={candidate.alreadyClaimed}
+                        disabled={candidate.alreadyClaimed || attachingId !== null}
                         onClick={() => toggleCompositionGame(candidate)}
                       >
                         <Layers3 />
@@ -943,11 +1061,15 @@ function EvidenceSearchDialog({
                     ) : null}
                     <Button
                       size="sm"
-                      disabled={candidate.alreadyClaimed}
+                      disabled={candidate.alreadyClaimed || attachingId !== null}
                       onClick={() => selectCandidate(candidate.evidence.id)}
                     >
-                      <Link2 />
-                      Vincular
+                      {attachingId === candidate.evidence.id ? (
+                        <LoaderCircle className="animate-spin" />
+                      ) : (
+                        <Link2 />
+                      )}
+                      {attachingId === candidate.evidence.id ? "Vinculando" : "Vincular"}
                     </Button>
                   </div>
                 </article>
@@ -964,10 +1086,33 @@ function EvidenceSearchDialog({
               </div>
             </div>
           )}
+          {candidates && state !== "loading" ? (
+            <div
+              ref={loadMoreRef}
+              className="flex h-14 items-center justify-center gap-2 border-t text-xs text-muted-foreground"
+            >
+              {loadingMore ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Carregando mais partidas
+                </>
+              ) : candidates.nextCursor ? (
+                "Role para carregar mais"
+              ) : (
+                "Todas as partidas encontradas foram exibidas"
+              )}
+            </div>
+          ) : null}
         </div>
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>{candidates ? `${candidates.totalInspected} registros inspecionados` : ""}</span>
-          <span>Resultados limitados a 25 por página</span>
+          <span>
+            {candidates?.nextCursor
+              ? "Mais resultados disponíveis"
+              : candidates
+                ? "Fim dos resultados"
+                : ""}
+          </span>
         </div>
       </DialogContent>
     </Dialog>
@@ -1243,7 +1388,17 @@ function EligibilityPanel({
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Situação</div>
               {appearance.findings.length ? (
-                <div className="mt-1 text-xs text-amber-300">{appearance.findings.join(" · ")}</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {appearance.findings.map((finding) => (
+                    <Badge
+                      key={finding}
+                      variant="outline"
+                      className="border-amber-400/40 text-amber-200"
+                    >
+                      {appearanceFindingLabel(finding)}
+                    </Badge>
+                  ))}
+                </div>
               ) : (
                 <div className="mt-1 text-xs text-emerald-300">Regular</div>
               )}
@@ -1288,9 +1443,17 @@ function EligibilityPanel({
                   </TableCell>
                   <TableCell>
                     {appearance.findings.length ? (
-                      <span className="text-xs text-amber-300">
-                        {appearance.findings.join(" · ")}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {appearance.findings.map((finding) => (
+                          <Badge
+                            key={finding}
+                            variant="outline"
+                            className="border-amber-400/40 text-amber-200"
+                          >
+                            {appearanceFindingLabel(finding)}
+                          </Badge>
+                        ))}
+                      </div>
                     ) : (
                       <span className="text-xs text-emerald-300">Regular</span>
                     )}

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useLocation } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { canAccessImplementedAdmin } from "#/features/admin/admin-sections";
 import type { ApiAccountSession } from "#/server/auth/session";
@@ -19,7 +19,13 @@ export function AppShell({
   children: ReactNode;
   session?: ApiAccountSession | null;
 }) {
-  const pathname = useLocation({ select: (location) => location.pathname });
+  // Keep the current shell in place until the destination route has resolved.
+  // The browser URL changes before a loader completes, so using `location`
+  // directly made the outgoing championships list abruptly become full-width.
+  const pathname = useRouterState({
+    select: (state) => state.resolvedLocation?.pathname ?? state.location.pathname,
+  });
+  const isNavigating = useRouterState({ select: (state) => state.isLoading });
   const isChampionshipEditor = isChampionshipEditorPath(pathname);
   const canAccessAdmin = canAccessImplementedAdmin(session);
   const visibleNavigation = getNavigation();
@@ -30,6 +36,12 @@ export function AppShell({
   return (
     <TooltipProvider>
       <div className="min-h-screen text-foreground">
+        <div
+          aria-hidden={!isNavigating}
+          className={`fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-primary transition-transform duration-200 ${
+            isNavigating ? "scale-x-100" : "scale-x-0"
+          }`}
+        />
         {isChampionshipEditor ? null : (
           <header className="sticky top-0 z-40 border-b bg-background/92 backdrop-blur">
             <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">

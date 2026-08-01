@@ -36,7 +36,7 @@ describe("championship API compositions", () => {
     const client = championshipClient();
     getApiClientMock.mockReturnValue(client);
 
-    await getChampionshipWorkspace(championshipUuid, actorAccountUuid, true);
+    await getChampionshipWorkspace(championshipUuid, actorAccountUuid);
 
     expect(client.championships.history.get).toHaveBeenCalledWith(championshipUuid, {
       actorAccountUuid,
@@ -51,6 +51,7 @@ function championshipClient() {
   const historyGet = vi.fn(() => success({ placements: page, awards: page, records: [] }));
 
   return {
+    request: vi.fn(() => success({ items: [] })),
     accounts: {
       list: vi.fn(() => success(page)),
     },
@@ -85,6 +86,8 @@ function championshipClient() {
         get: historyGet,
         imports: { list: vi.fn(() => success(page)) },
       },
+      honors: { list: vi.fn(() => success(page)) },
+      honorDefinitions: { list: vi.fn(() => success(page)) },
       collaboration: {
         threads: { list: vi.fn(() => success(page)) },
         assignments: { list: vi.fn(() => success(page)) },

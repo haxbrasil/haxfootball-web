@@ -208,7 +208,7 @@ export function ChampionshipWorkspacePage({
               onSelectMatch={selectMatch}
             />
           ) : view === "statistics" ? (
-            <StatisticsWorkspace data={data} mode="admin" />
+            <StatisticsWorkspace data={data} />
           ) : view === "archive" ? (
             <ChampionshipArchiveWorkspace data={data} mode="admin" />
           ) : (
@@ -390,7 +390,7 @@ function WorkspaceNavigation({
     { value: "statistics", label: "Estatísticas", icon: BarChart3 },
     {
       value: "archive",
-      label: "Títulos e acervo",
+      label: "Títulos e prêmios",
       icon: Trophy,
       count: Number(data.history.placements.totalCount) + Number(data.history.awards.totalCount),
     },
@@ -1984,7 +1984,7 @@ function WorkspaceCommandPalette({
           </CommandItem>
           <CommandItem onSelect={() => run(() => onSelectView("archive"))}>
             <Trophy />
-            Títulos e acervo
+            Títulos e prêmios
           </CommandItem>
           <CommandItem onSelect={() => run(() => onSelectView("activity"))}>
             <Activity />

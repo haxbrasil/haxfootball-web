@@ -4,6 +4,7 @@ import {
   ChampionshipWorkspacePage,
   type ChampionshipWorkspaceView,
 } from "#/features/admin/championships/workspace-page";
+import { ChampionshipWorkspacePending } from "#/features/admin/championships/workspace-pending";
 import { getChampionshipWorkspaceFn } from "#/server/api/championship-functions";
 
 const workspaceSearch = z.object({
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/admin/championships_/$championshipId")({
     getChampionshipWorkspaceFn({
       data: { championshipUuid: params.championshipId },
     }),
+  pendingComponent: ChampionshipWorkspacePending,
   component: ChampionshipWorkspaceRoute,
 });
 

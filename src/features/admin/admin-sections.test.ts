@@ -39,10 +39,28 @@ describe("visibleAdminSections", () => {
   it("shows all implemented sections for wildcard or bypass roles", () => {
     expect(
       visibleAdminSections(session({ permissions: ["*"] })).map((section) => section.key),
-    ).toEqual(["rooms", "room-programs", "matches", "championships", "accounts", "roles"]);
+    ).toEqual([
+      "honors",
+      "modes-statistics",
+      "rooms",
+      "room-programs",
+      "matches",
+      "championships",
+      "accounts",
+      "roles",
+    ]);
     expect(
       visibleAdminSections(session({ bypassAllPermissions: true })).map((section) => section.key),
-    ).toEqual(["rooms", "room-programs", "matches", "championships", "accounts", "roles"]);
+    ).toEqual([
+      "honors",
+      "modes-statistics",
+      "rooms",
+      "room-programs",
+      "matches",
+      "championships",
+      "accounts",
+      "roles",
+    ]);
   });
 
   it("shows championships when the account has championship access", () => {
@@ -65,11 +83,15 @@ describe("visibleAdminSections", () => {
     ).toEqual(["championships"]);
   });
 
-  it("does not treat unimplemented admin permissions as admin access", () => {
-    const unrelatedSession = session({ permissions: ["event-schema:admin"] });
+  it("grants studio access through each dedicated administration permission", () => {
+    for (const permission of ["game-mode:admin", "event-schema:admin", "visualization:admin"]) {
+      const studioSession = session({ permissions: [permission] });
 
-    expect(visibleAdminSections(unrelatedSession)).toEqual([]);
-    expect(canAccessImplementedAdmin(unrelatedSession)).toBe(false);
+      expect(visibleAdminSections(studioSession).map((section) => section.key)).toEqual([
+        "modes-statistics",
+      ]);
+      expect(canAccessImplementedAdmin(studioSession)).toBe(true);
+    }
   });
 
   it("describes matches as a general administrative resource", () => {

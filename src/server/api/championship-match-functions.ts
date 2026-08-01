@@ -59,6 +59,14 @@ export const getChampionshipMatchOperationsFn = createServerFn({ method: "GET" }
     });
   });
 
+export const getPublicChampionshipMatchFn = createServerFn({ method: "GET" })
+  .inputValidator(matchContext)
+  .handler(async ({ data }) => {
+    const { getChampionshipMatchOperations } = await import("#/server/api/championship-api");
+
+    return getChampionshipMatchOperations(data.championshipUuid, data.championshipMatchUuid, {});
+  });
+
 export const listChampionshipEvidenceCandidatesFn = createServerFn({ method: "GET" })
   .inputValidator(
     matchContext.extend({

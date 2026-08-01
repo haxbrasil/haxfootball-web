@@ -94,6 +94,7 @@ export function projectedTeamCap(
 export function draftReadiness(
   draft: Draft | null,
   registrationState: string,
+  salaryEnabled: boolean,
   pricesLocked: boolean,
 ) {
   const checks = [
@@ -103,7 +104,7 @@ export function draftReadiness(
       label: "Inscrições encerradas",
       ready: registrationState === "closed",
     },
-    { key: "prices", label: "Valores congelados", ready: pricesLocked },
+    ...(salaryEnabled ? [{ key: "prices", label: "Valores congelados", ready: pricesLocked }] : []),
     {
       key: "gms",
       label: "Todas as equipes têm GM",

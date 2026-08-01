@@ -13,7 +13,7 @@ import { ChampionshipArchiveWorkspace } from "./archive-workspace";
 afterEach(cleanup);
 
 describe("championship archive workspace", () => {
-  it("presents identity-snapshotted titles and partial historical data honestly", () => {
+  it("keeps final placement distinct from configured titles", () => {
     render(
       <ChampionshipArchiveWorkspace
         mode="public"
@@ -22,6 +22,7 @@ describe("championship archive workspace", () => {
             championship: { lifecycle: "completed", historical: true },
             teams: { items: [] },
             participants: { items: [] },
+            honors: { items: [], page: { limit: 100, nextCursor: null } },
             history: {
               completeness: {
                 placements: true,
@@ -62,9 +63,8 @@ describe("championship archive workspace", () => {
       />,
     );
 
-    expect(screen.getAllByText("Aurora 2019")).toHaveLength(2);
-    expect(screen.getByText("Título agregado a Aurora Football")).toBeTruthy();
-    expect(screen.getByText("Jogos: não registrado")).toBeTruthy();
-    expect(screen.getByText("Estatísticas: não registrado")).toBeTruthy();
+    expect(screen.getByText("Aurora 2019")).toBeTruthy();
+    expect(screen.queryByText("Título agregado a Aurora Football")).toBeNull();
+    expect(screen.getByText("Classificação final")).toBeTruthy();
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  appearanceFindingLabel,
   correctionImpactLabel,
   durationLabel,
   evidencePeriodScores,
@@ -176,6 +177,15 @@ describe("championship match workspace model", () => {
     [null, "duração indisponível"],
   ])("formats period duration %j", (seconds, expected) => {
     expect(durationLabel(seconds)).toBe(expected);
+  });
+
+  it.each([
+    ["unregistered", "Conta não registrada"],
+    ["off-roster", "Fora do elenco"],
+    ["wrong-side", "Registrado na equipe adversária"],
+    ["ambiguous-side", "Participação observada nos dois lados"],
+  ])("localizes appearance finding %s", (finding, expected) => {
+    expect(appearanceFindingLabel(finding)).toBe(expected);
   });
 
   it("summarizes recursive correction impact", () => {

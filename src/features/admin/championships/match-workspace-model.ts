@@ -195,6 +195,17 @@ export function durationLabel(seconds: number | null): string {
   )}`;
 }
 
+export function appearanceFindingLabel(finding: string): string {
+  return (
+    {
+      unregistered: "Conta não registrada",
+      "off-roster": "Fora do elenco",
+      "wrong-side": "Registrado na equipe adversária",
+      "ambiguous-side": "Participação observada nos dois lados",
+    }[finding] ?? finding
+  );
+}
+
 export function candidateSearchText(candidate: EvidenceCandidates["items"][number]): string {
   const players = candidate.evidence.rounds.flatMap((round) =>
     round.participants.items.map((participant) => participant.player.name),

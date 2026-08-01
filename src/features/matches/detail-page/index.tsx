@@ -8,6 +8,7 @@ import { MatchPointsPanel } from "./components/match-points-panel";
 import { MatchReplayPanel } from "./components/match-replay-panel";
 import { MatchRoundsPanel } from "./components/match-rounds-panel";
 import { MatchTeamsPanel } from "./components/match-teams-panel";
+import { VisualizationDashboardView } from "#/features/visualizations/visualization-chart";
 import { getMatchPointsMetric } from "./utils/match-points";
 
 export { formatStatValue } from "./utils/stat-formatting";
@@ -33,6 +34,17 @@ export function MatchDetailPage({ detail }: { detail: MatchDetail }) {
         <MatchReplayPanel match={match} />
         <MatchTeamsPanel detail={detail} />
         <MatchPointsPanel detail={detail} />
+        {detail.visualizations.items.length ? (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Análise da partida</h2>
+              <p className="text-sm text-muted-foreground">
+                Visualizações derivadas dos dados registrados.
+              </p>
+            </div>
+            <VisualizationDashboardView items={detail.visualizations.items} />
+          </section>
+        ) : null}
         <MatchMetricsTable
           metrics={overallMatchMetricRows(metrics)}
           metricMetadata={metricMetadata}

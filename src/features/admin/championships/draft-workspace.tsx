@@ -16,9 +16,11 @@ import {
   Shield,
   Sparkles,
   TimerOff,
+  Trash2,
   UserPlus,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -35,6 +37,7 @@ import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import { Progress } from "#/components/ui/progress";
 import type { ApiAccountSession } from "#/server/auth/session";
+import { hasApiPermission } from "#/server/auth/permissions";
 import type {
   ChampionshipWorkspaceData,
   PublicChampionshipDetail,
@@ -43,6 +46,7 @@ import { formatSalaryUnits } from "#/features/championships/salary-format";
 import {
   acceptChampionshipTradeFn,
   cancelChampionshipTradeFn,
+  cancelChampionshipDraftFn,
   configureChampionshipDraftFn,
   createChampionshipTradeFn,
   endChampionshipDraftFn,
@@ -91,11 +95,17 @@ export function DraftWorkspace({
   poll?: boolean;
 }) {
   const [projection, setProjection] = useState(data.draft);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const fetchDraft = useServerFn(getChampionshipDraftFn);
+  const cancelDraft = useServerFn(cancelChampionshipDraftFn);
+  const router = useRouter();
   const draft = projection.draft;
   const draftState = draft?.state;
   const draftServerTime = draft?.serverTime;
+  const canCancel =
+    mode === "admin" && session !== null && hasApiPermission(session, "championship:admin");
 
   useEffect(() => setProjection(data.draft), [data.draft]);
 
@@ -134,29 +144,123 @@ export function DraftWorkspace({
     return mode === "admin" ? <DraftSetup data={data} draft={null} /> : <DraftEmptyState />;
   }
 
+  const completedPicks = filledTurns(draft).length;
+  const activeDraft = draft;
+
+  async function confirmCancellation() {
+    setCancelBusy(true);
+    try {
+      const result = await cancelDraft({
+        data: {
+          championshipUuid: data.championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision: numberValue(activeDraft.championshipRevision),
+          expectedDraftRevision: numberValue(activeDraft.revision),
+          reason: "Draft cancelado pela organização",
+        },
+      });
+
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+
+      setProjection(result.data);
+      setCancelOpen(false);
+      toast.success("Draft cancelado.");
+      await router.invalidate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível cancelar o draft.");
+    } finally {
+      setCancelBusy(false);
+    }
+  }
+
   return (
-    <div className="space-y-5">
-      {draft.state === "setup" && mode === "admin" ? (
-        <DraftSetup data={data} draft={draft} />
-      ) : null}
-      <DraftStatusBand data={data} draft={draft} nowMs={nowMs} mode={mode} session={session} />
-      <TeamCapRail draft={draft} capUnits={numberValue(data.championship.rules.salary.capUnits)} />
-      <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_350px]">
-        <PlayerPool
-          data={data}
-          draft={draft}
-          session={session}
-          mode={mode}
-          onProjection={setProjection}
-        />
-        <DraftFeed data={data} draft={draft} mode={mode} onProjection={setProjection} />
+    <>
+      <div className="space-y-5">
+        {draft.state === "setup" && mode === "admin" ? (
+          <DraftSetup
+            data={data}
+            draft={draft}
+            canCancel={canCancel}
+            onCancel={() => setCancelOpen(true)}
+          />
+        ) : null}
+        <DraftStatusBand data={data} draft={draft} nowMs={nowMs} mode={mode} session={session} />
+        <DraftBoard data={data} draft={draft} nowMs={nowMs} mode={mode} />
+        <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_350px]">
+          <PlayerPool
+            data={data}
+            draft={draft}
+            session={session}
+            mode={mode}
+            onProjection={setProjection}
+          />
+          <DraftFeed
+            data={data}
+            draft={draft}
+            mode={mode}
+            canCancel={canCancel}
+            onCancel={() => setCancelOpen(true)}
+            onProjection={setProjection}
+          />
+        </div>
+        <TradeDesk data={data} draft={draft} mode={mode} />
       </div>
-      <TradeDesk data={data} draft={draft} mode={mode} />
-    </div>
+      <Dialog open={cancelOpen} onOpenChange={(open) => !cancelBusy && setCancelOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar draft?</DialogTitle>
+            <DialogDescription>
+              O draft deixa de aparecer nesta edição. A configuração e o histórico permanecem na
+              auditoria, e você poderá criar outro draft depois.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="border-y py-4">
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">Escolhas realizadas</span>
+              <span className="font-semibold tabular-nums">{completedPicks}</span>
+            </div>
+            {completedPicks > 0 ? (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  Corrija as {completedPicks} escolhas na linha do tempo antes de cancelar. Assim,
+                  nenhum jogador permanece no elenco por causa de um draft cancelado.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={cancelBusy} onClick={() => setCancelOpen(false)}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancelBusy || completedPicks > 0}
+              onClick={() => void confirmCancellation()}
+            >
+              <Trash2 />
+              {cancelBusy ? "Cancelando…" : "Cancelar draft"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-function DraftSetup({ data, draft }: { data: DraftData; draft: Draft | null }) {
+function DraftSetup({
+  data,
+  draft,
+  canCancel = false,
+  onCancel,
+}: {
+  data: DraftData;
+  draft: Draft | null;
+  canCancel?: boolean;
+  onCancel?: () => void;
+}) {
   const configure = useServerFn(configureChampionshipDraftFn);
   const start = useServerFn(startChampionshipDraftFn);
   const router = useRouter();
@@ -178,6 +282,7 @@ function DraftSetup({ data, draft }: { data: DraftData; draft: Draft | null }) {
   const readiness = draftReadiness(
     draft,
     data.championship.registrationState,
+    data.championship.rules.salary.enabled,
     data.championship.priceState === "locked",
   );
 
@@ -347,6 +452,17 @@ function DraftSetup({ data, draft }: { data: DraftData; draft: Draft | null }) {
               </Button>
             ) : null}
           </div>
+          {draft && canCancel ? (
+            <Button
+              variant="outline"
+              className="w-full border-destructive/50 text-destructive hover:border-destructive hover:bg-destructive/15 hover:text-destructive"
+              disabled={busy}
+              onClick={onCancel}
+            >
+              <Trash2 />
+              Cancelar draft
+            </Button>
+          ) : null}
         </div>
       </div>
     </section>
@@ -426,54 +542,167 @@ function DraftStatusBand({
   );
 }
 
-function TeamCapRail({ draft, capUnits }: { draft: Draft; capUnits: number }) {
+function DraftBoard({
+  data,
+  draft,
+  nowMs,
+  mode,
+}: {
+  data: DraftData;
+  draft: Draft;
+  nowMs: number;
+  mode: "admin" | "public";
+}) {
+  const capUnits = numberValue(data.championship.rules.salary.capUnits);
+  const teams = [...draft.teams].sort(
+    (left, right) => numberValue(left.position) - numberValue(right.position),
+  );
+  const rounds = [...new Set(draft.turns.items.map((turn) => numberValue(turn.round)))].sort(
+    (left, right) => left - right,
+  );
+  const turnByRoundAndTeam = new Map(
+    draft.turns.items.map((turn) => [`${turn.round}:${turn.team.uuid}`, turn]),
+  );
+  const completed = filledTurns(draft).length;
+  const isLive = draft.state === "live";
+
   return (
-    <section>
-      <div className="mb-2 flex items-center justify-between px-1">
-        <h3 className="text-xs font-semibold uppercase">Equipes e teto</h3>
-        <span className="text-xs text-muted-foreground">{draft.teams.length} equipes</span>
-      </div>
-      <div className="grid border-y bg-card/40 sm:grid-cols-2 xl:grid-cols-4">
-        {draft.teams.map((team) => (
-          <div key={team.uuid} className="min-w-0 border-b px-4 py-4 sm:border-r">
-            <div className="flex items-center gap-3">
-              <TeamSwatch colors={team.colors} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">{team.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {numberValue(team.rosterSize)} no elenco
-                </div>
-              </div>
-              <span
-                className={`text-xs font-semibold tabular-nums ${
-                  team.overCap ? "text-red-300" : ""
-                }`}
-              >
-                {numberValue(team.remainingUnits)}
-              </span>
-            </div>
-            <Progress
-              className="mt-3 h-1.5"
-              value={teamCapPercent(team, capUnits)}
-              aria-label={`Uso do teto de ${team.name}`}
-            />
-            <div className="mt-3 flex flex-wrap gap-1">
-              {team.roster.slice(0, 5).map((member) => (
-                <span
-                  key={member.participantUuid}
-                  className="max-w-24 truncate border px-1.5 py-0.5 text-[11px]"
-                >
-                  {member.displayName}
-                </span>
-              ))}
-              {team.roster.length > 5 ? (
-                <span className="px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                  +{team.roster.length - 5}
-                </span>
-              ) : null}
-            </div>
+    <section className="bfl-panel overflow-hidden rounded-xl border">
+      <div className="flex flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <Crown className="size-4 text-primary" />
+            <h3 className="font-semibold">Quadro do draft</h3>
           </div>
-        ))}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Uma coluna por equipe e uma linha por rodada. A ordem serpentina fica visível o tempo
+            todo.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">
+            {completed} de {draft.turns.items.length} escolhas
+          </Badge>
+          {draft.turns.page.nextCursor ? (
+            <Badge variant="outline">Mostrando rodadas recentes</Badge>
+          ) : null}
+        </div>
+      </div>
+      <div className="bfl-scrollbar overflow-x-auto">
+        <div
+          className="grid min-w-max"
+          style={{ gridTemplateColumns: `repeat(${teams.length}, minmax(208px, 1fr))` }}
+        >
+          {teams.map((team, index) => {
+            const gm = team.roster.find((member) => member.role === "gm");
+
+            return (
+              <div
+                key={team.uuid}
+                className={`min-w-52 border-b px-4 py-4 ${index ? "border-l" : ""}`}
+              >
+                <div className="flex items-center gap-3">
+                  <TeamSwatch colors={team.colors} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{team.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {gm ? `General Manager: ${gm.displayName}` : "Sem General Manager"}
+                    </div>
+                  </div>
+                </div>
+                {capUnits > 0 ? (
+                  <>
+                    <Progress
+                      className="mt-3 h-1.5"
+                      value={teamCapPercent(team, capUnits)}
+                      aria-label={`Uso do teto de ${team.name}`}
+                    />
+                    <div
+                      className={`mt-1 text-xs tabular-nums ${team.overCap ? "text-red-300" : "text-muted-foreground"}`}
+                    >
+                      {formatSalaryUnits(
+                        numberValue(team.usageUnits),
+                        data.championship.rules.salary.displayLabel,
+                      )}{" "}
+                      usados ·{" "}
+                      {formatSalaryUnits(
+                        numberValue(team.remainingUnits),
+                        data.championship.rules.salary.displayLabel,
+                      )}{" "}
+                      livres
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {numberValue(team.rosterSize)} no elenco
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {rounds.map((round) =>
+            teams.map((team, index) => {
+              const turn = turnByRoundAndTeam.get(`${round}:${team.uuid}`);
+              const canPick = turn ? draft.actor.eligibleTurnIds.includes(turn.uuid) : false;
+              const tone =
+                turn?.state === "overdue"
+                  ? "border-amber-500/50 bg-amber-500/5"
+                  : turn?.state === "open"
+                    ? "border-primary/60 bg-primary/5"
+                    : "";
+
+              return (
+                <div
+                  key={`${round}:${team.uuid}`}
+                  className={`min-h-28 border-b px-4 py-3 ${index ? "border-l" : ""} ${tone}`}
+                >
+                  <div className="flex items-center justify-between gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
+                    <span>Rodada {round}</span>
+                    {turn ? <span>#{numberValue(turn.sequence)}</span> : null}
+                  </div>
+                  {turn?.selectedParticipant ? (
+                    <>
+                      <div className="mt-3 truncate text-sm font-semibold">
+                        {turn.selectedParticipant.displayName}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {turn.priceUnitsSnapshot === null
+                          ? "Escolha confirmada"
+                          : formatSalaryUnits(
+                              numberValue(turn.priceUnitsSnapshot),
+                              data.championship.rules.salary.displayLabel,
+                            )}
+                      </div>
+                    </>
+                  ) : turn ? (
+                    <>
+                      <div className="mt-3 text-sm font-medium">{turnStateLabel(turn.state)}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {turn.state === "open" && turn.deadlineAt
+                          ? countdownLabel(secondsUntil(turn.deadlineAt, nowMs))
+                          : turn.state === "overdue"
+                            ? "A escolha continua disponível"
+                            : "Aguardando as escolhas anteriores"}
+                      </div>
+                      {isLive && canPick ? (
+                        <Badge className="mt-3" variant="secondary">
+                          {mode === "admin" ? "Escolha disponível" : "Sua escolha"}
+                        </Badge>
+                      ) : null}
+                    </>
+                  ) : (
+                    <div className="mt-3 text-sm text-muted-foreground">Sem escolha</div>
+                  )}
+                </div>
+              );
+            }),
+          )}
+        </div>
+      </div>
+      <div className="border-t px-4 py-3 text-xs text-muted-foreground sm:px-6">
+        {isLive
+          ? "Atualiza automaticamente enquanto o draft está ao vivo."
+          : "A ordem e as escolhas confirmadas permanecem registradas neste quadro."}
       </div>
     </section>
   );
@@ -495,6 +724,7 @@ function PlayerPool({
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingPick, setPendingPick] = useState<DraftParticipant | null>(null);
   const available = useMemo(
     () => participantSearch(draft.availableParticipants.items, query),
     [draft.availableParticipants.items, query],
@@ -532,15 +762,22 @@ function PlayerPool({
       return;
     }
     onProjection(result.data);
+    setPendingPick(null);
+    toast.success(`${participant.displayName} foi escolhido.`);
   }
 
   return (
-    <section>
-      <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-end">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
+      <div className="flex flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-end sm:px-5">
         <div className="flex-1">
-          <h3 className="font-semibold">Jogadores disponíveis</h3>
+          <div className="flex items-center gap-2">
+            <UserPlus className="size-4 text-primary" />
+            <h3 className="font-semibold">Mesa de escolha</h3>
+          </div>
           <p className="text-sm text-muted-foreground">
-            {draft.availableParticipants.items.length} opções nesta página
+            {targetTurn && targetTeam
+              ? `${mode === "admin" ? "Escolha para" : "Sua vez: "}${targetTeam.name} · rodada ${numberValue(targetTurn.round)} · escolha #${numberValue(targetTurn.sequence)}`
+              : "Acompanhe as opções que continuam disponíveis."}
           </p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -554,17 +791,37 @@ function PlayerPool({
           />
         </div>
       </div>
+      {targetTeam && targetTurn ? (
+        <div className="border-b bg-muted/25 px-4 py-3 sm:px-5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{targetTeam.name}</span>
+            <span>{numberValue(targetTeam.rosterSize)} no elenco</span>
+            {capUnits > 0 ? (
+              <span className={targetTeam.overCap ? "text-red-300" : ""}>
+                {formatSalaryUnits(
+                  numberValue(targetTeam.remainingUnits),
+                  data.championship.rules.salary.displayLabel,
+                )}{" "}
+                livres
+              </span>
+            ) : null}
+            {targetTurn.state === "overdue" ? (
+              <span className="text-amber-300">Escolha atrasada, mas ainda válida</span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {message ? (
-        <Alert variant="destructive" className="mt-3">
+        <Alert variant="destructive" className="m-4">
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       ) : null}
       {available.length === 0 ? (
-        <div className="border-b py-12 text-center text-sm text-muted-foreground">
+        <div className="py-12 text-center text-sm text-muted-foreground">
           Nenhum jogador disponível corresponde à busca.
         </div>
       ) : (
-        <div className="divide-y border-b">
+        <div className="max-h-[560px] divide-y overflow-y-auto">
           {available.map((participant) => {
             const projection = targetTeam
               ? projectedTeamCap(targetTeam, participant, capUnits)
@@ -594,12 +851,12 @@ function PlayerPool({
                     ) : null}
                   </div>
                 </div>
-                {mode === "admin" || eligible.length ? (
+                {eligible.length ? (
                   <Button
                     size="sm"
                     variant={cannotPick ? "outline" : "default"}
                     disabled={cannotPick || busyId !== null}
-                    onClick={() => void choose(participant)}
+                    onClick={() => setPendingPick(participant)}
                   >
                     <UserPlus />
                     {busyId === participant.uuid ? "Escolhendo…" : "Escolher"}
@@ -612,6 +869,49 @@ function PlayerPool({
           })}
         </div>
       )}
+      <Dialog open={pendingPick !== null} onOpenChange={(open) => !open && setPendingPick(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar escolha</DialogTitle>
+            <DialogDescription>
+              A escolha entra no quadro ao vivo imediatamente e não pode ser alterada sem uma
+              correção da organização.
+            </DialogDescription>
+          </DialogHeader>
+          {pendingPick && targetTurn && targetTeam ? (
+            <div className="space-y-3 border-y py-4 text-sm">
+              <ImpactRow label="Jogador" value={pendingPick.displayName} />
+              <ImpactRow label="Equipe" value={targetTeam.name} />
+              <ImpactRow
+                label="Escolha"
+                value={`Rodada ${numberValue(targetTurn.round)} · #${numberValue(targetTurn.sequence)}`}
+              />
+              {capUnits > 0 ? (
+                <ImpactRow
+                  label="Teto após a escolha"
+                  value={`${formatSalaryUnits(projectedTeamCap(targetTeam, pendingPick, capUnits).usageUnits, data.championship.rules.salary.displayLabel)} usados · ${formatSalaryUnits(projectedTeamCap(targetTeam, pendingPick, capUnits).remainingUnits, data.championship.rules.salary.displayLabel)} livres`}
+                />
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={busyId !== null}
+              onClick={() => setPendingPick(null)}
+            >
+              Voltar
+            </Button>
+            <Button
+              disabled={!pendingPick || busyId !== null}
+              onClick={() => pendingPick && void choose(pendingPick)}
+            >
+              <Check />
+              {busyId ? "Confirmando…" : "Confirmar escolha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -620,11 +920,15 @@ function DraftFeed({
   data,
   draft,
   mode,
+  canCancel,
+  onCancel,
   onProjection,
 }: {
   data: DraftData;
   draft: Draft;
   mode: "admin" | "public";
+  canCancel: boolean;
+  onCancel: () => void;
   onProjection: (draft: DraftData["draft"]) => void;
 }) {
   const preview = useServerFn(previewChampionshipDraftCorrectionFn);
@@ -737,7 +1041,7 @@ function DraftFeed({
         )}
       </div>
       {mode === "admin" && draft.state === "live" ? (
-        <div className="border-t p-3">
+        <div className="grid gap-2 border-t p-3">
           <Button
             variant="outline"
             className="w-full"
@@ -747,6 +1051,17 @@ function DraftFeed({
             <Check />
             Encerrar draft
           </Button>
+          {canCancel ? (
+            <Button
+              variant="outline"
+              className="w-full border-destructive/50 text-destructive hover:border-destructive hover:bg-destructive/15 hover:text-destructive"
+              disabled={busy}
+              onClick={onCancel}
+            >
+              <Trash2 />
+              Cancelar draft
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>

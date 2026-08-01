@@ -21,6 +21,41 @@ export type MetricMappingDraft = {
 
 const reservedMetricKeys = new Set(["matches_played", "playing_time_seconds"]);
 
+const metricLabels: Record<string, string> = {
+  assists: "Assistências",
+  carries: "Corridas",
+  extra_points_made: "Pontos extras convertidos",
+  fantasy_points: "Pontos de fantasy",
+  field_goal_yards: "Jardas de field goal",
+  field_goals_made: "Field goals convertidos",
+  field_goals_missed: "Field goals errados",
+  forced_fumbles: "Fumbles forçados",
+  fouls: "Faltas",
+  fumbles_lost: "Fumbles perdidos",
+  goals: "Gols",
+  goals_scored: "Gols marcados",
+  interceptions: "Interceptações",
+  interceptions_thrown: "Interceptações lançadas",
+  invasions: "Invasões",
+  pass_attempts: "Tentativas de passe",
+  pass_completions: "Passes completos",
+  passes_blocked: "Passes bloqueados",
+  passing_touchdowns: "Touchdowns de passe",
+  passing_yards: "Jardas passadas",
+  quarterback_carries: "Corridas do quarterback",
+  receiving_touchdowns: "Touchdowns recebidos",
+  receiving_yards: "Jardas recebidas",
+  receptions: "Recepções",
+  return_yards: "Jardas de retorno",
+  returns: "Retornos",
+  rushing_yards: "Jardas corridas",
+  sack_yards_lost: "Jardas perdidas em sacks",
+  sacks: "Sacks",
+  sacks_taken: "Sacks sofridos",
+  tackles: "Tackles",
+  yards_after_catch: "Jardas após a recepção",
+};
+
 export function playerMetricColumns(statistics: StatisticsProjection): string[] {
   return [
     ...new Set(
@@ -71,7 +106,10 @@ export function metricMappingDrafts(
         eventSchemaVersion: Number(source.eventSchemaVersion),
         sourceMetricKey: source.metricKey,
         canonicalMetricKey: existing?.canonicalMetricKey ?? source.metricKey,
-        displayLabel: existing?.displayLabel ?? source.label ?? humanizeMetricKey(source.metricKey),
+        displayLabel: metricDisplayLabel(
+          existing?.canonicalMetricKey ?? source.metricKey,
+          existing?.displayLabel ?? source.label,
+        ),
         valueKind: existing?.valueKind ?? source.valueKind,
         aggregation: existing?.aggregation ?? "sum",
       };
@@ -134,9 +172,16 @@ export function metricSourceKey(
 }
 
 export function humanizeMetricKey(key: string): string {
-  return key
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("pt-BR"));
+  const normalizedKey = key.toLocaleLowerCase("en-US").replace(/-/g, "_");
+  return (
+    metricLabels[normalizedKey] ??
+    key.replace(/[_-]+/g, " ").replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("pt-BR"))
+  );
+}
+
+export function metricDisplayLabel(key: string, configuredLabel?: string | null): string {
+  const normalizedKey = key.toLocaleLowerCase("en-US").replace(/-/g, "_");
+  return metricLabels[normalizedKey] ?? configuredLabel?.trim() ?? humanizeMetricKey(key);
 }
 
 export function statisticValueLabel(

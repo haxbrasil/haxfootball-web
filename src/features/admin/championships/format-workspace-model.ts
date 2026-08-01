@@ -113,10 +113,15 @@ export function buildBracketLayout(projection: FormatProjection, stageUuid: stri
       return [];
     }
     const destination = matchBySpotUuid.get(route.destinationSpotUuid) ?? null;
+    // A route leaving the rendered stage has no useful in-bracket destination.
+    // Do not draw it as a dangling line after a terminal match.
+    if (!destination) {
+      return [];
+    }
     const startX = source.x + source.width;
     const startY = source.y + source.height / 2;
-    const endX = destination ? destination.x : startX + columnGap;
-    const endY = destination ? destination.y + destination.height / 2 : startY;
+    const endX = destination.x;
+    const endY = destination.y + destination.height / 2;
     const control = Math.max(36, Math.abs(endX - startX) / 2);
 
     return [

@@ -11,6 +11,7 @@ import {
   type CreateRoomInput,
   type ListAccountsResponse,
   type ListChampionshipsResponse,
+  type ListChampionshipHonorDefinitionsResponse,
   type ListMatchesResponse,
   type ListPermissionsResponse,
   type ListPlayerMatchesResponse,
@@ -46,6 +47,7 @@ import {
   type UpdateRoleInput,
 } from "@haxbrasil/haxfootball-api-sdk";
 import type { PageInfo, PaginationQuery } from "#/lib/pagination/page";
+import type { Serializable } from "#/server/api/championship-api";
 import type {
   PublicLiveRoom,
   PublicRoomDetail,
@@ -189,7 +191,17 @@ export type MatchDetail = {
   metrics: WebMatchMetrics | null;
   metricMetadata: WebQueryMatchMetricsResponse["meta"]["availableMetrics"];
   featuredMetrics: WebQueryMatchMetricsResponse["meta"]["featuredMetrics"];
+  visualizations: import("#/features/visualizations/types").VisualizationDashboard;
 };
+
+export async function getMatchVisualizations(id: string) {
+  const client = getApiClient();
+  if (!client) return { items: [] };
+  const result = await client.request<
+    import("#/features/visualizations/types").VisualizationDashboard
+  >({ path: `/visualizations/matches/${encodeURIComponent(id)}` });
+  return result.ok ? result.data : { items: [] };
+}
 
 export type WebEventSchema = Omit<EventSchema, "definition"> & {
   definition: JsonValue;
@@ -255,6 +267,8 @@ export type AdminOverviewResources = {
   roles?: ListRolesResponse;
   roomPrograms?: WebListRoomProgramsResponse;
   rooms?: ListRoomsResponse;
+  eventSchemas?: Page<WebEventSchema>;
+  honorDefinitions?: Serializable<ListChampionshipHonorDefinitionsResponse>;
 };
 
 export type AdminRoomManagementResources = {
@@ -854,6 +868,8 @@ export async function listAdminOverviewResources(input: {
   roles: boolean;
   roomPrograms: boolean;
   rooms: boolean;
+  eventSchemas: boolean;
+  honorDefinitions: boolean;
 }): Promise<AdminOverviewResources> {
   const client = getApiClient();
   const env = getServerEnv();
@@ -866,10 +882,21 @@ export async function listAdminOverviewResources(input: {
       roles: input.roles ? emptyPage() : undefined,
       roomPrograms: input.roomPrograms ? emptyPage<WebRoomProgram>() : undefined,
       rooms: input.rooms ? emptyPage<Room>() : undefined,
+      eventSchemas: input.eventSchemas ? emptyPage<WebEventSchema>() : undefined,
+      honorDefinitions: input.honorDefinitions ? emptyPage() : undefined,
     };
   }
 
-  const [accounts, championships, matches, roles, roomPrograms, rooms] = await Promise.all([
+  const [
+    accounts,
+    championships,
+    matches,
+    roles,
+    roomPrograms,
+    rooms,
+    eventSchemas,
+    honorDefinitions,
+  ] = await Promise.all([
     input.accounts ? unwrap(client.accounts.list({ limit: 100 })) : Promise.resolve(null),
     input.championships
       ? unwrap(client.championships.list({ visibility: "all", limit: 100 }))
@@ -887,6 +914,12 @@ export async function listAdminOverviewResources(input: {
         )
       : Promise.resolve(null),
     input.rooms ? unwrap(client.rooms.list({ state: "open", limit: 100 })) : Promise.resolve(null),
+    input.eventSchemas
+      ? (unwrap(client.eventSchemas.list({ limit: 100 })) as Promise<Page<WebEventSchema> | null>)
+      : Promise.resolve(null),
+    input.honorDefinitions
+      ? unwrap(client.championships.honorDefinitions.list({ state: "all", limit: 100 }))
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -896,6 +929,11 @@ export async function listAdminOverviewResources(input: {
     roles: input.roles ? (roles ?? emptyPage()) : undefined,
     roomPrograms: input.roomPrograms ? normalizeRoomProgramPage(roomPrograms) : undefined,
     rooms: input.rooms ? (rooms ?? emptyPage<Room>()) : undefined,
+    eventSchemas: input.eventSchemas ? (eventSchemas ?? emptyPage<WebEventSchema>()) : undefined,
+    honorDefinitions: input.honorDefinitions
+      ? ((honorDefinitions ??
+          emptyPage()) as Serializable<ListChampionshipHonorDefinitionsResponse>)
+      : undefined,
   };
 }
 

@@ -91,18 +91,8 @@ export const getChampionshipWorkspaceFn = createServerFn({ method: "GET" })
     const { requireAnyApiPermission } = await import("#/server/auth/session");
     const { getChampionshipWorkspace } = await import("#/server/api/championship-api");
     const session = await requireAnyApiPermission(["championship:admin", "championship:operate"]);
-    const canManageHistory =
-      session.account.role.bypassAllPermissions ||
-      session.account.role.permissions.includes("*") ||
-      session.account.role.permissions.includes("championship:admin") ||
-      session.account.role.permissions.includes("championship-history:admin");
-
     return {
-      data: await getChampionshipWorkspace(
-        data.championshipUuid,
-        session.account.uuid,
-        canManageHistory,
-      ),
+      data: await getChampionshipWorkspace(data.championshipUuid, session.account.uuid),
       session,
     };
   });
@@ -180,110 +170,6 @@ export const updateChampionshipAwardFn = createServerFn({ method: "POST" })
     const { championshipUuid, awardUuid, ...input } = data;
 
     return updateChampionshipAward(championshipUuid, awardUuid, {
-      ...input,
-      actorAccountUuid: session.account.uuid,
-    });
-  });
-
-const historicalImportEntityType = z.enum([
-  "team-identity",
-  "team",
-  "historical-player",
-  "participant",
-  "roster-membership",
-  "stage",
-  "match",
-  "statistic",
-  "placement",
-  "award",
-  "record",
-  "unknown",
-]);
-
-export const previewChampionshipHistoricalImportFn = createServerFn({
-  method: "POST",
-})
-  .inputValidator(
-    z.object({
-      championshipUuid: uuid,
-      format: z.enum(["csv", "json"]),
-      sourceName: z.string().trim().min(1).max(255),
-      source: z.string().min(1).max(5_000_000),
-      mapping: z.object({
-        entityTypeColumn: z.string().max(160).nullable().optional(),
-        defaultEntityType: historicalImportEntityType.nullable().optional(),
-        fieldMap: z.record(z.string().min(1).max(120), z.string().min(1).max(160)).optional(),
-      }),
-    }),
-  )
-  .handler(async ({ data }) => {
-    const session = await requireChampionshipHistoryAdmin();
-    const { previewChampionshipHistoricalImport } = await import("#/server/api/championship-api");
-    const { championshipUuid, ...input } = data;
-
-    return previewChampionshipHistoricalImport(championshipUuid, {
-      ...input,
-      actorAccountUuid: session.account.uuid,
-    });
-  });
-
-export const applyChampionshipHistoricalImportFn = createServerFn({
-  method: "POST",
-})
-  .inputValidator(
-    commandInput.extend({
-      batchUuid: uuid,
-      reason: z.string().trim().min(3).max(2_000),
-    }),
-  )
-  .handler(async ({ data }) => {
-    const session = await requireChampionshipHistoryAdmin();
-    const { applyChampionshipHistoricalImport } = await import("#/server/api/championship-api");
-    const { championshipUuid, batchUuid, ...input } = data;
-
-    return applyChampionshipHistoricalImport(championshipUuid, batchUuid, {
-      ...input,
-      actorAccountUuid: session.account.uuid,
-    });
-  });
-
-export const rollbackChampionshipHistoricalImportFn = createServerFn({
-  method: "POST",
-})
-  .inputValidator(
-    commandInput.extend({
-      batchUuid: uuid,
-      reason: z.string().trim().min(3).max(2_000),
-    }),
-  )
-  .handler(async ({ data }) => {
-    const session = await requireChampionshipHistoryAdmin();
-    const { rollbackChampionshipHistoricalImport } = await import("#/server/api/championship-api");
-    const { championshipUuid, batchUuid, ...input } = data;
-
-    return rollbackChampionshipHistoricalImport(championshipUuid, batchUuid, {
-      ...input,
-      actorAccountUuid: session.account.uuid,
-    });
-  });
-
-export const linkChampionshipHistoricalPlayerFn = createServerFn({
-  method: "POST",
-})
-  .inputValidator(
-    commandInput.extend({
-      historicalPlayerUuid: uuid,
-      accountUuid: uuid.nullable(),
-      expectedLinkedAccountUuid: uuid.nullable().optional(),
-      reason: z.string().trim().min(3).max(2_000),
-    }),
-  )
-  .handler(async ({ data }) => {
-    const session = await requireChampionshipHistoryAdmin();
-    const { linkChampionshipHistoricalPlayer } = await import("#/server/api/championship-api");
-    const { championshipUuid, historicalPlayerUuid, ...input } = data;
-
-    return linkChampionshipHistoricalPlayer(championshipUuid, historicalPlayerUuid, {
       ...input,
       actorAccountUuid: session.account.uuid,
     });
@@ -734,6 +620,26 @@ export const executeChampionshipRosterMoveFn = createServerFn({
     });
   });
 
+export const reorderChampionshipRosterFn = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    commandInput.extend({
+      teamId: uuid,
+      participantIds: z.array(uuid).min(1).max(128),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await requireChampionshipAdmin();
+    const { reorderChampionshipRoster } = await import("#/server/api/championship-api");
+    const { championshipUuid, ...input } = data;
+
+    return reorderChampionshipRoster(championshipUuid, {
+      ...input,
+      actorAccountUuid: session.account.uuid,
+    });
+  });
+
 export const changeChampionshipRoomProgramFn = createServerFn({
   method: "POST",
 })
@@ -931,12 +837,6 @@ async function requireChampionshipAdmin() {
   const { requireApiPermission } = await import("#/server/auth/session");
 
   return requireApiPermission("championship:admin");
-}
-
-async function requireChampionshipHistoryAdmin() {
-  const { requireAnyApiPermission } = await import("#/server/auth/session");
-
-  return requireAnyApiPermission(["championship:admin", "championship-history:admin"]);
 }
 
 async function requireChampionshipAccount() {

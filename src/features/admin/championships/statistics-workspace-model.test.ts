@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   humanizeMetricKey,
+  metricDisplayLabel,
   metricMappingDrafts,
   playerMetricColumns,
   statisticValueLabel,
@@ -23,11 +24,22 @@ describe("championship statistics workspace model", () => {
   });
 
   it.each([
-    ["goals_scored", "Goals Scored"],
+    ["goals_scored", "Gols marcados"],
     ["qb-rating", "Qb Rating"],
     ["tackles", "Tackles"],
   ])("humanizes metric key %s", (key, expected) => {
     expect(humanizeMetricKey(key)).toBe(expected);
+  });
+
+  it("uses Portuguese labels for known football metrics before configured English labels", () => {
+    expect(metricDisplayLabel("passing_yards", "Passing Yards")).toBe("Jardas passadas");
+    expect(metricDisplayLabel("custom_metric", "Métrica personalizada")).toBe(
+      "Métrica personalizada",
+    );
+  });
+
+  it("rounds floating-point noise", () => {
+    expect(statisticValueLabel(1200.5166666662321)).toBe("1.200,52");
   });
 
   it.each(Array.from({ length: 61 }, (_, value) => value))("formats integer metric %d", (value) => {

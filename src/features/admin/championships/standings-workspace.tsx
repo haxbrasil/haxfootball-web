@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowDown,
@@ -6,7 +6,6 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
-  GitBranch,
   Info,
   LoaderCircle,
   Plus,
@@ -22,6 +21,13 @@ import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +53,7 @@ import {
   applyChampionshipClassificationFn,
   configureChampionshipStandingsFn,
   createChampionshipGroupFn,
+  createChampionshipLogicalMatchFn,
   generateChampionshipRoundRobinFn,
   getChampionshipFormatFn,
   getChampionshipStandingsFn,
@@ -68,24 +75,30 @@ export function StandingsWorkspace({
   projection,
   stage,
   admin,
+  showQualificationDestinations = true,
   onProjection,
-  onStage,
-  onGenerateElimination,
+  actionsControl,
 }: {
   data: FormatData;
   projection: FormatProjection;
   stage: FormatStage;
   admin: boolean;
+  showQualificationDestinations?: boolean;
   onProjection: (projection: FormatProjection) => void;
-  onStage: (stageUuid: string) => void;
-  onGenerateElimination: () => void;
+  actionsControl: ReactNode;
 }) {
-  const groups = projection.groups.items.filter((group) => group.stageUuid === stage.uuid);
-  const [groupUuid, setGroupUuid] = useState(groups[0]?.uuid ?? "");
-  const [standings, setStandings] = useState<ChampionshipStandingsData | null>(null);
+  const groups = useMemo(
+    () => projection.groups.items.filter((group) => group.stageUuid === stage.uuid),
+    [projection.groups.items, stage.uuid],
+  );
+  const [standingsByGroup, setStandingsByGroup] = useState<
+    Record<string, ChampionshipStandingsData>
+  >({});
   const [loading, setLoading] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [groupOpen, setGroupOpen] = useState(false);
+  const [matchOpen, setMatchOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [classificationOpen, setClassificationOpen] = useState(false);
@@ -94,27 +107,27 @@ export function StandingsWorkspace({
   const previewClassification = useServerFn(previewChampionshipClassificationFn);
 
   useEffect(() => {
-    const available = groups.some((group) => group.uuid === groupUuid);
-    if (!available) setGroupUuid(groups[0]?.uuid ?? "");
-  }, [groupUuid, groups]);
-
-  useEffect(() => {
-    if (!groupUuid) {
-      setStandings(null);
+    if (groups.length === 0) {
+      setStandingsByGroup({});
       return;
     }
     let active = true;
     setLoading(true);
     setMessage(null);
-    void getStandings({
-      data: {
-        championshipUuid: data.championship.uuid,
-        stageUuid: stage.uuid,
-        groupUuid,
-      },
-    })
-      .then((next) => {
-        if (active) setStandings(next);
+    void Promise.all(
+      groups.map(async (group) => {
+        const standings = await getStandings({
+          data: {
+            championshipUuid: data.championship.uuid,
+            stageUuid: stage.uuid,
+            groupUuid: group.uuid,
+          },
+        });
+        return [group.uuid, standings] as const;
+      }),
+    )
+      .then((entries) => {
+        if (active) setStandingsByGroup(Object.fromEntries(entries));
       })
       .catch((error: unknown) => {
         if (active) {
@@ -133,13 +146,13 @@ export function StandingsWorkspace({
   }, [
     data.championship.uuid,
     getStandings,
-    groupUuid,
+    groups,
     stage.uuid,
     projection.championshipRevision,
+    refreshToken,
   ]);
 
-  async function openClassificationPreview() {
-    if (!groupUuid) return;
+  async function openClassificationPreview(groupUuid: string) {
     setLoading(true);
     setMessage(null);
     try {
@@ -167,21 +180,11 @@ export function StandingsWorkspace({
     }
   }
 
-  async function reload() {
-    if (!groupUuid) return;
-    const next = await getStandings({
-      data: {
-        championshipUuid: data.championship.uuid,
-        stageUuid: stage.uuid,
-        groupUuid,
-      },
-    });
-    setStandings(next);
-  }
+  const firstStandings = standingsByGroup[groups[0]?.uuid ?? ""] ?? null;
 
   return (
-    <div className="space-y-5">
-      <header className="bfl-panel overflow-hidden rounded-xl border">
+    <section className="bfl-panel overflow-hidden rounded-xl border">
+      <header className="border-b">
         <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 xl:flex-row xl:items-end">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -190,66 +193,49 @@ export function StandingsWorkspace({
               <Badge variant="outline">Tabela</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {groups.length} {groups.length === 1 ? "grupo" : "grupos"} ·{" "}
-              {standings?.rows.length ?? 0} equipes classificadas
+              {groups.length} {groups.length === 1 ? "grupo" : "grupos"} exibidos verticalmente
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:flex xl:items-end">
-            <div className="space-y-1.5">
-              <Label htmlFor="standings-stage">Etapa</Label>
-              <NativeSelect
-                id="standings-stage"
-                value={stage.uuid}
-                onChange={(event) => onStage(event.target.value)}
-              >
-                {projection.stages.items.map((item) => (
-                  <NativeSelectOption key={item.uuid} value={item.uuid}>
-                    {item.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </div>
-            {groups.length > 0 ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="standings-group">Grupo</Label>
-                <NativeSelect
-                  id="standings-group"
-                  value={groupUuid}
-                  onChange={(event) => setGroupUuid(event.target.value)}
-                >
-                  {groups.map((group) => (
-                    <NativeSelectOption key={group.uuid} value={group.uuid}>
-                      {group.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </div>
-            ) : null}
             {admin ? (
               <>
-                <Button variant="outline" onClick={() => setGroupOpen(true)}>
-                  <Users />
-                  Grupos
-                </Button>
-                <Button variant="outline" disabled={!standings} onClick={() => setRulesOpen(true)}>
-                  <Settings2 />
-                  Critérios
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={groups.length === 0}
-                  onClick={() => setScheduleOpen(true)}
-                >
-                  <Sparkles />
-                  Gerar partidas
-                </Button>
-                <Button
-                  disabled={!standings || loading}
-                  onClick={() => void openClassificationPreview()}
-                >
-                  {loading ? <LoaderCircle className="animate-spin" /> : <Trophy />}
-                  Aplicar classificação
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      Ações
+                      <ChevronDown />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      disabled={groups.length === 0}
+                      onSelect={() => setMatchOpen(true)}
+                    >
+                      <Plus />
+                      Adicionar partida
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setGroupOpen(true)}>
+                      <Users />
+                      Grupos
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!firstStandings}
+                      onSelect={() => setRulesOpen(true)}
+                    >
+                      <Settings2 />
+                      Critérios
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={groups.length === 0}
+                      onSelect={() => setScheduleOpen(true)}
+                    >
+                      <Sparkles />
+                      Gerar partidas
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {actionsControl}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : null}
           </div>
@@ -264,7 +250,7 @@ export function StandingsWorkspace({
       ) : null}
 
       {groups.length === 0 ? (
-        <section className="bfl-panel rounded-xl border px-6 py-16 text-center">
+        <section className="px-6 py-16 text-center">
           <Users className="mx-auto size-8 text-muted-foreground" />
           <h3 className="mt-4 font-semibold">Esta tabela ainda não tem grupos</h3>
           <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
@@ -278,23 +264,32 @@ export function StandingsWorkspace({
             </Button>
           ) : null}
         </section>
-      ) : loading && !standings ? (
-        <StandingsSkeleton />
-      ) : standings ? (
-        <>
-          <StandingsTable standings={standings} />
-          <QualificationRail standings={standings} />
-        </>
-      ) : null}
-
-      {admin ? (
-        <div className="flex justify-end border-y px-4 py-3 sm:px-6">
-          <Button variant="ghost" onClick={onGenerateElimination}>
-            <GitBranch />
-            Criar etapa eliminatória
-          </Button>
+      ) : (
+        <div className="divide-y">
+          {groups.map((group) => {
+            const standings = standingsByGroup[group.uuid];
+            return standings ? (
+              <section key={group.uuid}>
+                <StandingsTable standings={standings} />
+                {showQualificationDestinations ? <QualificationRail standings={standings} /> : null}
+                {admin ? (
+                  <div className="flex justify-end border-t px-4 py-3 sm:px-6">
+                    <Button
+                      disabled={loading}
+                      onClick={() => void openClassificationPreview(group.uuid)}
+                    >
+                      {loading ? <LoaderCircle className="animate-spin" /> : <Trophy />}
+                      Aplicar classificação de {group.name}
+                    </Button>
+                  </div>
+                ) : null}
+              </section>
+            ) : (
+              <StandingsSkeleton key={group.uuid} />
+            );
+          })}
         </div>
-      ) : null}
+      )}
 
       <GroupDialog
         data={data}
@@ -304,20 +299,25 @@ export function StandingsWorkspace({
         onOpenChange={setGroupOpen}
         onProjection={(next) => {
           onProjection(next);
-          const created = next.groups.items
-            .filter((group) => group.stageUuid === stage.uuid)
-            .at(-1);
-          if (created) setGroupUuid(created.uuid);
         }}
+      />
+      <StandingsMatchDialog
+        data={data}
+        projection={projection}
+        stage={stage}
+        groups={groups}
+        open={matchOpen}
+        onOpenChange={setMatchOpen}
+        onProjection={onProjection}
       />
       <RulesDialog
         data={data}
         projection={projection}
-        standings={standings}
+        standings={firstStandings}
         open={rulesOpen}
         onOpenChange={setRulesOpen}
         onProjection={onProjection}
-        onSaved={reload}
+        onSaved={async () => setRefreshToken((value) => value + 1)}
       />
       <RoundRobinDialog
         data={data}
@@ -336,11 +336,11 @@ export function StandingsWorkspace({
         onOpenChange={setClassificationOpen}
         onProjection={onProjection}
         onApplied={(next) => {
-          setStandings(next);
+          setStandingsByGroup((current) => ({ ...current, [next.group.uuid]: next }));
           setClassification(next);
         }}
       />
-    </div>
+    </section>
   );
 }
 
@@ -348,7 +348,7 @@ function StandingsTable({ standings }: { standings: ChampionshipStandingsData })
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
 
   return (
-    <section className="bfl-panel overflow-hidden rounded-xl border">
+    <section className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
         <div>
           <h3 className="font-semibold">{standings.group.name}</h3>
@@ -519,18 +519,22 @@ function StandingsRow({
 
 function QualificationRail({ standings }: { standings: ChampionshipStandingsData }) {
   if (standings.qualification.length === 0) return null;
+  const columnCount = Math.min(4, Math.ceil(Math.sqrt(standings.qualification.length)));
 
   return (
-    <section className="bfl-panel overflow-hidden rounded-xl border">
+    <section className="overflow-hidden border-t">
       <div className="border-b px-4 py-3 sm:px-6">
         <h3 className="font-semibold">Destinos da classificação</h3>
         <p className="text-xs text-muted-foreground">
           A mesma rota serve para aplicação automática e interferência manual.
         </p>
       </div>
-      <div className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-3">
+      <div
+        className="grid gap-px bg-border sm:grid-cols-[repeat(var(--qualification-columns),minmax(0,1fr))]"
+        style={{ "--qualification-columns": columnCount } as CSSProperties}
+      >
         {standings.qualification.map((route) => (
-          <div key={route.routeUuid} className="min-w-0 px-4 py-4 sm:px-6">
+          <div key={route.routeUuid} className="min-w-0 bg-card/30 px-4 py-4 sm:px-6">
             <div className="flex items-center justify-between gap-3">
               <Badge variant="outline">{route.rank}º</Badge>
               {route.blocked ? (
@@ -552,6 +556,186 @@ function QualificationRail({ standings }: { standings: ChampionshipStandingsData
         ))}
       </div>
     </section>
+  );
+}
+
+function StandingsMatchDialog({
+  data,
+  projection,
+  stage,
+  groups,
+  open,
+  onOpenChange,
+  onProjection,
+}: {
+  data: FormatData;
+  projection: FormatProjection;
+  stage: FormatStage;
+  groups: Array<{ uuid: string; name: string }>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onProjection: (projection: FormatProjection) => void;
+}) {
+  const createMatch = useServerFn(createChampionshipLogicalMatchFn);
+  const [groupUuid, setGroupUuid] = useState("");
+  const [sideA, setSideA] = useState("");
+  const [sideB, setSideB] = useState("");
+  const [label, setLabel] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const spots = projection.spots.items.filter(
+    (spot) => spot.stageUuid === stage.uuid && spot.groupUuid === groupUuid && spot.currentTeam,
+  );
+  const teamSpots = spots.flatMap((spot) =>
+    spot.currentTeam ? [{ spot, team: spot.currentTeam }] : [],
+  );
+  const selectedA = teamSpots.find(({ team }) => team.uuid === sideA)?.team;
+  const selectedB = teamSpots.find(({ team }) => team.uuid === sideB)?.team;
+
+  useEffect(() => {
+    if (!open) return;
+    setGroupUuid(groups[0]?.uuid ?? "");
+    setSideA("");
+    setSideB("");
+    setLabel("");
+    setMessage(null);
+  }, [groups, open]);
+
+  async function submit() {
+    const sideASpot = teamSpots.find(({ team }) => team.uuid === sideA)?.spot;
+    const sideBSpot = teamSpots.find(({ team }) => team.uuid === sideB)?.spot;
+    if (!sideASpot || !sideBSpot || sideA === sideB || busy) return;
+    setBusy(true);
+    setMessage(null);
+    const result = await createMatch({
+      data: {
+        championshipUuid: data.championship.uuid,
+        commandUuid: crypto.randomUUID(),
+        expectedRevision: numberValue(projection.championshipRevision),
+        stageId: stage.uuid,
+        groupId: groupUuid,
+        label:
+          label.trim() || `${selectedA?.name ?? "Equipe A"} × ${selectedB?.name ?? "Equipe B"}`,
+        sideASpotId: sideASpot.uuid,
+        sideBSpotId: sideBSpot.uuid,
+      },
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setMessage(result.message);
+      return;
+    }
+    onProjection(result.data);
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Adicionar partida à tabela</DialogTitle>
+          <DialogDescription>
+            Esta partida entra diretamente na classificação do grupo escolhido.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="standings-match-group">Grupo</Label>
+            <NativeSelect
+              id="standings-match-group"
+              value={groupUuid}
+              onChange={(event) => {
+                setGroupUuid(event.target.value);
+                setSideA("");
+                setSideB("");
+              }}
+            >
+              {groups.map((group) => (
+                <NativeSelectOption key={group.uuid} value={group.uuid}>
+                  {group.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TeamSpotSelect
+              label="Equipe A"
+              value={sideA}
+              options={teamSpots}
+              onChange={setSideA}
+            />
+            <TeamSpotSelect
+              label="Equipe B"
+              value={sideB}
+              options={teamSpots}
+              onChange={setSideB}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="standings-match-label">Nome da partida</Label>
+            <Input
+              id="standings-match-label"
+              value={label}
+              placeholder={
+                selectedA && selectedB
+                  ? `${selectedA.name} × ${selectedB.name}`
+                  : "Equipe A × Equipe B"
+              }
+              onChange={(event) => setLabel(event.target.value)}
+            />
+          </div>
+          {sideA && sideA === sideB ? (
+            <Alert variant="destructive">
+              <AlertDescription>Escolha duas equipes diferentes.</AlertDescription>
+            </Alert>
+          ) : null}
+          {message ? (
+            <Alert variant="destructive">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={!sideA || !sideB || sideA === sideB || busy}
+            onClick={() => void submit()}
+          >
+            {busy ? <LoaderCircle className="animate-spin" /> : <Plus />}
+            Criar partida
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TeamSpotSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ team: { uuid: string; name: string } }>;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <NativeSelect id={id} value={value} onChange={(event) => onChange(event.target.value)}>
+        <NativeSelectOption value="">Selecionar equipe</NativeSelectOption>
+        {options.map(({ team }) => (
+          <NativeSelectOption key={team.uuid} value={team.uuid}>
+            {team.name}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+    </div>
   );
 }
 

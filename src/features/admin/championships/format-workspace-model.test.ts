@@ -128,6 +128,7 @@ function fixture(size: number): FormatProjection {
         bracketPosition: position,
         evidenceRevision: 0,
         resultRevision: 0,
+        result: null,
         scheduleRevision: 0,
         revision: 0,
         createdAt: "",

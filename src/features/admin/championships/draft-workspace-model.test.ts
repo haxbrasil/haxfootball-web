@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countdownLabel,
+  draftReadiness,
   numberValue,
   participantSearch,
   projectedTeamCap,
@@ -85,7 +86,29 @@ describe("draft workspace model", () => {
       } as never),
     ).toEqual({ proposing: 40, receiving: 50, difference: 10, withinLimit: true });
   });
+
+  it("does not require frozen values when salary management is disabled", () => {
+    const readiness = draftReadiness(draftWithGms(), "closed", false, false);
+
+    expect(readiness.ready).toBe(true);
+    expect(readiness.checks.find((check) => check.key === "prices")).toBeUndefined();
+  });
+
+  it("requires frozen values when salary management is enabled", () => {
+    const readiness = draftReadiness(draftWithGms(), "closed", true, false);
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.checks.find((check) => check.key === "prices")).toMatchObject({
+      ready: false,
+    });
+  });
 });
+
+function draftWithGms() {
+  return {
+    teams: [{ roster: [{ role: "gm" }] }, { roster: [{ role: "gm" }] }],
+  } as never;
+}
 
 function team({ usageUnits }: { usageUnits: number }) {
   return {

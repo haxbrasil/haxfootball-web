@@ -8,6 +8,7 @@ import {
   disableMatchEvent,
   getMatch,
   getMatchMetrics,
+  getMatchVisualizations,
   getAccountByUuid,
   getRole,
   getRoom,
@@ -125,10 +126,11 @@ export const getMatchFn = createServerFn({ method: "GET" })
 export const getMatchDetailFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data }) => {
-    const [match, metrics, stats] = await Promise.all([
+    const [match, metrics, stats, visualizations] = await Promise.all([
       getMatch(data.id),
       getMatchMetrics(data.id),
       getStats({ limit: 1 }),
+      getMatchVisualizations(data.id),
     ]);
 
     return {
@@ -136,6 +138,7 @@ export const getMatchDetailFn = createServerFn({ method: "GET" })
       metrics,
       metricMetadata: stats?.meta.availableMetrics ?? [],
       featuredMetrics: stats?.meta.featuredMetrics ?? {},
+      visualizations,
     };
   });
 
@@ -218,6 +221,8 @@ export const getAdminOverviewFn = createServerFn({ method: "GET" }).handler(asyn
     roles: sections.some((section) => section.key === "roles"),
     roomPrograms: sections.some((section) => section.key === "room-programs"),
     rooms: sections.some((section) => section.key === "rooms"),
+    eventSchemas: sections.some((section) => section.key === "modes-statistics"),
+    honorDefinitions: sections.some((section) => section.key === "honors"),
   });
 
   return { sections, resources };

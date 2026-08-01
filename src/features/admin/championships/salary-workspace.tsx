@@ -2,9 +2,9 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type ClipboardEvent,
-  type DragEvent,
   type FormEvent,
   type KeyboardEvent,
 } from "react";
@@ -12,18 +12,30 @@ import type { ChampionshipRosterMovePreview } from "@haxbrasil/haxfootball-api-s
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  draggable,
+  dropTargetForElements,
+  monitorForElements,
+} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import { toast } from "sonner";
+import {
   ArrowRightLeft,
   BadgeDollarSign,
   Check,
   CircleAlert,
   CircleDollarSign,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Crown,
   History,
   LockKeyhole,
-  MoveRight,
   Plus,
   Save,
   Search,
   ShieldAlert,
+  Settings2,
   UserRoundPlus,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
@@ -32,6 +44,7 @@ import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -39,6 +52,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "#/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
@@ -60,6 +79,7 @@ import {
   freezeChampionshipPricesFn,
   getChampionshipSalaryWorkspacePageFn,
   previewChampionshipRosterMoveFn,
+  reorderChampionshipRosterFn,
   searchChampionshipAccountsFn,
   transitionChampionshipRegistrationFn,
   updateChampionshipParticipantFn,
@@ -669,7 +689,7 @@ function ValuationGrid({
                   <div className="truncate font-medium">{participant.displayName}</div>
                   <div className="text-xs text-muted-foreground">
                     {participant.membership?.role === "gm"
-                      ? "GM"
+                      ? "General Manager"
                       : participant.membership
                         ? "Jogador"
                         : "Disponível"}
@@ -752,7 +772,7 @@ function ValuationGrid({
                     <div className="font-medium">{participant.displayName}</div>
                     <div className="text-xs text-muted-foreground">
                       {participant.membership?.role === "gm"
-                        ? "GM"
+                        ? "General Manager"
                         : participant.membership
                           ? "Jogador"
                           : "Disponível"}
@@ -1067,165 +1087,428 @@ function TeamCapComparison({
   data: ChampionshipWorkspaceData;
   onMoveRequest: (request: RosterMoveRequest) => void;
 }) {
+  const reorderRoster = useServerFn(reorderChampionshipRosterFn);
+  const router = useRouter();
+  const boardRef = useRef<HTMLElement>(null);
+  const kanbanScrollerRef = useRef<HTMLDivElement>(null);
+  const boardPanRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(
+    null,
+  );
   const participants = data.salary.participants.items;
   const salaryEnabled = data.salary.enabled;
   const unassigned = participants.filter(
     ({ membership, status }) => !membership && status === "active",
   );
 
-  function dropOnTeam(teamUuid: string | null, event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const participantUuid = event.dataTransfer.getData("text/championship-participant");
-    const participant = participants.find(({ uuid }) => uuid === participantUuid);
-
-    if (!participant) return;
-    onMoveRequest({
-      participant,
-      targetTeamId: teamUuid,
-      role: participant.membership?.role ?? "player",
-    });
+  async function reorder(team: SalaryTeam, ordered: SalaryParticipant[]) {
+    try {
+      const result = await reorderRoster({
+        data: {
+          championshipUuid: data.championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision: numberValue(data.championship.revision),
+          teamId: team.uuid,
+          participantIds: ordered.map(({ uuid }) => uuid),
+        },
+      });
+      if (!result.ok) return toast.error(result.message);
+      await router.invalidate();
+    } catch (error) {
+      toast.error(messageFor(error));
+    }
   }
 
+  useEffect(() => {
+    const board = boardRef.current;
+    const scroller = kanbanScrollerRef.current;
+    if (!board || !scroller) return;
+
+    const cleanups = [
+      autoScrollForElements({
+        element: scroller,
+        getAllowedAxis: () => "horizontal",
+        getConfiguration: () => ({ maxScrollSpeed: "fast" }),
+      }),
+      monitorForElements({
+        onDrop({ source, location }) {
+          const participantUuid = source.data.participantUuid;
+          if (typeof participantUuid !== "string") return;
+          const participant = participants.find((candidate) => candidate.uuid === participantUuid);
+          const target = location.current.dropTargets[0];
+          const targetTeamUuid = target?.data.teamUuid;
+          const targetParticipantUuid = target?.data.participantUuid;
+
+          if (!participant || typeof targetTeamUuid !== "string") return;
+
+          if (participant.membership?.teamUuid !== targetTeamUuid) {
+            onMoveRequest({
+              participant,
+              targetTeamId: targetTeamUuid === "available" ? null : targetTeamUuid,
+              role: participant.membership?.role ?? "player",
+            });
+            return;
+          }
+
+          if (
+            typeof targetParticipantUuid !== "string" ||
+            targetParticipantUuid === participantUuid
+          ) {
+            return;
+          }
+
+          const team = data.salary.teams.items.find(
+            (candidate) => candidate.uuid === targetTeamUuid,
+          );
+          if (!team) return;
+          const ordered = participants
+            .filter(({ membership }) => membership?.teamUuid === team.uuid)
+            .sort(
+              (left, right) =>
+                Number(right.membership?.role === "gm") - Number(left.membership?.role === "gm") ||
+                numberValue(left.membership?.displayOrder) -
+                  numberValue(right.membership?.displayOrder),
+            );
+          const from = ordered.findIndex((candidate) => candidate.uuid === participantUuid);
+          const to = ordered.findIndex((candidate) => candidate.uuid === targetParticipantUuid);
+          if (from < 0 || to < 0) return;
+          const next = [...ordered];
+          const [moving] = next.splice(from, 1);
+          next.splice(from < to ? to - 1 : to, 0, moving!);
+          void reorder(team, next);
+        },
+      }),
+    ];
+
+    for (const element of board.querySelectorAll<HTMLElement>("[data-roster-participant]")) {
+      const participantUuid = element.dataset.rosterParticipant;
+      const teamUuid = element.dataset.rosterTeam;
+      if (!participantUuid || !teamUuid) continue;
+      cleanups.push(
+        combine(
+          draggable({
+            element,
+            getInitialData: () => ({ type: "championship-participant", participantUuid }),
+            onDragStart: () => element.setAttribute("data-dragging", "true"),
+            onDrop: () => element.removeAttribute("data-dragging"),
+          }),
+          dropTargetForElements({
+            element,
+            getData: () => ({ type: "roster-participant", participantUuid, teamUuid }),
+            getIsSticky: () => true,
+          }),
+        ),
+      );
+    }
+    for (const element of board.querySelectorAll<HTMLElement>("[data-roster-team]")) {
+      const teamUuid = element.dataset.rosterTeam;
+      if (!teamUuid) continue;
+      cleanups.push(
+        dropTargetForElements({
+          element,
+          getData: () => ({ type: "roster-team", teamUuid }),
+          getIsSticky: () => true,
+        }),
+      );
+    }
+
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [data.salary.teams.items, onMoveRequest, participants]);
+
   return (
-    <section>
+    <section ref={boardRef} className="min-w-0 max-w-full">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold">
             {salaryEnabled ? "Comparação de equipes" : "Elencos por equipe"}
           </h3>
           <p className="text-xs text-muted-foreground">
-            Arraste participantes entre as colunas ou use os seletores de alocação.
+            Arraste participantes para qualquer equipe ou use os seletores de alocação.
           </p>
         </div>
         <Badge variant="outline">{data.salary.teams.items.length} equipes</Badge>
       </div>
-      <div className="grid gap-3 sm:flex sm:snap-x sm:overflow-x-auto sm:pb-2">
-        <RosterColumn
-          title="Disponíveis"
-          subtitle={`${unassigned.length} participante(s)`}
-          participants={unassigned}
-          salaryEnabled={salaryEnabled}
-          onDrop={(event) => dropOnTeam(null, event)}
-        />
-        {data.salary.teams.items.map((team) => {
-          const teamParticipants = participants.filter(
-            ({ membership }) => membership?.teamUuid === team.uuid,
-          );
+      <div
+        ref={kanbanScrollerRef}
+        className="bfl-scrollbar min-w-0 max-w-full cursor-grab overflow-x-auto pb-3 active:cursor-grabbing"
+        onPointerDown={(event) => {
+          if (
+            event.button !== 0 ||
+            (event.target as HTMLElement).closest(
+              "[data-roster-participant], button, input, select, textarea, a",
+            )
+          ) {
+            return;
+          }
+          boardPanRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startScrollLeft: event.currentTarget.scrollLeft,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const pan = boardPanRef.current;
+          if (!pan || pan.pointerId !== event.pointerId) return;
+          event.currentTarget.scrollLeft = pan.startScrollLeft - (event.clientX - pan.startX);
+        }}
+        onPointerUp={(event) => {
+          if (boardPanRef.current?.pointerId !== event.pointerId) return;
+          boardPanRef.current = null;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          boardPanRef.current = null;
+        }}
+        onWheelCapture={(event) => {
+          const horizontalDelta = event.shiftKey ? event.deltaY : event.deltaX;
+          if (horizontalDelta === 0) return;
+          event.currentTarget.scrollLeft += horizontalDelta;
+          event.preventDefault();
+        }}
+      >
+        <div className="flex min-w-max gap-3">
+          {data.salary.teams.items.map((team) => {
+            const teamParticipants = participants
+              .filter(({ membership }) => membership?.teamUuid === team.uuid)
+              .sort(
+                (left, right) =>
+                  Number(right.membership?.role === "gm") -
+                    Number(left.membership?.role === "gm") ||
+                  numberValue(left.membership?.displayOrder) -
+                    numberValue(right.membership?.displayOrder),
+              );
 
-          return (
-            <div
-              key={team.uuid}
-              className={`w-full border bg-card/45 sm:w-72 sm:shrink-0 sm:snap-start ${
-                salaryEnabled && team.overCap ? "border-red-400/60" : ""
-              }`}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => dropOnTeam(team.uuid, event)}
-            >
-              <div className="border-b p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{team.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      elenco r{team.rosterRevision} · {team.rosterSize} pessoas
+            return (
+              <div
+                key={team.uuid}
+                data-roster-team={team.uuid}
+                className={`flex h-[calc(100dvh-18rem)] min-h-[30rem] w-[22rem] shrink-0 flex-col border bg-card/45 ${
+                  salaryEnabled && team.overCap ? "border-red-400/60" : ""
+                }`}
+              >
+                <div className="border-b p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold">{team.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {team.rosterSize} pessoas no elenco
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!salaryEnabled ? null : team.approvedOverCap ? (
+                        <Badge variant="destructive" className="bg-red-800 text-white">
+                          Exceção
+                        </Badge>
+                      ) : team.overCap ? (
+                        <ShieldAlert className="size-5 text-red-300" />
+                      ) : (
+                        <Check className="size-5 text-emerald-300" />
+                      )}
+                      <TeamConfigurationMenu
+                        team={team}
+                        participants={teamParticipants}
+                        onMoveRequest={onMoveRequest}
+                      />
                     </div>
                   </div>
-                  {!salaryEnabled ? null : team.approvedOverCap ? (
-                    <Badge variant="destructive" className="bg-red-800 text-white">
-                      Exceção
-                    </Badge>
-                  ) : team.overCap ? (
-                    <ShieldAlert className="size-5 text-red-300" />
+                  {salaryEnabled ? (
+                    <>
+                      <Progress
+                        aria-label={`Uso do teto salarial de ${team.name}`}
+                        value={Math.min(
+                          100,
+                          salaryCapPercentage(team.usageUnits, data.salary.capUnits),
+                        )}
+                        className={`mt-3 ${team.overCap ? "[&_[data-slot=progress-indicator]]:bg-red-400" : ""}`}
+                      />
+                      <div className="mt-2 flex justify-between text-xs tabular-nums">
+                        <span>
+                          {formatSalaryUnits(team.usageUnits, data.salary.displayLabel)} /{" "}
+                          {formatSalaryUnits(data.salary.capUnits, data.salary.displayLabel)}
+                        </span>
+                        <span
+                          className={
+                            numberValue(team.remainingUnits) < 0
+                              ? "text-red-300"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {numberValue(team.remainingUnits) >= 0
+                            ? `${team.remainingUnits} livres`
+                            : `${-numberValue(team.remainingUnits)} acima`}
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+                <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
+                  {teamParticipants.length === 0 ? (
+                    <p className="p-4 text-sm text-muted-foreground">Solte um participante aqui.</p>
                   ) : (
-                    <Check className="size-5 text-emerald-300" />
+                    teamParticipants.map((participant, position) => (
+                      <RosterPerson
+                        key={participant.uuid}
+                        participant={participant}
+                        salaryEnabled={salaryEnabled}
+                        position={position}
+                        canMoveUp={position > 0}
+                        canMoveDown={position < teamParticipants.length - 1}
+                        onMove={(direction) => {
+                          const next = [...teamParticipants];
+                          const target = position + direction;
+                          [next[position], next[target]] = [next[target]!, next[position]!];
+                          void reorder(team, next);
+                        }}
+                      />
+                    ))
                   )}
                 </div>
-                {salaryEnabled ? (
-                  <>
-                    <Progress
-                      aria-label={`Uso do teto salarial de ${team.name}`}
-                      value={Math.min(
-                        100,
-                        salaryCapPercentage(team.usageUnits, data.salary.capUnits),
-                      )}
-                      className={`mt-3 ${team.overCap ? "[&_[data-slot=progress-indicator]]:bg-red-400" : ""}`}
-                    />
-                    <div className="mt-2 flex justify-between text-xs tabular-nums">
-                      <span>
-                        {formatSalaryUnits(team.usageUnits, data.salary.displayLabel)} /{" "}
-                        {formatSalaryUnits(data.salary.capUnits, data.salary.displayLabel)}
-                      </span>
-                      <span
-                        className={
-                          numberValue(team.remainingUnits) < 0
-                            ? "text-red-300"
-                            : "text-muted-foreground"
-                        }
-                      >
-                        {numberValue(team.remainingUnits) >= 0
-                          ? `${team.remainingUnits} livres`
-                          : `${-numberValue(team.remainingUnits)} acima`}
-                      </span>
+                {salaryEnabled && team.activeException ? (
+                  <div className="border-t bg-red-400/5 px-4 py-3 text-xs">
+                    <div className="font-medium text-red-200">Exceção aprovada</div>
+                    <div className="mt-1 text-muted-foreground">
+                      Expira na próxima alteração do elenco.
                     </div>
-                  </>
+                  </div>
                 ) : null}
               </div>
-              <div className="min-h-32 divide-y">
-                {teamParticipants.length === 0 ? (
-                  <p className="p-4 text-sm text-muted-foreground">Solte um participante aqui.</p>
-                ) : (
-                  teamParticipants.map((participant) => (
-                    <RosterPerson
-                      key={participant.uuid}
-                      participant={participant}
-                      salaryEnabled={salaryEnabled}
-                    />
-                  ))
-                )}
-              </div>
-              {salaryEnabled && team.activeException ? (
-                <div className="border-t bg-red-400/5 px-4 py-3 text-xs">
-                  <div className="font-medium text-red-200">Exceção aprovada</div>
-                  <div className="mt-1 text-muted-foreground">
-                    Expira na próxima alteração do elenco.
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+      <AvailableRoster participants={unassigned} salaryEnabled={salaryEnabled} />
     </section>
   );
 }
 
-function RosterColumn({
-  title,
-  subtitle,
+function TeamConfigurationMenu({
+  team,
+  participants,
+  onMoveRequest,
+}: {
+  team: SalaryTeam;
+  participants: SalaryParticipant[];
+  onMoveRequest: (request: RosterMoveRequest) => void;
+}) {
+  const [managersOpen, setManagersOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon-sm" title={`Configurar ${team.name}`}>
+            <Settings2 />
+            <span className="sr-only">Configurar equipe</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onSelect={() => setManagersOpen(true)}>
+            <Crown />
+            Gerenciar General Managers
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={managersOpen} onOpenChange={setManagersOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>General Managers de {team.name}</DialogTitle>
+            <DialogDescription>
+              Defina quem representa a equipe no draft, sem alterar o elenco ou a ordem dos
+              participantes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 divide-y overflow-y-auto border">
+            {participants.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                Esta equipe ainda não tem pessoas.
+              </p>
+            ) : (
+              participants.map((participant) => {
+                const isManager = participant.membership?.role === "gm";
+
+                return (
+                  <div key={participant.uuid} className="flex items-center gap-3 p-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{participant.displayName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isManager ? "General Manager atual" : "Jogador"}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={isManager ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => {
+                        setManagersOpen(false);
+                        onMoveRequest({
+                          participant,
+                          targetTeamId: team.uuid,
+                          role: isManager ? "player" : "gm",
+                        });
+                      }}
+                    >
+                      <Crown />
+                      {isManager ? "Remover General Manager" : "Definir General Manager"}
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function AvailableRoster({
   participants,
   salaryEnabled,
-  onDrop,
 }: {
-  title: string;
-  subtitle: string;
   participants: SalaryParticipant[];
   salaryEnabled: boolean;
-  onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
+  const visibleParticipants = normalizedQuery
+    ? participants.filter((participant) =>
+        participant.displayName.toLocaleLowerCase("pt-BR").includes(normalizedQuery),
+      )
+    : participants;
+
   return (
-    <div
-      className="w-full border bg-card/30 sm:w-72 sm:shrink-0 sm:snap-start"
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={onDrop}
-    >
-      <div className="border-b p-4">
-        <div className="font-semibold">{title}</div>
-        <div className="text-xs text-muted-foreground">{subtitle}</div>
+    <div data-roster-team="available" className="mt-5 flex min-w-0 flex-col border bg-card/30">
+      <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="font-semibold">Disponíveis</div>
+          <div className="text-xs text-muted-foreground">
+            {participants.length} participante(s) sem equipe
+          </div>
+        </div>
+        {participants.length > 8 ? (
+          <div className="w-full sm:max-w-xs">
+            <Label className="sr-only" htmlFor="available-roster-filter">
+              Buscar participantes disponíveis
+            </Label>
+            <Input
+              id="available-roster-filter"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar participante"
+            />
+          </div>
+        ) : null}
       </div>
-      <div className="min-h-32 divide-y">
-        {participants.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Nenhum participante nesta coluna.</p>
+      <div className="min-h-32 max-h-[30rem] divide-y overflow-y-auto overscroll-contain xl:grid xl:grid-cols-2 xl:divide-x xl:divide-y-0 xl:[&>*]:border-b">
+        {visibleParticipants.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">
+            {normalizedQuery
+              ? "Nenhum participante corresponde à busca."
+              : "Nenhum participante nesta coluna."}
+          </p>
         ) : (
-          participants.map((participant) => (
+          visibleParticipants.map((participant) => (
             <RosterPerson
               key={participant.uuid}
               participant={participant}
@@ -1241,30 +1524,64 @@ function RosterColumn({
 function RosterPerson({
   participant,
   salaryEnabled,
+  position,
+  canMoveUp,
+  canMoveDown,
+  onMove,
 }: {
   participant: SalaryParticipant;
   salaryEnabled: boolean;
+  position?: number;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMove?: (direction: -1 | 1) => void;
 }) {
   return (
     <div
-      draggable
-      className="flex cursor-grab items-center gap-3 px-4 py-3 active:cursor-grabbing"
-      onDragStart={(event) => {
-        event.dataTransfer.setData("text/championship-participant", participant.uuid);
-        event.dataTransfer.effectAllowed = "move";
-      }}
+      data-roster-participant={participant.uuid}
+      data-roster-team={participant.membership?.teamUuid ?? "available"}
+      className="flex cursor-grab items-center gap-3 px-4 py-3 active:cursor-grabbing data-[dragging]:opacity-40"
     >
       <div className="grid size-8 place-items-center border bg-background text-xs font-semibold">
         {participant.displayName.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{participant.displayName}</div>
+        <div className="flex min-w-0 items-center gap-2">
+          {position !== undefined ? (
+            <span className="text-xs tabular-nums text-muted-foreground">{position + 1}</span>
+          ) : null}
+          <div className="truncate text-sm font-medium">{participant.displayName}</div>
+        </div>
         <div className="text-xs text-muted-foreground">
-          {participant.membership?.role === "gm" ? "GM" : "Jogador"}
+          {participant.membership?.role === "gm" ? "General Manager" : "Jogador"}
         </div>
       </div>
       {salaryEnabled ? (
         <span className="text-xs tabular-nums">{participant.priceUnits ?? "—"}</span>
+      ) : null}
+      {onMove ? (
+        <div className="flex shrink-0 border-l pl-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={!canMoveUp}
+            title="Subir posição"
+            onClick={() => onMove(-1)}
+          >
+            <ChevronUp />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={!canMoveDown}
+            title="Descer posição"
+            onClick={() => onMove(1)}
+          >
+            <ChevronDown />
+          </Button>
+        </div>
       ) : null}
     </div>
   );
@@ -1348,100 +1665,122 @@ function RosterMoveDialog({
 
   return (
     <Dialog open={request !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="grid max-h-[min(760px,calc(100vh-2rem))] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Revisar movimentação de elenco</DialogTitle>
-          <DialogDescription>
-            O impacto abaixo é recalculado no servidor antes da confirmação transacional.
-          </DialogDescription>
+          <div className="border-b px-5 py-5 sm:px-6">
+            <DialogTitle>Revisar movimentação de elenco</DialogTitle>
+            <DialogDescription className="mt-1">
+              O impacto é recalculado no servidor antes da confirmação transacional.
+            </DialogDescription>
+          </div>
         </DialogHeader>
         {loading ? (
-          <div className="grid min-h-40 place-items-center text-sm text-muted-foreground">
+          <div className="grid min-h-64 place-items-center text-sm text-muted-foreground">
             Calculando impacto…
           </div>
         ) : preview ? (
-          <form className="space-y-5" onSubmit={submit}>
-            <div className="flex items-center gap-3 border-y px-3 py-4">
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold">{preview.participant.displayName}</div>
-                {data.salary.enabled ? (
-                  <div className="text-xs text-muted-foreground">
-                    {formatSalaryUnits(
-                      preview.participant.priceUnits ?? 0,
-                      data.salary.displayLabel,
-                    )}
-                  </div>
-                ) : null}
-              </div>
-              <div className="text-right text-sm">
-                <div>{preview.source?.teamName ?? "Sem equipe"}</div>
-                <MoveRight className="mx-auto my-1 size-4 text-muted-foreground" />
-                <div>{preview.target?.teamName ?? "Sem equipe"}</div>
-              </div>
-            </div>
-
-            <div className="divide-y border">
-              {preview.affectedTeams.map((team) => (
-                <div
-                  key={team.teamUuid}
-                  className={`grid gap-3 px-3 py-3 text-sm ${
-                    data.salary.enabled
-                      ? "sm:grid-cols-[minmax(0,1fr)_auto_auto]"
-                      : "sm:grid-cols-1"
-                  }`}
-                >
-                  <div>
-                    <div className="font-medium">{team.teamName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      elenco r{team.rosterRevision} → r{numberValue(team.rosterRevision) + 1}
+          <form className="bfl-scrollbar min-h-0 overflow-y-auto" onSubmit={submit}>
+            <div className="space-y-5 px-5 py-5 sm:px-6">
+              <div className="grid gap-3 border bg-card/35 p-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+                <MoveEndpoint
+                  label="Origem"
+                  teamName={preview.source?.teamName ?? "Sem equipe"}
+                  align="start"
+                />
+                <ChevronRight className="mx-auto size-5 text-primary" />
+                <MoveEndpoint
+                  label="Destino"
+                  teamName={preview.target?.teamName ?? "Sem equipe"}
+                  align="end"
+                />
+                <div className="border-t pt-3 sm:col-span-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-10 place-items-center border bg-background text-sm font-semibold text-primary">
+                      {preview.participant.displayName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold">
+                        {preview.participant.displayName}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline">
+                          {request?.role === "gm" ? "General Manager" : "Jogador"}
+                        </Badge>
+                        {data.salary.enabled ? (
+                          <span className="tabular-nums">
+                            {formatSalaryUnits(
+                              preview.participant.priceUnits ?? 0,
+                              data.salary.displayLabel,
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                  {data.salary.enabled ? (
-                    <>
-                      <div className="tabular-nums">
-                        {team.usageBeforeUnits} → {team.usageAfterUnits}
-                      </div>
-                      <Badge variant={team.overCapAfter ? "destructive" : "outline"}>
-                        {team.overCapAfter ? "Acima do teto" : `${team.remainingAfterUnits} livres`}
-                      </Badge>
-                    </>
+                </div>
+              </div>
+
+              <section className="overflow-hidden border">
+                <div className="border-b px-4 py-3">
+                  <h3 className="text-sm font-semibold">Impacto nas equipes</h3>
+                </div>
+                <div className="divide-y">
+                  {preview.affectedTeams.map((team) => (
+                    <TeamMoveImpact
+                      key={team.teamUuid}
+                      team={team}
+                      salaryEnabled={data.salary.enabled}
+                      displayLabel={data.salary.displayLabel}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              {preview.requiresCapException ? (
+                <Alert variant="destructive">
+                  <ShieldAlert />
+                  <AlertTitle>Exceção administrativa necessária</AlertTitle>
+                  <AlertDescription>
+                    A equipe continuará marcada como não conforme. A aprovação expira na próxima
+                    alteração do elenco.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {preview.violations.filter(
+                (violation) => violation !== "O teto salarial seria excedido.",
+              ).length > 0 ? (
+                <InlineError
+                  message={preview.violations
+                    .filter((violation) => violation !== "O teto salarial seria excedido.")
+                    .join(" ")}
+                />
+              ) : null}
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between gap-3">
+                  <Label htmlFor="moveReason">
+                    {preview.requiresCapException
+                      ? "Justificativa da exceção"
+                      : "Nota da movimentação"}
+                  </Label>
+                  {!preview.requiresCapException ? (
+                    <span className="text-xs text-muted-foreground">Opcional</span>
                   ) : null}
                 </div>
-              ))}
+                <Textarea
+                  id="moveReason"
+                  name="reason"
+                  required={preview.requiresCapException}
+                  placeholder="Fica registrada na auditoria"
+                />
+              </div>
+              {message ? <InlineError message={message} /> : null}
             </div>
-
-            {preview.requiresCapException ? (
-              <Alert variant="destructive">
-                <ShieldAlert />
-                <AlertTitle>Exceção administrativa necessária</AlertTitle>
-                <AlertDescription>
-                  A equipe continuará marcada como não conforme. A aprovação expira na próxima
-                  alteração do elenco.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {preview.violations.filter(
-              (violation) => violation !== "O teto salarial seria excedido.",
-            ).length > 0 ? (
-              <InlineError
-                message={preview.violations
-                  .filter((violation) => violation !== "O teto salarial seria excedido.")
-                  .join(" ")}
-              />
-            ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="moveReason">
-                {preview.requiresCapException ? "Justificativa da exceção" : "Nota da movimentação"}
-              </Label>
-              <Textarea
-                id="moveReason"
-                name="reason"
-                required={preview.requiresCapException}
-                placeholder="Fica registrada na auditoria"
-              />
-            </div>
-            {message ? <InlineError message={message} /> : null}
-            <DialogFooter>
+            <DialogFooter className="sticky bottom-0 border-t bg-background px-5 py-4 sm:px-6">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={busy}>
+                  Cancelar
+                </Button>
+              </DialogClose>
               <Button
                 type="submit"
                 disabled={
@@ -1462,10 +1801,62 @@ function RosterMoveDialog({
             </DialogFooter>
           </form>
         ) : (
-          <InlineError message={message ?? "Não foi possível calcular a movimentação."} />
+          <div className="px-5 py-5 sm:px-6">
+            <InlineError message={message ?? "Não foi possível calcular a movimentação."} />
+          </div>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MoveEndpoint({
+  label,
+  teamName,
+  align,
+}: {
+  label: string;
+  teamName: string;
+  align: "start" | "end";
+}) {
+  return (
+    <div className={align === "end" ? "text-left sm:text-right" : "text-left"}>
+      <div className="text-[11px] font-medium uppercase text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate font-semibold">{teamName}</div>
+    </div>
+  );
+}
+
+function TeamMoveImpact({
+  team,
+  salaryEnabled,
+  displayLabel,
+}: {
+  team: ChampionshipRosterMovePreview["affectedTeams"][number];
+  salaryEnabled: boolean;
+  displayLabel: string;
+}) {
+  const usageChanged = numberValue(team.usageBeforeUnits) !== numberValue(team.usageAfterUnits);
+
+  return (
+    <div className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <div className="truncate font-medium">{team.teamName}</div>
+      </div>
+      {salaryEnabled ? (
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <span className="text-sm tabular-nums">
+            {formatSalaryUnits(team.usageBeforeUnits, displayLabel)}
+            {usageChanged ? ` → ${formatSalaryUnits(team.usageAfterUnits, displayLabel)}` : ""}
+          </span>
+          <Badge variant={team.overCapAfter ? "destructive" : "outline"}>
+            {team.overCapAfter
+              ? "Acima do teto"
+              : `${formatSalaryUnits(team.remainingAfterUnits, displayLabel)} livres`}
+          </Badge>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1621,7 +2012,8 @@ function RosterHistory({ data }: { data: ChampionshipWorkspaceData }) {
                   <div>
                     <div className="font-medium">{membership.participant.displayName}</div>
                     <div className="text-sm text-muted-foreground">
-                      {membership.team.name} · {membership.role === "gm" ? "GM" : "Jogador"}
+                      {membership.team.name} ·{" "}
+                      {membership.role === "gm" ? "General Manager" : "Jogador"}
                     </div>
                   </div>
                   <Badge variant="outline">{membership.endedAt ? "Encerrada" : "Ativa"}</Badge>
@@ -1663,7 +2055,9 @@ function RosterHistory({ data }: { data: ChampionshipWorkspaceData }) {
                       {membership.participant.displayName}
                     </TableCell>
                     <TableCell>{membership.team.name}</TableCell>
-                    <TableCell>{membership.role === "gm" ? "GM" : "Jogador"}</TableCell>
+                    <TableCell>
+                      {membership.role === "gm" ? "General Manager" : "Jogador"}
+                    </TableCell>
                     <TableCell>{acquisitionLabel(membership.acquisitionSource)}</TableCell>
                     <TableCell className="tabular-nums">
                       {membership.effectiveFromRevision}

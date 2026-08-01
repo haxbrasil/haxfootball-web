@@ -84,7 +84,7 @@ export function championshipContextLabel(contextType: string | null | undefined)
       format: "Formato",
       matches: "Jogos",
       statistics: "Estatísticas",
-      archive: "Títulos e acervo",
+      archive: "Títulos e prêmios",
       activity: "Atividade",
       championship: "Campeonato",
       "championship-match": "Jogo",

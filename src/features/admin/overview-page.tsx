@@ -1,5 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { Layers3, PackageOpen, ShieldCheck, Trophy, Users, Volleyball } from "lucide-react";
+import {
+  BarChart3,
+  Crown,
+  Layers3,
+  PackageOpen,
+  ShieldCheck,
+  Trophy,
+  Users,
+  Volleyball,
+} from "lucide-react";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "#/components/ui/card";
@@ -10,6 +19,8 @@ const sectionIcons = {
   rooms: Volleyball,
   championships: Trophy,
   "room-programs": PackageOpen,
+  "modes-statistics": BarChart3,
+  honors: Crown,
   matches: Layers3,
   accounts: Users,
   roles: ShieldCheck,
@@ -82,6 +93,14 @@ function sectionSummary(section: AdminSectionKey, resources: AdminOverviewResour
 
   if (section === "accounts") {
     return pageCountLabel(resources.accounts, "conta", "contas");
+  }
+
+  if (section === "modes-statistics") {
+    return pageCountLabel(resources.eventSchemas, "esquema", "esquemas");
+  }
+
+  if (section === "honors") {
+    return pageCountLabel(resources.honorDefinitions, "definição", "definições");
   }
 
   if (section === "matches") {

@@ -2,20 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import {
-  Archive,
-  Award,
-  Check,
-  CircleAlert,
-  Crown,
-  History,
-  Medal,
-  Plus,
-  Save,
-  Shield,
-  Sparkles,
-  Trophy,
-} from "lucide-react";
+import { Archive, Award, Check, Crown, Medal, Plus, Save, Sparkles, Trophy } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -39,10 +26,14 @@ import {
   replaceChampionshipPlacementsFn,
   updateChampionshipAwardFn,
 } from "#/server/api/championship-functions";
-import { HistoricalImportWorkspace } from "./historical-import-workspace";
+import { ChampionshipHonorsWorkspace } from "./honors-workspace";
 
-type ArchiveData = Pick<ChampionshipWorkspaceData, "championship" | "teams" | "participants"> & {
+type ArchiveData = Pick<
+  ChampionshipWorkspaceData,
+  "championship" | "teams" | "participants" | "format" | "honors"
+> & {
   history: ChampionshipHistoryData;
+  honorDefinitions?: ChampionshipWorkspaceData["honorDefinitions"];
 };
 type ArchiveDataWithAccounts = ArchiveData & {
   accounts?: ChampionshipWorkspaceData["accounts"];
@@ -57,20 +48,16 @@ export function ChampionshipArchiveWorkspace({
   data: ArchiveDataWithAccounts;
   mode: "admin" | "public";
 }) {
-  const champion = data.history.placements.items.find(({ rank }) => rank === 1);
-  const runnerUp = data.history.placements.items.find(({ rank }) => rank === 2);
-  const partial = Object.values(data.history.completeness).some((value) => !value);
-
   return (
     <div className="space-y-7">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Archive className="size-4 text-primary" />
-            <h2 className="text-lg font-semibold">Legado da edição</h2>
+            <h2 className="text-lg font-semibold">Títulos e prêmios</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Colocações, títulos e prêmios preservados como registro oficial.
+            Conquistas em disputa, resultados confirmados e classificação final.
           </p>
         </div>
         {data.championship.lifecycle === "completed" ||
@@ -82,108 +69,20 @@ export function ChampionshipArchiveWorkspace({
         ) : null}
       </header>
 
-      {champion ? (
-        <PodiumHero champion={champion} runnerUp={runnerUp} />
-      ) : (
-        <div className="bfl-panel rounded-xl border px-6 py-14 text-center">
-          <Trophy className="mx-auto size-9 text-muted-foreground" />
-          <p className="mt-4 text-sm font-medium">O título ainda não foi registrado</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            A edição permanece válida em andamento; a colocação será publicada ao final.
-          </p>
-        </div>
-      )}
-
-      {partial && (data.championship.historical || mode === "admin") ? (
-        <CompletenessBand history={data.history} />
+      {mode === "admin" || data.honors.items.length ? (
+        <ChampionshipHonorsWorkspace data={data} mode={mode} />
       ) : null}
 
-      {mode === "admin" ? <HistoricalImportWorkspace data={data} /> : null}
+      {data.history.awards.items.length ? <AwardLedger data={data} mode={mode} /> : null}
 
-      <div className="grid items-start gap-7 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+      <div className="grid items-start gap-7">
         {mode === "admin" ? (
           <PlacementEditor data={data} />
         ) : (
           <PlacementLedger history={data.history} />
         )}
-        <AwardLedger data={data} mode={mode} />
       </div>
-
-      {data.history.records.items.length ? <RecordCatalog history={data.history} /> : null}
     </div>
-  );
-}
-
-function PodiumHero({
-  champion,
-  runnerUp,
-}: {
-  champion: ChampionshipHistoryData["placements"]["items"][number];
-  runnerUp?: ChampionshipHistoryData["placements"]["items"][number];
-}) {
-  return (
-    <section className="bfl-panel grid overflow-hidden rounded-xl border md:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]">
-      <div className="relative px-6 py-8 sm:px-9">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-amber-300">
-          <Crown className="size-4" />
-          Campeão
-        </div>
-        <div className="mt-3 text-3xl font-semibold sm:text-4xl">{champion.teamNameSnapshot}</div>
-        {champion.identitySnapshot ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Título agregado a {champion.identitySnapshot.name}
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">Título desta equipe da edição</p>
-        )}
-      </div>
-      <div className="border-t bg-background/75 px-6 py-8 md:border-t-0 md:border-l">
-        <div className="text-xs font-semibold uppercase text-muted-foreground">Vice-campeão</div>
-        <div className="mt-3 text-xl font-semibold">
-          {runnerUp?.teamNameSnapshot ?? "Não registrado"}
-        </div>
-        <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
-          <History className="size-3.5" />
-          Identidades são congeladas no momento do título
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CompletenessBand({ history }: { history: ChampionshipHistoryData }) {
-  const labels: Record<keyof ChampionshipHistoryData["completeness"], string> = {
-    placements: "Colocações",
-    awards: "Prêmios",
-    teams: "Equipes",
-    rosters: "Elencos",
-    matches: "Jogos",
-    detailedStatistics: "Estatísticas",
-  };
-
-  return (
-    <section className="bfl-panel rounded-xl border px-4 py-4">
-      <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase">
-        <CircleAlert className="size-4 text-amber-300" />
-        Profundidade do acervo
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(history.completeness).map(([key, complete]) => (
-          <Badge
-            key={key}
-            variant="outline"
-            className={
-              complete
-                ? "border-emerald-400/35 text-emerald-300"
-                : "border-border text-muted-foreground"
-            }
-          >
-            {complete ? <Check /> : <CircleAlert />}
-            {labels[key as keyof typeof labels]}: {complete ? "preservado" : "não registrado"}
-          </Badge>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -240,11 +139,16 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-        <div>
-          <h3 className="text-sm font-semibold">Colocações oficiais</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Uma equipe e uma posição por linha.
-          </p>
+        <div className="flex items-center gap-3">
+          <span className="grid size-8 place-items-center border bg-muted/30 text-primary">
+            <Trophy className="size-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold">Colocações oficiais</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Defina a classificação final da edição.
+            </p>
+          </div>
         </div>
         <Button
           size="sm"
@@ -319,7 +223,7 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
         ))}
         {drafts.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-            Nenhuma colocação configurada.
+            Adicione as equipes que terão uma colocação oficial.
           </div>
         ) : null}
       </div>
@@ -392,9 +296,14 @@ function AwardLedger({ data, mode }: { data: ArchiveDataWithAccounts; mode: "adm
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-        <div>
-          <h3 className="text-sm font-semibold">Prêmios e reconhecimentos</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">Catálogo extensível e corrigível.</p>
+        <div className="flex items-center gap-3">
+          <span className="grid size-8 place-items-center border bg-muted/30 text-amber-300">
+            <Award className="size-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold">Prêmios e reconhecimentos</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">Destaques oficiais da edição.</p>
+          </div>
         </div>
         {mode === "admin" ? (
           <Button size="sm" onClick={() => setOpen(true)}>
@@ -422,7 +331,7 @@ function AwardLedger({ data, mode }: { data: ArchiveDataWithAccounts; mode: "adm
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{award.displayLabel}</span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  {award.note ?? award.kind}
+                  {award.note ?? awardTargetLabel(award.target.type)}
                 </span>
               </span>
               {award.rank ? <Badge variant="outline">{award.rank}º</Badge> : null}
@@ -583,26 +492,16 @@ function AwardDialog({
   );
 }
 
-function RecordCatalog({ history }: { history: ChampionshipHistoryData }) {
+function awardTargetLabel(type: AwardTargetType) {
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
-        <Shield className="size-4 text-primary" />
-        <h3 className="text-sm font-semibold">Catálogo de registros</h3>
-      </div>
-      <div className="grid gap-px border bg-border sm:grid-cols-2 xl:grid-cols-4">
-        {history.records.items.map((record, index) => (
-          <div key={`${record.key}:${record.targetUuid}:${index}`} className="bg-background p-4">
-            <div className="text-[10px] font-semibold uppercase text-muted-foreground">
-              {record.label}
-            </div>
-            <div className="mt-2 truncate text-sm font-medium">{record.targetLabel}</div>
-            <div className="mt-2 font-mono text-2xl font-semibold">{record.value}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+    {
+      participant: "Participante",
+      team: "Equipe",
+      "team-identity": "Identidade de equipe",
+      account: "Conta",
+      "historical-player": "Jogador histórico",
+    } as const
+  )[type];
 }
 
 function awardTargets(data: ArchiveDataWithAccounts, type: AwardTargetType) {

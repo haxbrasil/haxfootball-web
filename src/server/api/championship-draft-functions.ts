@@ -131,6 +131,19 @@ export const endChampionshipDraftFn = createServerFn({ method: "POST" })
     });
   });
 
+export const cancelChampionshipDraftFn = createServerFn({ method: "POST" })
+  .inputValidator(draftCommand.extend({ reason: z.string().trim().min(1).max(1_000) }))
+  .handler(async ({ data }) => {
+    const session = await requireChampionshipAdmin();
+    const { cancelChampionshipDraft } = await import("#/server/api/championship-api");
+    const { championshipUuid, ...input } = data;
+
+    return cancelChampionshipDraft(championshipUuid, {
+      ...input,
+      actorAccountUuid: session.account.uuid,
+    });
+  });
+
 export const previewChampionshipDraftCorrectionFn = createServerFn({ method: "GET" })
   .inputValidator(z.object({ championshipUuid: uuid, turnUuid: uuid }))
   .handler(async ({ data }) => {
@@ -240,4 +253,10 @@ async function requireChampionshipOperator() {
   const { requireAnyApiPermission } = await import("#/server/auth/session");
 
   return requireAnyApiPermission(["championship:admin", "championship:operate"]);
+}
+
+async function requireChampionshipAdmin() {
+  const { requireApiPermission } = await import("#/server/auth/session");
+
+  return requireApiPermission("championship:admin");
 }
