@@ -649,6 +649,7 @@ function EvidenceSearchDialog({
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const queryRevisionRef = useRef(0);
+  const failedCursorRef = useRef<string | null>(null);
 
   const fetchCandidates = useCallback(
     (cursor?: string) =>
@@ -656,11 +657,7 @@ function EvidenceSearchDialog({
         data: {
           championshipUuid: operations.championshipUuid,
           championshipMatchUuid: operations.match.uuid,
-          ...(search.trim()
-            ? /^[A-Za-z0-9_-]{8,9}$/.test(search.trim())
-              ? { logicalMatchId: search.trim() }
-              : { playerSearch: search.trim() }
-            : {}),
+          ...(search.trim() ? { playerSearch: search.trim() } : {}),
           ...(quality === "all" ? {} : { quality }),
           claimState: showClaimed ? "all" : "available",
           includeAllPrograms,
@@ -683,6 +680,7 @@ function EvidenceSearchDialog({
     async (event?: FormEvent) => {
       event?.preventDefault();
       const queryRevision = ++queryRevisionRef.current;
+      failedCursorRef.current = null;
       setState("loading");
       setLoadingMore(false);
       setMessage(null);
@@ -692,18 +690,23 @@ function EvidenceSearchDialog({
         if (queryRevision !== queryRevisionRef.current) return;
         setCandidates(result);
         setState("ready");
-      } catch (cause) {
+      } catch {
         if (queryRevision !== queryRevisionRef.current) return;
-        setMessage(errorMessage(cause));
+        setMessage("Não foi possível buscar as partidas. Tente novamente.");
         setState("error");
       }
     },
     [fetchCandidates],
   );
+  const runSearchRef = useRef(runSearch);
+
+  useEffect(() => {
+    runSearchRef.current = runSearch;
+  }, [runSearch]);
 
   const loadMore = useCallback(async () => {
     const cursor = candidates?.nextCursor;
-    if (!cursor || loadingMore || state === "loading") return;
+    if (!cursor || loadingMore || state === "loading" || failedCursorRef.current === cursor) return;
 
     const queryRevision = queryRevisionRef.current;
     setLoadingMore(true);
@@ -726,8 +729,11 @@ function EvidenceSearchDialog({
           totalInspected: numberValue(current.totalInspected) + numberValue(result.totalInspected),
         };
       });
-    } catch (cause) {
-      if (queryRevision === queryRevisionRef.current) setMessage(errorMessage(cause));
+    } catch {
+      if (queryRevision === queryRevisionRef.current) {
+        failedCursorRef.current = cursor;
+        setMessage("Não foi possível carregar mais partidas. Use Atualizar para tentar novamente.");
+      }
     } finally {
       if (queryRevision === queryRevisionRef.current) setLoadingMore(false);
     }
@@ -735,9 +741,17 @@ function EvidenceSearchDialog({
 
   useEffect(() => {
     if (!open) return;
-    const timeout = window.setTimeout(() => void runSearch(), candidates ? 300 : 0);
+    const timeout = window.setTimeout(() => void runSearchRef.current(), 300);
     return () => window.clearTimeout(timeout);
-  }, [open, runSearch]);
+  }, [
+    includeAllPrograms,
+    open,
+    operations.championshipUuid,
+    operations.match.uuid,
+    quality,
+    search,
+    showClaimed,
+  ]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -897,7 +911,7 @@ function EvidenceSearchDialog({
             <NativeSelectOption value="complete">Completa</NativeSelectOption>
             <NativeSelectOption value="recovered">Recuperada</NativeSelectOption>
             <NativeSelectOption value="partial">Parcial</NativeSelectOption>
-            <NativeSelectOption value="legacy">Histórica</NativeSelectOption>
+            <NativeSelectOption value="legacy">Proveniência indisponível</NativeSelectOption>
           </NativeSelect>
           <Button type="submit" variant="outline" disabled={state === "loading"}>
             <RefreshCw className={state === "loading" ? "animate-spin" : ""} />
@@ -914,8 +928,12 @@ function EvidenceSearchDialog({
             />
             Incluir programas diferentes do esperado
           </label>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <label
+            htmlFor="show-claimed-evidence"
+            className="flex items-center gap-2 text-xs text-muted-foreground"
+          >
             <Checkbox
+              id="show-claimed-evidence"
               checked={showClaimed}
               onCheckedChange={(value) => setShowClaimed(value === true)}
             />
@@ -1024,7 +1042,7 @@ function EvidenceSearchDialog({
                               .map((round) => round.provenance?.program.name)
                               .filter((name): name is string => !!name),
                           ),
-                        ).join(", ") || "Programa desconhecido"}
+                        ).join(", ") || "Sem programa registrado"}
                       </span>
                       <span>
                         {candidate.evidence.rounds

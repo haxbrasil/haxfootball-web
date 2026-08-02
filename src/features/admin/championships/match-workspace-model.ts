@@ -157,7 +157,7 @@ export function evidenceQualityLabel(quality: string): string {
       complete: "Completa",
       recovered: "Recuperada",
       partial: "Parcial",
-      legacy: "Histórica",
+      legacy: "Proveniência indisponível",
       ineligible: "Inelegível",
     }[quality] ?? quality
   );

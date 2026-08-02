@@ -3,6 +3,7 @@ import {
   appearanceFindingLabel,
   correctionImpactLabel,
   durationLabel,
+  evidenceQualityLabel,
   evidencePeriodScores,
   numberValue,
   officialScore,
@@ -186,6 +187,10 @@ describe("championship match workspace model", () => {
     ["ambiguous-side", "Participação observada nos dois lados"],
   ])("localizes appearance finding %s", (finding, expected) => {
     expect(appearanceFindingLabel(finding)).toBe(expected);
+  });
+
+  it("describes legacy evidence by the metadata that is actually missing", () => {
+    expect(evidenceQualityLabel("legacy")).toBe("Proveniência indisponível");
   });
 
   it("summarizes recursive correction impact", () => {
