@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   appearanceFindingLabel,
+  championshipEvidenceScore,
   correctionImpactLabel,
+  defaultSettlementDraft,
   durationLabel,
   evidenceUsesUnconfiguredProgram,
   evidenceQualityLabel,
@@ -60,6 +62,37 @@ describe("championship match workspace model", () => {
       { label: "2º tempo", sideA: 1, sideB: 3 },
       { label: "Prorrogação", sideA: 1, sideB: 0 },
     ]);
+  });
+
+  it("projects evidence scores into championship sides", () => {
+    expect(championshipEvidenceScore({ red: 24, blue: 14 }, "swapped")).toEqual({
+      a: 14,
+      b: 24,
+    });
+  });
+
+  it("uses the projected evidence score when correcting a played result", () => {
+    const draft = defaultSettlementDraft({
+      evidenceOrientation: "swapped",
+      evidence: { score: { red: 24, blue: 14 } },
+      result: {
+        method: "played",
+        sideAPlayedScore: 24,
+        sideBPlayedScore: 14,
+        sideAAdministrativeScore: 0,
+        sideBAdministrativeScore: 0,
+        sideAOutcome: "win",
+        sideBOutcome: "loss",
+        note: null,
+      },
+    } as never);
+
+    expect(draft).toMatchObject({
+      sideAPlayedScore: 14,
+      sideBPlayedScore: 24,
+      sideAOutcome: "loss",
+      sideBOutcome: "win",
+    });
   });
 
   it("sums independent room-game scores into period layers", () => {

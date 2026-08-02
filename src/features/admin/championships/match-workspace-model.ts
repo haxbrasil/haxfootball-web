@@ -34,20 +34,36 @@ export type PeriodScore = {
   round: EvidenceRound;
 };
 
+export type EvidenceOrientation = "aligned" | "swapped";
+
 export function numberValue(value: string | number | null | undefined): number {
   const result = Number(value ?? 0);
   return Number.isFinite(result) ? result : 0;
 }
 
-export function evidencePeriodScores(evidence: MatchOperations["evidence"]): PeriodScore[] {
+export function championshipEvidenceScore(
+  score: { red?: number | null; blue?: number | null } | null | undefined,
+  orientation: EvidenceOrientation,
+) {
+  const red = numberValue(score?.red);
+  const blue = numberValue(score?.blue);
+
+  return orientation === "aligned" ? { a: red, b: blue } : { a: blue, b: red };
+}
+
+export function evidencePeriodScores(
+  evidence: MatchOperations["evidence"],
+  orientation: EvidenceOrientation = "aligned",
+): PeriodScore[] {
   if (!evidence) return [];
 
   let accumulatedA = 0;
   let accumulatedB = 0;
 
   return evidence.rounds.map((round, index) => {
-    const normalizedSideA = numberValue(round.normalizedScore?.red);
-    const normalizedSideB = numberValue(round.normalizedScore?.blue);
+    const normalizedScore = championshipEvidenceScore(round.normalizedScore, orientation);
+    const normalizedSideA = normalizedScore.a;
+    const normalizedSideB = normalizedScore.b;
     const sideA =
       evidence.scoreMode === "per-game"
         ? normalizedSideA
@@ -82,13 +98,24 @@ export function evidencePeriodScores(evidence: MatchOperations["evidence"]): Per
 }
 
 export function defaultSettlementDraft(operations: MatchOperations): SettlementDraft {
-  const score = operations.evidence?.score;
-  const sideA = operations.result
+  const evidenceScore = operations.evidence
+    ? championshipEvidenceScore(
+        operations.evidence.score,
+        operations.evidenceOrientation ?? "aligned",
+      )
+    : null;
+  const useEvidenceScore = operations.evidence !== null && operations.result?.method === "played";
+  const sideA = useEvidenceScore
+    ? evidenceScore?.a ?? 0
+    : operations.result
     ? numberValue(operations.result.sideAPlayedScore)
-    : numberValue(score?.red);
-  const sideB = operations.result
+    : evidenceScore?.a ?? 0;
+  const sideB = useEvidenceScore
+    ? evidenceScore?.b ?? 0
+    : operations.result
     ? numberValue(operations.result.sideBPlayedScore)
-    : numberValue(score?.blue);
+    : evidenceScore?.b ?? 0;
+  const outcomes = outcomeForScores(sideA, sideB);
 
   return {
     method: operations.result?.method ?? (operations.evidence ? "played" : "manual"),
@@ -96,8 +123,8 @@ export function defaultSettlementDraft(operations: MatchOperations): SettlementD
     sideBPlayedScore: sideB,
     sideAAdministrativeScore: numberValue(operations.result?.sideAAdministrativeScore),
     sideBAdministrativeScore: numberValue(operations.result?.sideBAdministrativeScore),
-    sideAOutcome: operations.result?.sideAOutcome ?? outcomeForScores(sideA, sideB)[0],
-    sideBOutcome: operations.result?.sideBOutcome ?? outcomeForScores(sideA, sideB)[1],
+    sideAOutcome: useEvidenceScore ? outcomes[0] : operations.result?.sideAOutcome ?? outcomes[0],
+    sideBOutcome: useEvidenceScore ? outcomes[1] : operations.result?.sideBOutcome ?? outcomes[1],
     evidenceQualityReviewed: operations.evidence?.quality === "complete",
     programMismatchReason: null,
     note: operations.result?.note ?? null,

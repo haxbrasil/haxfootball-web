@@ -77,6 +77,7 @@ import {
 } from "#/server/api/championship-match-functions";
 import {
   appearanceFindingLabel,
+  championshipEvidenceScore,
   correctionImpactLabel,
   defaultSettlementDraft,
   durationLabel,
@@ -433,7 +434,10 @@ function EvidencePanel({
   const detach = useServerFn(detachChampionshipMatchEvidenceFn);
   const [busy, setBusy] = useState(false);
   const evidence = operations.evidence;
-  const periods = useMemo(() => evidencePeriodScores(evidence), [evidence]);
+  const periods = useMemo(
+    () => evidencePeriodScores(evidence, operations.evidenceOrientation ?? "aligned"),
+    [evidence, operations.evidenceOrientation],
+  );
   const [selectedPeriodId, setSelectedPeriodId] = useState(periods[0]?.id ?? "");
   const selectedPeriod = periods.find((period) => period.id === selectedPeriodId) ?? periods[0];
 
@@ -1039,8 +1043,13 @@ function EvidenceSearchDialog({
                     </div>
                     <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
                       <span className="font-mono text-base text-foreground">
-                        {numberValue(candidate.evidence.score?.red)} –{" "}
-                        {numberValue(candidate.evidence.score?.blue)}
+                        {(() => {
+                          const score = championshipEvidenceScore(
+                            candidate.evidence.score,
+                            candidate.orientationRecommendation?.orientation ?? orientation,
+                          );
+                          return `${score.a} – ${score.b}`;
+                        })()}
                       </span>
                       <span>{candidate.evidence.rounds.length} tempos</span>
                       {candidate.evidence.rounds[0]?.initiatedAt ? (
