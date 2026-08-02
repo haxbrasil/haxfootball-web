@@ -913,7 +913,10 @@ function targetOptions(data: HonorData, type: RecipientType) {
 
 function publishedDefinitions(data: HonorData) {
   return (data.honorDefinitions?.items ?? []).filter(
-    (definition) => definition.state === "active" && definition.versions.length > 0,
+    (definition) =>
+      definition.state === "active" &&
+      definition.versions.length > 0 &&
+      definition.competitionType.uuid === data.championship.competitionType.uuid,
   );
 }
 

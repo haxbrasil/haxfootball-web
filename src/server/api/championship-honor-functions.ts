@@ -55,6 +55,7 @@ export const getChampionshipHonorCatalogFn = createServerFn({ method: "GET" }).h
 export const createChampionshipHonorDefinitionFn = createServerFn({ method: "POST" })
   .inputValidator(
     definitionFields.extend({
+      competitionTypeId: uuid,
       slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
       kind: z.enum(["title", "award"]),
     }),

@@ -217,6 +217,10 @@ export type ChampionshipHonorResolutionPreviewData =
 export type ChampionshipHonorsData = Serializable<ListChampionshipHonorsResponse>;
 export type ChampionshipHonorDefinitionsData =
   Serializable<ListChampionshipHonorDefinitionsResponse>;
+export type ChampionshipHonorCatalogData = {
+  definitions: ChampionshipHonorDefinitionsData;
+  competitionTypes: Serializable<ListCompetitionTypesResponse>;
+};
 
 type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -537,12 +541,13 @@ export async function updateChampionshipAward(
   );
 }
 
-export async function listChampionshipHonorCatalog(): Promise<ChampionshipHonorDefinitionsData> {
-  return serialize(
-    await requireResult(
-      requireClient().championships.honorDefinitions.list({ state: "all", limit: 100 }),
-    ),
-  );
+export async function listChampionshipHonorCatalog(): Promise<ChampionshipHonorCatalogData> {
+  const client = requireClient();
+  const [definitions, competitionTypes] = await Promise.all([
+    requireResult(client.championships.honorDefinitions.list({ state: "all", limit: 100 })),
+    requireResult(client.championships.types.list({ state: "all", limit: 100 })),
+  ]);
+  return serialize({ definitions, competitionTypes });
 }
 
 export async function createChampionshipHonorDefinition(

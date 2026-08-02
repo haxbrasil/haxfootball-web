@@ -24,8 +24,8 @@ import { Input } from "#/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import { Textarea } from "#/components/ui/textarea";
 import type {
+  ChampionshipHonorCatalogData,
   ChampionshipHonorDefinitionData,
-  ChampionshipHonorDefinitionsData,
 } from "#/server/api/championship-api";
 import {
   archiveChampionshipHonorDefinitionFn,
@@ -36,21 +36,25 @@ import {
 
 type RecipientType = ChampionshipHonorDefinitionData["draft"]["recipientTypes"][number];
 
-export function HonorsPage({ data }: { data: ChampionshipHonorDefinitionsData }) {
+export function HonorsPage({ data }: { data: ChampionshipHonorCatalogData }) {
   const router = useRouter();
   const publish = useServerFn(publishChampionshipHonorDefinitionFn);
   const archive = useServerFn(archiveChampionshipHonorDefinitionFn);
   const [kind, setKind] = useState<"all" | "title" | "award">("all");
+  const [competitionTypeId, setCompetitionTypeId] = useState(
+    data.competitionTypes.items[0]?.uuid ?? "",
+  );
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<ChampionshipHonorDefinitionData | null | undefined>();
   const filtered = useMemo(
     () =>
-      data.items.filter(
+      data.definitions.items.filter(
         (item) =>
+          item.competitionType.uuid === competitionTypeId &&
           (kind === "all" || item.kind === kind) &&
           `${item.draft.name} ${item.slug}`.toLowerCase().includes(search.toLowerCase()),
       ),
-    [data.items, kind, search],
+    [competitionTypeId, data.definitions.items, kind, search],
   );
 
   async function publishDefinition(item: ChampionshipHonorDefinitionData) {
@@ -83,13 +87,28 @@ export function HonorsPage({ data }: { data: ChampionshipHonorDefinitionsData })
         title="Catálogo de títulos e prêmios"
         description="Defina as conquistas que podem entrar em disputa nas edições e preserve suas versões ao longo do tempo."
         action={
-          <Button onClick={() => setEditing(null)}>
+          <Button
+            onClick={() => setEditing(null)}
+            disabled={data.competitionTypes.items.length === 0}
+          >
             <Plus /> Nova definição
           </Button>
         }
       />
       <section className="bfl-panel overflow-hidden rounded-lg border">
         <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center">
+          <NativeSelect
+            className="lg:w-64"
+            value={competitionTypeId}
+            aria-label="Tipo de campeonato"
+            onChange={(event) => setCompetitionTypeId(event.target.value)}
+          >
+            {data.competitionTypes.items.map((type) => (
+              <NativeSelectOption key={type.uuid} value={type.uuid}>
+                {type.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
           <Input
             className="lg:max-w-md"
             placeholder="Buscar título ou prêmio"
@@ -121,6 +140,7 @@ export function HonorsPage({ data }: { data: ChampionshipHonorDefinitionsData })
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-semibold">{item.draft.name}</h2>
+                      <Badge variant="secondary">{item.competitionType.name}</Badge>
                       <Badge variant="outline">{item.kind === "title" ? "Título" : "Prêmio"}</Badge>
                       {item.state === "archived" ? (
                         <Badge variant="secondary">Arquivado</Badge>
@@ -169,9 +189,15 @@ export function HonorsPage({ data }: { data: ChampionshipHonorDefinitionsData })
           {filtered.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <Sparkles className="mx-auto size-8 text-muted-foreground" />
-              <p className="mt-4 font-medium">Comece pelo que será disputado</p>
+              <p className="mt-4 font-medium">
+                {data.competitionTypes.items.length
+                  ? "Comece pelo que será disputado"
+                  : "Cadastre um tipo de campeonato"}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Crie um título ou prêmio reutilizável para anunciar em uma edição.
+                {data.competitionTypes.items.length
+                  ? "Crie um título ou prêmio reutilizável para anunciar em uma edição deste tipo."
+                  : "Os títulos e prêmios são organizados pelo tipo de competição."}
               </p>
             </div>
           ) : null}
@@ -180,6 +206,8 @@ export function HonorsPage({ data }: { data: ChampionshipHonorDefinitionsData })
       {editing !== undefined ? (
         <DefinitionDialog
           definition={editing}
+          competitionTypes={data.competitionTypes.items}
+          defaultCompetitionTypeId={competitionTypeId}
           onClose={() => setEditing(undefined)}
           onDone={async () => {
             setEditing(undefined);
@@ -193,10 +221,14 @@ export function HonorsPage({ data }: { data: ChampionshipHonorDefinitionsData })
 
 function DefinitionDialog({
   definition,
+  competitionTypes,
+  defaultCompetitionTypeId,
   onClose,
   onDone,
 }: {
   definition: ChampionshipHonorDefinitionData | null;
+  competitionTypes: ChampionshipHonorCatalogData["competitionTypes"]["items"];
+  defaultCompetitionTypeId: string;
   onClose: () => void;
   onDone: () => Promise<void>;
 }) {
@@ -205,6 +237,9 @@ function DefinitionDialog({
   const publish = useServerFn(publishChampionshipHonorDefinitionFn);
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<"title" | "award">(definition?.kind ?? "award");
+  const [competitionTypeId, setCompetitionTypeId] = useState(
+    definition?.competitionType.uuid ?? defaultCompetitionTypeId,
+  );
   const [recipients, setRecipients] = useState<RecipientType[]>(
     definition?.draft.recipientTypes ?? ["participant"],
   );
@@ -236,6 +271,7 @@ function DefinitionDialog({
             data: {
               ...fields,
               kind,
+              competitionTypeId,
               slug: `${slugify(fields.name)}-${crypto.randomUUID().slice(0, 6)}`,
             },
           });
@@ -271,16 +307,34 @@ function DefinitionDialog({
         </DialogHeader>
         <form className="space-y-5" onSubmit={(event) => void submit(event, false)}>
           {!definition ? (
-            <Field label="Categoria">
-              <NativeSelect
-                value={kind}
-                onChange={(event) => setKind(event.target.value as typeof kind)}
-              >
-                <NativeSelectOption value="title">Título</NativeSelectOption>
-                <NativeSelectOption value="award">Prêmio</NativeSelectOption>
-              </NativeSelect>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Tipo de campeonato">
+                <NativeSelect
+                  value={competitionTypeId}
+                  onChange={(event) => setCompetitionTypeId(event.target.value)}
+                >
+                  {competitionTypes.map((type) => (
+                    <NativeSelectOption key={type.uuid} value={type.uuid}>
+                      {type.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label="Categoria">
+                <NativeSelect
+                  value={kind}
+                  onChange={(event) => setKind(event.target.value as typeof kind)}
+                >
+                  <NativeSelectOption value="title">Título</NativeSelectOption>
+                  <NativeSelectOption value="award">Prêmio</NativeSelectOption>
+                </NativeSelect>
+              </Field>
+            </div>
+          ) : (
+            <Field label="Tipo de campeonato">
+              <Input value={definition.competitionType.name} disabled />
             </Field>
-          ) : null}
+          )}
           <Field label="Nome público">
             <Input name="name" required defaultValue={definition?.draft.name ?? ""} />
           </Field>
