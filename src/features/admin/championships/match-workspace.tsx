@@ -1340,6 +1340,70 @@ function normalizeCompositionGames(games: CompositionGame[]): CompositionGame[] 
   return games.map((item, index) => (index === 0 ? { ...item, orientation: "aligned" } : item));
 }
 
+const resolvedAttributionFindingCodes = new Set(["unregistered", "off-roster", "wrong-side"]);
+
+function attributionTargetName(
+  data: ChampionshipWorkspaceData,
+  appearance: MatchAppearance,
+  attribution: AttributionDraft,
+): string | null {
+  if (attribution.mode !== "redirect") return null;
+  return (
+    data.participants.items.find(
+      (participant) => participant.uuid === attribution.targetParticipantUuid,
+    )?.displayName ??
+    appearance.attribution.targetDisplayName ??
+    null
+  );
+}
+
+function visibleAppearanceFindings(
+  appearance: MatchAppearance,
+  attribution: AttributionDraft,
+  targetName: string | null,
+): string[] {
+  if (attribution.mode === "exclude") return [];
+  if (attribution.mode === "redirect" && targetName) {
+    return appearance.findings.filter((finding) => !resolvedAttributionFindingCodes.has(finding));
+  }
+  return appearance.findings;
+}
+
+function AppearanceStatus({
+  data,
+  appearance,
+  attribution,
+}: {
+  data: ChampionshipWorkspaceData;
+  appearance: MatchAppearance;
+  attribution: AttributionDraft;
+}) {
+  const targetName = attributionTargetName(data, appearance, attribution);
+  const findings = visibleAppearanceFindings(appearance, attribution, targetName);
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {attribution.mode === "exclude" ? (
+        <Badge variant="outline" className="border-slate-400/50 text-slate-200">
+          Estatísticas excluídas
+        </Badge>
+      ) : targetName ? (
+        <Badge variant="outline" className="border-sky-400/50 text-sky-200">
+          Redirecionado para {targetName}
+        </Badge>
+      ) : null}
+      {findings.map((finding) => (
+        <Badge key={finding} variant="outline" className="border-amber-400/40 text-amber-200">
+          {appearanceFindingLabel(finding)}
+        </Badge>
+      ))}
+      {!findings.length && attribution.mode === "default" ? (
+        <span className="text-xs text-emerald-300">Regular</span>
+      ) : null}
+    </div>
+  );
+}
+
 function EligibilityPanel({
   data,
   operations,
@@ -1355,9 +1419,11 @@ function EligibilityPanel({
 }) {
   const update = useServerFn(updateChampionshipMatchAttributionsFn);
   const [busy, setBusy] = useState(false);
-  const hasFindings = operations.appearances.items.some(
-    (appearance) => appearance.findings.length > 0,
-  );
+  const hasFindings = operations.appearances.items.some((appearance, index) => {
+    const attribution = attributions[index]!;
+    const targetName = attributionTargetName(data, appearance, attribution);
+    return visibleAppearanceFindings(appearance, attribution, targetName).length > 0;
+  });
 
   async function save() {
     setBusy(true);
@@ -1399,10 +1465,10 @@ function EligibilityPanel({
       {hasFindings ? (
         <div className="border-y border-amber-400/25 bg-amber-400/5 px-4 py-3 text-xs text-amber-100">
           <ShieldAlert className="mr-2 inline size-4" />
-          Há jogadores fora do elenco ou sem conta registrada. Revise cada linha.
+          Há participações que ainda exigem uma decisão de atribuição. Revise cada linha.
         </div>
       ) : null}
-      <div className="divide-y sm:hidden">
+      <div className="w-full min-w-0 divide-y sm:hidden">
         {operations.appearances.items.map((appearance, index) => (
           <article key={appearance.sourcePlayerId} className="space-y-3 p-4">
             <div className="flex items-start justify-between gap-3">
@@ -1429,21 +1495,13 @@ function EligibilityPanel({
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Situação</div>
-              {appearance.findings.length ? (
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {appearance.findings.map((finding) => (
-                    <Badge
-                      key={finding}
-                      variant="outline"
-                      className="border-amber-400/40 text-amber-200"
-                    >
-                      {appearanceFindingLabel(finding)}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-1 text-xs text-emerald-300">Regular</div>
-              )}
+              <div className="mt-1">
+                <AppearanceStatus
+                  data={data}
+                  appearance={appearance}
+                  attribution={attributions[index]!}
+                />
+              </div>
             </div>
             <AttributionControls
               compact
@@ -1457,7 +1515,7 @@ function EligibilityPanel({
           </article>
         ))}
       </div>
-      <div className="hidden sm:block">
+      <div className="hidden w-full min-w-0 sm:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -1483,24 +1541,14 @@ function EligibilityPanel({
                   <TableCell className="font-mono tabular-nums">
                     {durationLabel(appearance.playingTimeSeconds)}
                   </TableCell>
-                  <TableCell>
-                    {appearance.findings.length ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {appearance.findings.map((finding) => (
-                          <Badge
-                            key={finding}
-                            variant="outline"
-                            className="border-amber-400/40 text-amber-200"
-                          >
-                            {appearanceFindingLabel(finding)}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-emerald-300">Regular</span>
-                    )}
+                  <TableCell className="min-w-0">
+                    <AppearanceStatus
+                      data={data}
+                      appearance={appearance}
+                      attribution={attribution}
+                    />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-0">
                     <AttributionControls
                       data={data}
                       appearance={appearance}
@@ -1543,9 +1591,9 @@ function AttributionControls({
   compact?: boolean;
 }) {
   return (
-    <div className={compact ? "grid gap-2" : "flex min-w-72 gap-2"}>
+    <div className={compact ? "grid w-full gap-2" : "flex w-full min-w-0 items-center gap-2"}>
       <NativeSelect
-        className="min-w-44 shrink-0"
+        className="w-44 min-w-44 shrink-0"
         aria-label={`Atribuição de ${appearance.displayName}`}
         value={attribution.mode}
         onChange={(event) =>
@@ -1586,6 +1634,7 @@ function AttributionControls({
           placeholder="Escolha o destino"
           searchPlaceholder="Buscar participante…"
           emptyLabel="Nenhum participante ativo encontrado."
+          className={compact ? "w-full" : "w-64 max-w-full min-w-0 shrink-0"}
           options={data.participants.items
             .filter((participant) => participant.status === "active")
             .map((participant) => ({
@@ -1863,6 +1912,8 @@ function SettlementImpactDialog({
 }) {
   if (!preview) return null;
 
+  const findings = settlementPreviewFindings(preview);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
@@ -1883,9 +1934,9 @@ function SettlementImpactDialog({
           />
           <EvidenceDatum label="Participações" value={`${preview.appearances.length} revisadas`} />
         </div>
-        {preview.findings.length ? (
+        {findings.length ? (
           <div className="divide-y border">
-            {preview.findings.map((finding) => (
+            {findings.map((finding) => (
               <div key={`${finding.code}:${finding.message}`} className="flex gap-3 p-3 text-sm">
                 <AlertTriangle
                   className={`mt-0.5 size-4 ${
@@ -1932,11 +1983,11 @@ function SettlementImpactDialog({
           </Button>
           <Button
             variant={
-              preview.findings.some((finding) => finding.severity === "blocking")
+              findings.some((finding) => finding.severity === "blocking")
                 ? "destructive"
                 : "default"
             }
-            disabled={busy || preview.findings.some((finding) => finding.severity === "blocking")}
+            disabled={busy || findings.some((finding) => finding.severity === "blocking")}
             onClick={onConfirm}
           >
             <Check />
@@ -1946,6 +1997,47 @@ function SettlementImpactDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function settlementPreviewFindings(preview: ChampionshipSettlementPreviewData) {
+  const appearanceByFindingCode = new Map<
+    string,
+    ChampionshipSettlementPreviewData["appearances"][number]
+  >();
+
+  for (const appearance of preview.appearances) {
+    for (const finding of appearance.findings) {
+      appearanceByFindingCode.set(`${finding}:${appearance.sourcePlayerId}`, appearance);
+    }
+  }
+
+  const findings = preview.findings.filter((finding) => {
+    const appearance = appearanceByFindingCode.get(finding.code);
+    return !appearance || appearance.attribution.mode === "default";
+  });
+  const resolutions = preview.appearances.flatMap((appearance) => {
+    if (appearance.attribution.mode === "redirect" && appearance.attribution.targetDisplayName) {
+      return [
+        {
+          code: `attribution:${appearance.sourcePlayerId}`,
+          severity: "info" as const,
+          message: `${appearance.displayName}: atribuição redirecionada para ${appearance.attribution.targetDisplayName}.`,
+        },
+      ];
+    }
+    if (appearance.attribution.mode === "exclude") {
+      return [
+        {
+          code: `attribution:${appearance.sourcePlayerId}`,
+          severity: "info" as const,
+          message: `${appearance.displayName}: estatísticas excluídas desta edição.`,
+        },
+      ];
+    }
+    return [];
+  });
+
+  return [...findings, ...resolutions];
 }
 
 function ResultHistory({ operations }: { operations: MatchOperations }) {

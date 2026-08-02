@@ -58,6 +58,52 @@ describe("championship match workspace", () => {
     ).toBe(false);
   });
 
+  it("shows a redirected appearance as an effective attribution", () => {
+    const targetUuid = "40000000-0000-4000-8000-000000000001";
+    const data = {
+      ...workspace(),
+      participants: {
+        items: [{ uuid: targetUuid, displayName: "Quezin", status: "active" }],
+      },
+    } as unknown as ChampionshipWorkspaceData;
+
+    render(
+      <MatchWorkspace
+        data={data}
+        selectedMatchUuid={matchUuid}
+        onSelectMatch={vi.fn()}
+        initialOperations={operations({
+          appearances: {
+            items: [
+              {
+                sourcePlayerId: "queymar",
+                sourceAccountUuid: null,
+                displayName: "QUEYMAR",
+                observedSide: "a",
+                playingTimeSeconds: 120,
+                registered: false,
+                onRoster: false,
+                findings: ["unregistered", "off-roster"],
+                attribution: {
+                  mode: "redirect",
+                  targetParticipantUuid: targetUuid,
+                  targetDisplayName: "Quezin",
+                  reason: null,
+                },
+              },
+            ],
+            totalCount: 1,
+            truncated: false,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getAllByText("Redirecionado para Quezin").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Conta não registrada")).toBeNull();
+    expect(screen.queryByText("Fora do elenco")).toBeNull();
+  });
+
   it("exposes cumulative halves as individual period scores", () => {
     const withEvidence = operations({
       evidence: {
