@@ -570,12 +570,14 @@ function DraftSetup({
   adminView = false,
   canCancel = false,
   onCancel,
+  onProjection,
 }: {
   data: DraftData;
   draft: Draft | null;
   adminView?: boolean;
   canCancel?: boolean;
   onCancel?: () => void;
+  onProjection?: (draft: DraftData["draft"]) => void;
 }) {
   const configure = useServerFn(configureChampionshipDraftFn);
   const start = useServerFn(startChampionshipDraftFn);
@@ -593,6 +595,7 @@ function DraftSetup({
       ? numberValue(draft.countdownSeconds)
       : numberValue(data.championship.rules.draft.countdownSeconds),
   );
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const readiness = draftReadiness(
@@ -601,6 +604,17 @@ function DraftSetup({
     data.championship.rules.salary.enabled,
     data.championship.priceState === "locked",
   );
+  const configuredTeamIds = draft
+    ? [...draft.teams]
+        .sort((left, right) => numberValue(left.position) - numberValue(right.position))
+        .map((team) => team.uuid)
+    : [];
+  const configurationChanged =
+    draft === null ||
+    rounds !== numberValue(draft.rounds) ||
+    countdown !== numberValue(draft.countdownSeconds) ||
+    teamIds.length !== configuredTeamIds.length ||
+    teamIds.some((teamId, index) => teamId !== configuredTeamIds[index]);
 
   function move(index: number, offset: -1 | 1) {
     const target = index + offset;
@@ -616,48 +630,114 @@ function DraftSetup({
     });
   }
 
-  async function save() {
+  async function persistConfiguration() {
     setBusy(true);
     setMessage(null);
-    const result = await configure({
-      data: {
-        championshipUuid: data.championship.uuid,
-        commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(data.championship.revision),
-        teamIds,
-        rounds,
-        countdownSeconds: countdown,
-      },
-    });
+    try {
+      const result = await configure({
+        data: {
+          championshipUuid: data.championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision: numberValue(data.championship.revision),
+          teamIds,
+          rounds,
+          countdownSeconds: countdown,
+        },
+      });
 
-    setBusy(false);
-    if (!result.ok) {
-      setMessage(result.message);
+      if (!result.ok) {
+        setMessage(result.message);
+        return null;
+      }
+
+      onProjection?.(result.data);
+      return result.data;
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Não foi possível salvar a configuração.",
+      );
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function save() {
+    const result = await persistConfiguration();
+
+    if (!result) {
       return;
     }
+
+    setDialogOpen(false);
+    toast.success(draft ? "Configuração do draft salva." : "Draft criado.");
     await router.invalidate();
   }
 
   async function begin() {
     if (!draft) {
+      await save();
       return;
     }
+
     setBusy(true);
     setMessage(null);
-    const result = await start({
-      data: {
-        championshipUuid: data.championship.uuid,
-        commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(data.championship.revision),
-        expectedDraftRevision: numberValue(draft.revision),
-      },
-    });
-    setBusy(false);
-    if (!result.ok) {
-      setMessage(result.message);
-      return;
+    try {
+      let expectedRevision = numberValue(data.championship.revision);
+      let expectedDraftRevision = numberValue(draft.revision);
+
+      if (configurationChanged) {
+        const configured = await configure({
+          data: {
+            championshipUuid: data.championship.uuid,
+            commandUuid: crypto.randomUUID(),
+            expectedRevision,
+            teamIds,
+            rounds,
+            countdownSeconds: countdown,
+          },
+        });
+
+        if (!configured.ok) {
+          setMessage(configured.message);
+          return;
+        }
+
+        onProjection?.(configured.data);
+        const configuredDraft = configured.data.draft;
+        if (!configuredDraft) {
+          setMessage(
+            "A configuração foi salva, mas o draft ainda não está disponível para iniciar.",
+          );
+          return;
+        }
+        expectedRevision = numberValue(configuredDraft.championshipRevision);
+        expectedDraftRevision = numberValue(configuredDraft.revision);
+      }
+
+      const result = await start({
+        data: {
+          championshipUuid: data.championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision,
+          expectedDraftRevision,
+        },
+      });
+
+      if (!result.ok) {
+        setMessage(result.message);
+        return;
+      }
+
+      onProjection?.(result.data);
+      setDialogOpen(false);
+      toast.success("Draft iniciado.");
+      await router.invalidate();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível iniciar o draft.");
+    } finally {
+      setBusy(false);
     }
-    await router.invalidate();
   }
 
   return (
@@ -711,69 +791,39 @@ function DraftSetup({
           </div>
         </div>
         <div className="space-y-4 border-l-0 lg:border-l lg:pl-6">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="draft-rounds">Rodadas</Label>
-              <Input
-                id="draft-rounds"
-                type="number"
-                min={1}
-                max={100}
-                value={rounds}
-                onChange={(event) => setRounds(Number(event.target.value))}
-              />
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              Parâmetros de abertura
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="draft-countdown">
-                {adminView ? "Prazo por escolha (segundos)" : "Segundos"}
-              </Label>
-              <Input
-                id="draft-countdown"
-                type="number"
-                min={0}
-                max={3_600}
-                value={countdown}
-                onChange={(event) => setCountdown(Number(event.target.value))}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            {readiness.checks.map((check) => (
-              <div key={check.key} className="flex items-center gap-2 text-sm">
-                {check.ready ? (
-                  <Check className="size-4 text-emerald-300" />
-                ) : (
-                  <CircleAlert className="size-4 text-amber-300" />
-                )}
-                <span className={check.ready ? "" : "text-muted-foreground"}>{check.label}</span>
+            <div className="mt-3 grid grid-cols-2 divide-x border-y py-3">
+              <div className="pr-4">
+                <div className="text-xs text-muted-foreground">Rodadas</div>
+                <div className="mt-1 text-lg font-semibold tabular-nums">
+                  {draft ? numberValue(draft.rounds) : "—"}
+                </div>
               </div>
-            ))}
+              <div className="pl-4">
+                <div className="text-xs text-muted-foreground">Prazo por escolha</div>
+                <div className="mt-1 text-lg font-semibold tabular-nums">
+                  {draft ? String(numberValue(draft.countdownSeconds)) + " s" : "—"}
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Ajuste os parâmetros e confira as condições no painel de início.
+            </p>
           </div>
-          {message ? (
-            <Alert variant="destructive">
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          ) : null}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              disabled={busy}
-              onClick={() => void save()}
-            >
-              {draft ? (adminView ? "Salvar configuração" : "Salvar ordem") : "Criar draft"}
-            </Button>
-            {draft ? (
-              <Button
-                className="flex-1"
-                disabled={busy || !readiness.ready}
-                onClick={() => void begin()}
-              >
-                <Play />
-                {adminView ? "Iniciar operação" : "Iniciar"}
-              </Button>
-            ) : null}
-          </div>
+          <Button
+            className="w-full"
+            disabled={busy}
+            onClick={() => {
+              setMessage(null);
+              setDialogOpen(true);
+            }}
+          >
+            <Play />
+            {draft ? "Configurar e iniciar" : "Configurar draft"}
+          </Button>
           {draft && canCancel ? (
             <Button
               variant="outline"
@@ -787,6 +837,81 @@ function DraftSetup({
           ) : null}
         </div>
       </div>
+      <Dialog open={dialogOpen} onOpenChange={(open) => !busy && setDialogOpen(open)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{draft ? "Iniciar operação do draft" : "Configurar draft"}</DialogTitle>
+            <DialogDescription>
+              Defina o ritmo da operação e confirme as condições antes de abrir a fila de escolhas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 border-y py-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="draft-rounds">Rodadas</Label>
+              <Input
+                id="draft-rounds"
+                type="number"
+                min={1}
+                max={100}
+                value={rounds}
+                onChange={(event) => setRounds(Number(event.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="draft-countdown">Prazo por escolha (segundos)</Label>
+              <Input
+                id="draft-countdown"
+                type="number"
+                min={0}
+                max={3_600}
+                value={countdown}
+                onChange={(event) => setCountdown(Number(event.target.value))}
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              Condições de início
+            </div>
+            <div className="divide-y border-y">
+              {readiness.checks.map((check) => (
+                <div key={check.key} className="flex items-center gap-3 py-3 text-sm">
+                  {check.ready ? (
+                    <Check className="size-4 shrink-0 text-emerald-300" />
+                  ) : (
+                    <CircleAlert className="size-4 shrink-0 text-amber-300" />
+                  )}
+                  <span className={check.ready ? "" : "text-muted-foreground"}>{check.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {message ? (
+            <Alert variant="destructive">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          ) : null}
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+            <Button variant="outline" disabled={busy} onClick={() => setDialogOpen(false)}>
+              Voltar
+            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              {draft ? (
+                <Button variant="outline" disabled={busy} onClick={() => void save()}>
+                  Salvar configuração
+                </Button>
+              ) : null}
+              <Button
+                disabled={busy || (draft !== null && !readiness.ready)}
+                onClick={() => void begin()}
+              >
+                <Play />
+                {busy ? "Processando…" : draft ? "Iniciar operação" : "Criar draft"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
