@@ -393,7 +393,10 @@ function DefinitionDialog({
             </Field>
           </div>
           {recipients.some((value) => value === "team" || value === "team-identity") ? (
-            <label htmlFor="aggregate-by-identity" className="flex items-start gap-3 rounded-md border p-4">
+            <label
+              htmlFor="aggregate-by-identity"
+              className="flex items-start gap-3 rounded-md border p-4"
+            >
               <input
                 id="aggregate-by-identity"
                 aria-label="Agregar por identidade de equipe"

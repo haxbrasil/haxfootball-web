@@ -104,9 +104,7 @@ export function ChampionshipHonorsWorkspace({
   const [editing, setEditing] = useState<ChampionshipHonorData | null | undefined>();
   const [awarding, setAwarding] = useState<ChampionshipHonorData | null>(null);
   const [resolving, setResolving] = useState<ChampionshipHonorData | null>(null);
-  const [orderedUuids, setOrderedUuids] = useState(() =>
-    activeHonorUuids(data.honors.items),
-  );
+  const [orderedUuids, setOrderedUuids] = useState(() => activeHonorUuids(data.honors.items));
   const [reordering, setReordering] = useState(false);
   useEffect(() => {
     setOrderedUuids(activeHonorUuids(data.honors.items));
@@ -658,8 +656,17 @@ function HonorDialog({
           </Field>
           <PolicyFields type={policyType} honor={honor} data={data} />
           {!honor ? (
-            <label htmlFor="announce-honor" className="flex items-start gap-3 rounded-md border p-4">
-              <input id="announce-honor" aria-label="Anunciar ao público agora" name="announce" type="checkbox" defaultChecked />
+            <label
+              htmlFor="announce-honor"
+              className="flex items-start gap-3 rounded-md border p-4"
+            >
+              <input
+                id="announce-honor"
+                aria-label="Anunciar ao público agora"
+                name="announce"
+                type="checkbox"
+                defaultChecked
+              />
               <span>
                 <span className="block text-sm font-medium">Anunciar ao público agora</span>
                 <span className="mt-1 block text-xs text-muted-foreground">
