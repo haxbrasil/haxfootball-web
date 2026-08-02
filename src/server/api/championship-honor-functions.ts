@@ -159,6 +159,20 @@ export const updateChampionshipHonorFn = createServerFn({ method: "POST" })
     });
   });
 
+export const reorderChampionshipHonorsFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    command.extend({ honorUuids: z.array(uuid).min(1).max(128) }),
+  )
+  .handler(async ({ data }) => {
+    const { requireAnyApiPermission } = await import("#/server/auth/session");
+    const { reorderChampionshipHonors } = await import("#/server/api/championship-api");
+    const session = await requireAnyApiPermission(["championship:admin", "championship:operate"]);
+    return reorderChampionshipHonors(data.championshipUuid, {
+      ...data,
+      actorAccountUuid: session.account.uuid,
+    });
+  });
+
 export const createChampionshipHonorGrantFn = createServerFn({ method: "POST" })
   .inputValidator(
     command.extend({

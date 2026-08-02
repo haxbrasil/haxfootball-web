@@ -1,13 +1,22 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  draggable,
+  dropTargetForElements,
+  monitorForElements,
+} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import {
   Award,
   Check,
+  ChevronDown,
+  ChevronUp,
   Crown,
   Ellipsis,
   Gauge,
   GitBranch,
+  GripVertical,
   Medal,
   Pencil,
   Plus,
@@ -52,6 +61,7 @@ import {
   previewChampionshipHonorResolutionFn,
   revokeChampionshipHonorGrantFn,
   resolveChampionshipHonorFn,
+  reorderChampionshipHonorsFn,
   updateChampionshipHonorFn,
 } from "#/server/api/championship-honor-functions";
 
@@ -88,15 +98,122 @@ export function ChampionshipHonorsWorkspace({
   data: HonorData;
   mode: "admin" | "public";
 }) {
+  const router = useRouter();
+  const reorderHonors = useServerFn(reorderChampionshipHonorsFn);
+  const workspaceRef = useRef<HTMLElement>(null);
   const [editing, setEditing] = useState<ChampionshipHonorData | null | undefined>();
   const [awarding, setAwarding] = useState<ChampionshipHonorData | null>(null);
   const [resolving, setResolving] = useState<ChampionshipHonorData | null>(null);
-  const active = data.honors.items.filter((honor) => honor.state !== "void");
+  const [orderedUuids, setOrderedUuids] = useState(() =>
+    activeHonorUuids(data.honors.items),
+  );
+  const [reordering, setReordering] = useState(false);
+  useEffect(() => {
+    setOrderedUuids(activeHonorUuids(data.honors.items));
+  }, [data.honors.items]);
+  const honorByUuid = new Map(data.honors.items.map((honor) => [honor.uuid, honor]));
+  const active = orderedUuids
+    .map((uuid) => honorByUuid.get(uuid))
+    .filter((honor): honor is ChampionshipHonorData => Boolean(honor && honor.state !== "void"));
   const inDispute = active.filter((honor) => honor.state !== "awarded");
   const awarded = active.filter((honor) => honor.state === "awarded");
 
+  async function persistOrder(next: ChampionshipHonorData[]) {
+    if (reordering || next.every((honor, index) => honor.uuid === active[index]?.uuid)) return;
+    const previous = orderedUuids;
+    const nextUuids = next.map((honor) => honor.uuid);
+    setOrderedUuids(nextUuids);
+    setReordering(true);
+    try {
+      const result = await reorderHonors({
+        data: {
+          championshipUuid: data.championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision: Number(data.championship.revision),
+          honorUuids: nextUuids,
+        },
+      });
+      if (!result.ok) {
+        setOrderedUuids(previous);
+        return toast.error(result.message);
+      }
+      await router.invalidate();
+    } catch (cause) {
+      setOrderedUuids(previous);
+      toast.error(errorMessage(cause));
+    } finally {
+      setReordering(false);
+    }
+  }
+
+  function moveHonor(honorUuid: string, direction: -1 | 1) {
+    const section = inDispute.some((honor) => honor.uuid === honorUuid) ? inDispute : awarded;
+    const from = section.findIndex((honor) => honor.uuid === honorUuid);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= section.length) return;
+    const nextSection = [...section];
+    const [moving] = nextSection.splice(from, 1);
+    nextSection.splice(to, 0, moving!);
+    void persistOrder(
+      section === inDispute ? [...nextSection, ...awarded] : [...inDispute, ...nextSection],
+    );
+  }
+
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace || mode !== "admin") return;
+    const cleanups = [
+      monitorForElements({
+        onDrop({ source, location }) {
+          if (source.data.type !== "championship-honor" || reordering) return;
+          const sourceUuid = source.data.honorUuid;
+          const target = location.current.dropTargets[0];
+          const targetUuid = target?.data.honorUuid;
+          if (
+            typeof sourceUuid !== "string" ||
+            typeof targetUuid !== "string" ||
+            sourceUuid === targetUuid ||
+            source.data.section !== target.data.section
+          ) {
+            return;
+          }
+          const section = source.data.section === "awarded" ? awarded : inDispute;
+          const nextSection = reorderHonorItems(section, sourceUuid, targetUuid);
+          void persistOrder(
+            source.data.section === "awarded"
+              ? [...inDispute, ...nextSection]
+              : [...nextSection, ...awarded],
+          );
+        },
+      }),
+    ];
+    for (const row of workspace.querySelectorAll<HTMLElement>("[data-honor-row]")) {
+      const honorUuid = row.dataset.honorRow;
+      const section = row.dataset.honorSection;
+      const handle = row.querySelector<HTMLElement>("[data-honor-drag-handle]");
+      if (!honorUuid || !section || !handle) continue;
+      cleanups.push(
+        combine(
+          draggable({
+            element: row,
+            dragHandle: handle,
+            getInitialData: () => ({ type: "championship-honor", honorUuid, section }),
+            onDragStart: () => row.setAttribute("data-dragging", "true"),
+            onDrop: () => row.removeAttribute("data-dragging"),
+          }),
+          dropTargetForElements({
+            element: row,
+            getData: () => ({ type: "championship-honor", honorUuid, section }),
+            getIsSticky: () => true,
+          }),
+        ),
+      );
+    }
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [active, awarded, inDispute, mode, reordering]);
+
   return (
-    <section className="bfl-panel overflow-hidden rounded-lg border">
+    <section ref={workspaceRef} className="bfl-panel overflow-hidden rounded-lg border">
       <header className="flex flex-col gap-4 border-b px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -125,6 +242,8 @@ export function ChampionshipHonorsWorkspace({
               onEdit={setEditing}
               onAward={setAwarding}
               onResolve={setResolving}
+              onMove={moveHonor}
+              reordering={reordering}
             />
           ) : null}
           {awarded.length ? (
@@ -136,6 +255,8 @@ export function ChampionshipHonorsWorkspace({
               onEdit={setEditing}
               onAward={setAwarding}
               onResolve={setResolving}
+              onMove={moveHonor}
+              reordering={reordering}
             />
           ) : null}
         </div>
@@ -174,6 +295,8 @@ function HonorSection({
   onEdit,
   onAward,
   onResolve,
+  onMove,
+  reordering,
 }: {
   eyebrow: string;
   items: ChampionshipHonorData[];
@@ -182,6 +305,8 @@ function HonorSection({
   onEdit: (honor: ChampionshipHonorData) => void;
   onAward: (honor: ChampionshipHonorData) => void;
   onResolve: (honor: ChampionshipHonorData) => void;
+  onMove: (honorUuid: string, direction: -1 | 1) => void;
+  reordering: boolean;
 }) {
   return (
     <div className="border-b last:border-b-0">
@@ -189,7 +314,7 @@ function HonorSection({
         {eyebrow}
       </div>
       <div className="divide-y">
-        {items.map((honor) => (
+        {items.map((honor, index) => (
           <HonorRow
             key={honor.uuid}
             honor={honor}
@@ -198,6 +323,10 @@ function HonorSection({
             onEdit={() => onEdit(honor)}
             onAward={() => onAward(honor)}
             onResolve={() => onResolve(honor)}
+            onMove={(direction) => onMove(honor.uuid, direction)}
+            canMoveUp={index > 0}
+            canMoveDown={index < items.length - 1}
+            reordering={reordering}
           />
         ))}
       </div>
@@ -212,6 +341,10 @@ function HonorRow({
   onEdit,
   onAward,
   onResolve,
+  onMove,
+  canMoveUp,
+  canMoveDown,
+  reordering,
 }: {
   honor: ChampionshipHonorData;
   data: HonorData;
@@ -219,6 +352,10 @@ function HonorRow({
   onEdit: () => void;
   onAward: () => void;
   onResolve: () => void;
+  onMove: (direction: -1 | 1) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  reordering: boolean;
 }) {
   const router = useRouter();
   const update = useServerFn(updateChampionshipHonorFn);
@@ -262,8 +399,24 @@ function HonorRow({
   }
 
   return (
-    <article className="grid gap-4 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.75fr)_auto] lg:items-center">
+    <article
+      data-honor-row={honor.uuid}
+      data-honor-section={honor.state === "awarded" ? "awarded" : "in-dispute"}
+      className="grid gap-4 px-5 py-5 transition-opacity data-[dragging=true]:opacity-45 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.75fr)_auto] lg:items-center"
+    >
       <div className="flex min-w-0 items-start gap-4">
+        {mode === "admin" ? (
+          <button
+            type="button"
+            data-honor-drag-handle
+            className="mt-2 grid size-7 shrink-0 cursor-grab place-items-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+            aria-label={`Reordenar ${honor.name}`}
+            title="Arraste para reordenar"
+            disabled={reordering}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        ) : null}
         <span className="grid size-11 shrink-0 place-items-center rounded-md border bg-muted/30 text-primary">
           <Icon className="size-5" />
         </span>
@@ -322,6 +475,13 @@ function HonorRow({
             <DropdownMenuItem onSelect={onEdit}>
               <Pencil /> Configurar
             </DropdownMenuItem>
+            <DropdownMenuItem disabled={!canMoveUp || reordering} onSelect={() => onMove(-1)}>
+              <ChevronUp /> Mover para cima
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={!canMoveDown || reordering} onSelect={() => onMove(1)}>
+              <ChevronDown /> Mover para baixo
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             {honor.state === "draft" ? (
               <DropdownMenuItem onSelect={() => void transition("announced")}>
                 <Send /> Anunciar
@@ -399,7 +559,6 @@ function HonorDialog({
               nameOverride: nullableText(form.get("nameOverride")),
               descriptionOverride: nullableText(form.get("descriptionOverride")),
               decisionPolicy: policy,
-              displayOrder: Number(form.get("displayOrder") ?? 0),
               reason: "Configuração da conquista atualizada",
             },
           })
@@ -413,7 +572,7 @@ function HonorDialog({
               nameOverride: nullableText(form.get("nameOverride")),
               descriptionOverride: nullableText(form.get("descriptionOverride")),
               decisionPolicy: policy,
-              displayOrder: Number(form.get("displayOrder") ?? 0),
+              displayOrder: data.honors.items.length,
             },
           });
       if (!result.ok) return toast.error(result.message);
@@ -466,23 +625,13 @@ function HonorDialog({
             </div>
           ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nome nesta edição">
-              <Input
-                name="nameOverride"
-                placeholder="Usar nome do catálogo"
-                defaultValue={honor?.name ?? ""}
-              />
-            </Field>
-            <Field label="Ordem de exibição">
-              <Input
-                name="displayOrder"
-                type="number"
-                min={0}
-                defaultValue={honor?.displayOrder ?? data.honors.items.length}
-              />
-            </Field>
-          </div>
+          <Field label="Nome nesta edição">
+            <Input
+              name="nameOverride"
+              placeholder="Usar nome do catálogo"
+              defaultValue={honor?.name ?? ""}
+            />
+          </Field>
           <Field label="Descrição nesta edição">
             <Textarea
               name="descriptionOverride"
@@ -921,6 +1070,27 @@ function publishedDefinitions(data: HonorData) {
       definition.versions.length > 0 &&
       definition.competitionType.uuid === data.championship.competitionType.uuid,
   );
+}
+
+function activeHonorUuids(items: ChampionshipHonorData[]) {
+  return items
+    .filter((honor) => honor.state !== "void")
+    .sort((left, right) => Number(left.displayOrder) - Number(right.displayOrder))
+    .map((honor) => honor.uuid);
+}
+
+export function reorderHonorItems(
+  items: ChampionshipHonorData[],
+  sourceUuid: string,
+  targetUuid: string,
+) {
+  const from = items.findIndex((honor) => honor.uuid === sourceUuid);
+  const to = items.findIndex((honor) => honor.uuid === targetUuid);
+  if (from < 0 || to < 0 || from === to) return items;
+  const reordered = [...items];
+  const [moving] = reordered.splice(from, 1);
+  reordered.splice(to, 0, moving!);
+  return reordered;
 }
 
 function honorStateLabel(state: ChampionshipHonorData["state"]) {

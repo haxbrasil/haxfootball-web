@@ -1,17 +1,38 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ChampionshipWorkspaceData } from "#/server/api/championship-api";
+import type {
+  ChampionshipHonorData,
+  ChampionshipWorkspaceData,
+} from "#/server/api/championship-api";
 
 vi.mock("@tanstack/react-router", async (original) => ({
   ...(await original<typeof import("@tanstack/react-router")>()),
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
 
-import { ChampionshipHonorsWorkspace } from "./honors-workspace";
+import { ChampionshipHonorsWorkspace, reorderHonorItems } from "./honors-workspace";
 
 afterEach(cleanup);
 
 describe("championship honors workspace", () => {
+  it("reorders honors directly in either direction", () => {
+    const first = honor({ name: "Primeiro" });
+    const second = honor({ name: "Segundo" });
+    const third = honor({ name: "Terceiro" });
+    const items = [first, second, third] as ChampionshipHonorData[];
+
+    expect(reorderHonorItems(items, first.uuid, third.uuid).map((item) => item.name)).toEqual([
+      "Segundo",
+      "Terceiro",
+      "Primeiro",
+    ]);
+    expect(reorderHonorItems(items, third.uuid, first.uuid).map((item) => item.name)).toEqual([
+      "Terceiro",
+      "Primeiro",
+      "Segundo",
+    ]);
+  });
+
   it("shows announced and awarded honors as distinct public facts", () => {
     const data = {
       championship: { uuid: crypto.randomUUID(), revision: 4 },

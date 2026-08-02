@@ -128,6 +128,7 @@ import type {
   DetachChampionshipMatchEvidenceInput,
   PreviewChampionshipSettlementInput,
   ReplaceChampionshipMetricMappingsInput,
+  ReorderChampionshipHonorsInput,
   SettleChampionshipMatchInput,
   UpdateChampionshipAttributionsInput,
   VoidChampionshipDraftPickInput,
@@ -598,6 +599,13 @@ export async function updateChampionshipHonor(
   return mutationResult(
     requireClient().championships.honors.update(championshipUuid, honorUuid, input),
   );
+}
+
+export async function reorderChampionshipHonors(
+  championshipUuid: string,
+  input: ReorderChampionshipHonorsInput,
+): Promise<ChampionshipMutationResult<ChampionshipHonorData[]>> {
+  return mutationResult(requireClient().championships.honors.reorder(championshipUuid, input));
 }
 
 export async function createChampionshipHonorGrant(
