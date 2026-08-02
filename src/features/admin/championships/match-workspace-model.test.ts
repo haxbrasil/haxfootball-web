@@ -3,6 +3,7 @@ import {
   appearanceFindingLabel,
   correctionImpactLabel,
   durationLabel,
+  evidenceUsesUnconfiguredProgram,
   evidenceQualityLabel,
   evidencePeriodScores,
   numberValue,
@@ -128,6 +129,34 @@ describe("championship match workspace model", () => {
         sideBAdministrativeScore: 0,
       } as never),
     ).toEqual([5, 4]);
+  });
+
+  it("accepts evidence from any active championship room program", () => {
+    const operations = {
+      evidence: {
+        rounds: [
+          {
+            provenance: {
+              program: { uuid: "haxfootball-v1" },
+            },
+          },
+        ],
+      },
+    } as never;
+
+    expect(evidenceUsesUnconfiguredProgram(operations, ["haxfootball-v2", "haxfootball-v1"])).toBe(
+      false,
+    );
+    expect(evidenceUsesUnconfiguredProgram(operations, ["haxfootball-v2"])).toBe(true);
+  });
+
+  it("keeps missing provenance and an empty program configuration permissive", () => {
+    const operations = {
+      evidence: { rounds: [{ provenance: null }] },
+    } as never;
+
+    expect(evidenceUsesUnconfiguredProgram(operations, ["haxfootball-v2"])).toBe(false);
+    expect(evidenceUsesUnconfiguredProgram(operations, [])).toBe(false);
   });
 
   it("permits outcome to differ from score for a mid-game forfeit", () => {

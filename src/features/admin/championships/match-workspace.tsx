@@ -82,6 +82,7 @@ import {
   evidencePeriodScores,
   evidenceQualityLabel,
   evidenceQualityTone,
+  evidenceUsesUnconfiguredProgram,
   methodLabel,
   numberValue,
   officialScore,
@@ -332,6 +333,9 @@ function MatchCockpit({
         <SettlementPanel
           operations={operations}
           attributions={attributions}
+          allowedProgramUuids={(data.championship.roomPrograms ?? [])
+            .filter((program) => program.state === "active")
+            .map((program) => program.uuid)}
           onOperations={onOperations}
         />
       </div>
@@ -926,7 +930,7 @@ function EvidenceSearchDialog({
               checked={includeAllPrograms}
               onCheckedChange={(value) => setIncludeAllPrograms(value === true)}
             />
-            Incluir programas diferentes do esperado
+            Incluir programas não autorizados nesta edição
           </label>
           <label
             htmlFor="show-claimed-evidence"
@@ -1016,7 +1020,7 @@ function EvidenceSearchDialog({
                       ) : null}
                       {!candidate.programCompatible ? (
                         <Badge variant="outline" className="border-amber-400/50 text-amber-300">
-                          Programa diferente
+                          Programa não autorizado
                         </Badge>
                       ) : null}
                       {candidate.alreadyClaimed ? (
@@ -1576,10 +1580,12 @@ function AttributionControls({
 function SettlementPanel({
   operations,
   attributions,
+  allowedProgramUuids,
   onOperations,
 }: {
   operations: MatchOperations;
   attributions: AttributionDraft[];
+  allowedProgramUuids: readonly string[];
   onOperations: (operations: ChampionshipMatchOperationsData) => void;
 }) {
   const preview = useServerFn(previewChampionshipMatchSettlementFn);
@@ -1733,14 +1739,8 @@ function SettlementPanel({
             onChange={(outcome) => setDraft((current) => ({ ...current, sideBOutcome: outcome }))}
           />
         </div>
-        {operations.evidence &&
-        operations.match.expectedProgram &&
-        operations.evidence.rounds.some(
-          (round) =>
-            round.provenance &&
-            round.provenance.program.uuid !== operations.match.expectedProgram?.uuid,
-        ) ? (
-          <Field label="Motivo para programa diferente">
+        {evidenceUsesUnconfiguredProgram(operations, allowedProgramUuids) ? (
+          <Field label="Justificativa para programa não autorizado">
             <Textarea
               rows={2}
               value={draft.programMismatchReason ?? ""}

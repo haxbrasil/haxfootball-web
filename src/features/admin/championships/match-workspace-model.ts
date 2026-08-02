@@ -104,6 +104,18 @@ export function defaultSettlementDraft(operations: MatchOperations): SettlementD
   };
 }
 
+export function evidenceUsesUnconfiguredProgram(
+  operations: MatchOperations,
+  allowedProgramUuids: readonly string[],
+): boolean {
+  if (!operations.evidence || allowedProgramUuids.length === 0) return false;
+
+  const allowedPrograms = new Set(allowedProgramUuids);
+  return operations.evidence.rounds.some(
+    (round) => round.provenance !== null && !allowedPrograms.has(round.provenance.program.uuid),
+  );
+}
+
 export function outcomeForScores(sideA: number, sideB: number): [MatchOutcome, MatchOutcome] {
   if (sideA === sideB) return ["draw", "draw"];
   return sideA > sideB ? ["win", "loss"] : ["loss", "win"];
