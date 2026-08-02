@@ -8,9 +8,12 @@ import {
   Check,
   CircleAlert,
   Clock3,
+  ClipboardCheck,
   Crown,
   History,
+  ListChecks,
   Play,
+  Radio,
   RotateCcw,
   Search,
   Shield,
@@ -142,7 +145,19 @@ export function DraftWorkspace({
   }, [data.championship.uuid, draftState, fetchDraft, poll]);
 
   if (!draft) {
-    return mode === "admin" ? <DraftSetup data={data} draft={null} /> : <DraftEmptyState />;
+    return mode === "admin" ? (
+      <AdminDraftWorkspace
+        data={data}
+        draft={null}
+        session={session}
+        nowMs={nowMs}
+        canCancel={canCancel}
+        onCancel={() => setCancelOpen(true)}
+        onProjection={setProjection}
+      />
+    ) : (
+      <DraftEmptyState />
+    );
   }
 
   const completedPicks = filledTurns(draft).length;
@@ -177,38 +192,46 @@ export function DraftWorkspace({
     }
   }
 
+  const publicWorkspace = (
+    <div className="space-y-5">
+      <DraftStatusBand data={data} draft={draft} nowMs={nowMs} mode={mode} session={session} />
+      <DraftBoard data={data} draft={draft} nowMs={nowMs} mode={mode} />
+      <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_350px]">
+        <PlayerPool
+          data={data}
+          draft={draft}
+          session={session}
+          mode={mode}
+          onProjection={setProjection}
+        />
+        <DraftFeed
+          data={data}
+          draft={draft}
+          mode={mode}
+          canCancel={canCancel}
+          onCancel={() => setCancelOpen(true)}
+          onProjection={setProjection}
+        />
+      </div>
+      <TradeDesk data={data} draft={draft} mode={mode} />
+    </div>
+  );
+
   return (
     <>
-      <div className="space-y-5">
-        {draft.state === "setup" && mode === "admin" ? (
-          <DraftSetup
-            data={data}
-            draft={draft}
-            canCancel={canCancel}
-            onCancel={() => setCancelOpen(true)}
-          />
-        ) : null}
-        <DraftStatusBand data={data} draft={draft} nowMs={nowMs} mode={mode} session={session} />
-        <DraftBoard data={data} draft={draft} nowMs={nowMs} mode={mode} />
-        <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_350px]">
-          <PlayerPool
-            data={data}
-            draft={draft}
-            session={session}
-            mode={mode}
-            onProjection={setProjection}
-          />
-          <DraftFeed
-            data={data}
-            draft={draft}
-            mode={mode}
-            canCancel={canCancel}
-            onCancel={() => setCancelOpen(true)}
-            onProjection={setProjection}
-          />
-        </div>
-        <TradeDesk data={data} draft={draft} mode={mode} />
-      </div>
+      {mode === "admin" ? (
+        <AdminDraftWorkspace
+          data={data}
+          draft={draft}
+          session={session}
+          nowMs={nowMs}
+          canCancel={canCancel}
+          onCancel={() => setCancelOpen(true)}
+          onProjection={setProjection}
+        />
+      ) : (
+        publicWorkspace
+      )}
       <Dialog open={cancelOpen} onOpenChange={(open) => !cancelBusy && setCancelOpen(open)}>
         <DialogContent>
           <DialogHeader>
@@ -251,14 +274,306 @@ export function DraftWorkspace({
   );
 }
 
+function AdminDraftWorkspace({
+  data,
+  draft,
+  session,
+  nowMs,
+  canCancel,
+  onCancel,
+  onProjection,
+}: {
+  data: DraftData;
+  draft: Draft | null;
+  session: ApiAccountSession | null;
+  nowMs: number;
+  canCancel: boolean;
+  onCancel: () => void;
+  onProjection: (draft: DraftData["draft"]) => void;
+}) {
+  const isSetup = draft === null || draft.state === "setup";
+
+  return (
+    <div className="space-y-4">
+      <AdminDraftHeader data={data} draft={draft} />
+      {isSetup ? (
+        <DraftSetup data={data} draft={draft} adminView canCancel={canCancel} onCancel={onCancel} />
+      ) : (
+        <>
+          {draft.state === "live" ? <AdminDraftControlStrip draft={draft} nowMs={nowMs} /> : null}
+          <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_330px]">
+            <div className="min-w-0 space-y-4">
+              <DraftBoard data={data} draft={draft} nowMs={nowMs} mode="admin" adminView />
+              {draft.state === "live" ? (
+                <PlayerPool
+                  data={data}
+                  draft={draft}
+                  session={session}
+                  mode="admin"
+                  adminView
+                  onProjection={onProjection}
+                />
+              ) : null}
+            </div>
+            <AdminDraftMonitor draft={draft} nowMs={nowMs} />
+          </div>
+          <DraftFeed
+            data={data}
+            draft={draft}
+            mode="admin"
+            adminView
+            canCancel={canCancel}
+            onCancel={onCancel}
+            onProjection={onProjection}
+          />
+          <TradeDesk data={data} draft={draft} mode="admin" adminView />
+        </>
+      )}
+    </div>
+  );
+}
+
+function AdminDraftHeader({ data, draft }: { data: DraftData; draft: Draft | null }) {
+  const completed = draft ? filledTurns(draft).length : 0;
+  const total = draft?.turns.items.length ?? 0;
+  const available = draft?.availableParticipants.items.length ?? 0;
+  const teamCount = draft?.teams.length ?? data.teams.items.length;
+  const stateLabel = draft ? draftStateLabel(draft.state) : "Ainda não configurado";
+
+  return (
+    <section className="bfl-panel overflow-hidden rounded-xl border">
+      <div className="flex flex-col gap-5 border-b px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <ClipboardCheck className="size-4 text-primary" />
+            Operação do draft
+            <Badge variant="outline" className="normal-case tracking-normal">
+              {stateLabel}
+            </Badge>
+            {draft?.state === "live" ? (
+              <Badge className="border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
+                <Radio className="size-3" />
+                Sincronização ativa
+              </Badge>
+            ) : null}
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight">Gestão do draft</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Configure a ordem, acompanhe escolhas em tempo real e mantenha correções, elencos e
+            trocas sob controle da organização.
+          </p>
+        </div>
+        <div className="text-left text-sm text-muted-foreground lg:text-right">
+          <div className="font-medium text-foreground">{data.championship.name}</div>
+          <div>{data.championship.editionLabel ?? "Edição atual"}</div>
+        </div>
+      </div>
+      <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+        <AdminDraftMetric
+          label="Escolhas registradas"
+          value={draft ? String(completed) + "/" + String(total) : "—"}
+        />
+        <AdminDraftMetric label="Equipes" value={String(teamCount)} />
+        <AdminDraftMetric
+          label="Participantes disponíveis"
+          value={draft ? String(available) : "—"}
+        />
+        <AdminDraftMetric label="Rodadas" value={draft ? String(numberValue(draft.rounds)) : "—"} />
+      </div>
+    </section>
+  );
+}
+
+function AdminDraftMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-4 py-3 sm:px-5">
+      <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function AdminDraftControlStrip({ draft, nowMs }: { draft: Draft; nowMs: number }) {
+  const turn = activeTurn(draft);
+  const overdue = overdueTurns(draft);
+  const eligible = eligibleTurns(draft);
+  const remaining = secondsUntil(turn?.deadlineAt, nowMs);
+
+  return (
+    <section className="bfl-panel overflow-hidden rounded-xl border border-primary/30">
+      <div className="grid gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+            <ListChecks className="size-4" />
+            Turno em operação
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h3 className="text-lg font-semibold">
+              {turn ? turn.team.name : "Aguardando a próxima escolha"}
+            </h3>
+            {turn ? (
+              <span className="text-sm text-muted-foreground">
+                Rodada {numberValue(turn.round)} · escolha #{numberValue(turn.sequence)} ·{" "}
+                {roundDirection(numberValue(turn.round)) === "forward" ? "ida" : "volta"}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {turn
+              ? turn.state === "overdue"
+                ? "O prazo terminou; a equipe ainda pode concluir esta escolha."
+                : "Registre a escolha no painel de participantes disponíveis."
+              : "O draft atualiza a fila assim que uma escolha é confirmada."}
+          </p>
+        </div>
+        <div className="grid grid-cols-3 divide-x border-y py-2 text-center sm:border-y-0 sm:py-0 lg:min-w-[360px]">
+          <div className="px-3">
+            <div className="text-xs text-muted-foreground">Prazo</div>
+            <div className="mt-1 font-mono text-lg font-semibold tabular-nums">
+              {countdownLabel(remaining)}
+            </div>
+          </div>
+          <div className="px-3">
+            <div className="text-xs text-muted-foreground">Elegíveis</div>
+            <div className="mt-1 text-lg font-semibold tabular-nums">{eligible.length}</div>
+          </div>
+          <div className="px-3">
+            <div className="text-xs text-muted-foreground">Atrasadas</div>
+            <div
+              className={
+                overdue.length
+                  ? "mt-1 text-lg font-semibold tabular-nums text-amber-200"
+                  : "mt-1 text-lg font-semibold tabular-nums"
+              }
+            >
+              {overdue.length}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AdminDraftMonitor({ draft, nowMs }: { draft: Draft; nowMs: number }) {
+  const turn = activeTurn(draft);
+  const overdue = overdueTurns(draft);
+  const recent = filledTurns(draft).slice(0, 6);
+  const remaining = secondsUntil(turn?.deadlineAt, nowMs);
+
+  return (
+    <aside className="bfl-panel overflow-hidden rounded-xl border">
+      <div className="flex items-start justify-between gap-3 border-b px-4 py-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="size-4 text-primary" />
+            <h3 className="font-semibold">Monitor operacional</h3>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Estado da fila, prazos e escolhas recentes.
+          </p>
+        </div>
+        <Badge variant="outline">{draftStateLabel(draft.state)}</Badge>
+      </div>
+      <div className="px-4 py-4">
+        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          Próxima operação
+        </div>
+        {turn ? (
+          <div className="mt-2">
+            <div className="text-lg font-semibold">{turn.team.name}</div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Escolha #{numberValue(turn.sequence)} · {countdownLabel(remaining)}
+            </div>
+            <div className="mt-3 border-l-2 border-primary/60 pl-3 text-sm text-muted-foreground">
+              A escolha continua disponível após o prazo.
+            </div>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {draft.state === "completed"
+              ? "Todas as escolhas foram encerradas."
+              : draft.state === "canceled"
+                ? "Este draft foi cancelado; o histórico permanece disponível para consulta."
+                : "A fila será aberta quando o draft começar."}
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-2 divide-x border-y">
+        <AdminDraftMetric label="Turnos atrasados" value={String(overdue.length)} />
+        <AdminDraftMetric label="Escolhas concluídas" value={String(filledTurns(draft).length)} />
+      </div>
+      <div className="border-b px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Atenção operacional
+          </div>
+          {overdue.length ? (
+            <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-200">
+              {overdue.length} pendente{overdue.length === 1 ? "" : "s"}
+            </Badge>
+          ) : null}
+        </div>
+        {overdue.length ? (
+          <div className="mt-3 space-y-2">
+            {overdue.slice(0, 4).map((item) => (
+              <div key={item.uuid} className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate">{item.team.name}</span>
+                <span className="shrink-0 text-xs tabular-nums text-amber-200">
+                  #{numberValue(item.sequence)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">Nenhum prazo exige atenção agora.</p>
+        )}
+      </div>
+      <div>
+        <div className="flex items-center gap-2 px-4 py-4">
+          <History className="size-4 text-muted-foreground" />
+          <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Últimas escolhas
+          </div>
+        </div>
+        {recent.length ? (
+          <div className="divide-y border-t">
+            {recent.slice(0, 5).map((item) => (
+              <div key={item.uuid} className="flex items-center gap-3 px-4 py-3">
+                <span className="grid size-7 shrink-0 place-items-center border text-xs font-semibold tabular-nums">
+                  {numberValue(item.sequence)}
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">
+                    {item.selectedParticipant?.displayName ?? "Participante"}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">{item.team.name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="border-t px-4 py-6 text-sm text-muted-foreground">
+            O histórico aparecerá aqui quando a primeira escolha for registrada.
+          </p>
+        )}
+      </div>
+    </aside>
+  );
+}
+
 function DraftSetup({
   data,
   draft,
+  adminView = false,
   canCancel = false,
   onCancel,
 }: {
   data: DraftData;
   draft: Draft | null;
+  adminView?: boolean;
   canCancel?: boolean;
   onCancel?: () => void;
 }) {
@@ -351,11 +666,15 @@ function DraftSetup({
         <div>
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
-            <h2 className="font-semibold">Preparação do draft</h2>
+            <h2 className="font-semibold">
+              {adminView ? "Configuração operacional" : "Preparação do draft"}
+            </h2>
             <Badge variant="outline">Serpentina</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Defina a prioridade inicial. A direção alterna automaticamente a cada rodada.
+            {adminView
+              ? "Defina a ordem das equipes, o número de rodadas e o prazo de cada escolha antes de abrir a operação."
+              : "Defina a prioridade inicial. A direção alterna automaticamente a cada rodada."}
           </p>
           <div className="mt-4 divide-y border-y">
             {teamIds.map((teamId, index) => {
@@ -405,7 +724,9 @@ function DraftSetup({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="draft-countdown">Segundos</Label>
+              <Label htmlFor="draft-countdown">
+                {adminView ? "Prazo por escolha (segundos)" : "Segundos"}
+              </Label>
               <Input
                 id="draft-countdown"
                 type="number"
@@ -440,7 +761,7 @@ function DraftSetup({
               disabled={busy}
               onClick={() => void save()}
             >
-              {draft ? "Salvar ordem" : "Criar draft"}
+              {draft ? (adminView ? "Salvar configuração" : "Salvar ordem") : "Criar draft"}
             </Button>
             {draft ? (
               <Button
@@ -449,7 +770,7 @@ function DraftSetup({
                 onClick={() => void begin()}
               >
                 <Play />
-                Iniciar
+                {adminView ? "Iniciar operação" : "Iniciar"}
               </Button>
             ) : null}
           </div>
@@ -548,11 +869,13 @@ function DraftBoard({
   draft,
   nowMs,
   mode,
+  adminView = false,
 }: {
   data: DraftData;
   draft: Draft;
   nowMs: number;
   mode: "admin" | "public";
+  adminView?: boolean;
 }) {
   const capUnits = numberValue(data.championship.rules.salary.capUnits);
   const teams = [...draft.teams].sort(
@@ -573,11 +896,12 @@ function DraftBoard({
         <div>
           <div className="flex items-center gap-2">
             <Crown className="size-4 text-primary" />
-            <h3 className="font-semibold">Quadro do draft</h3>
+            <h3 className="font-semibold">{adminView ? "Grade operacional" : "Quadro do draft"}</h3>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Uma coluna por equipe e uma linha por rodada. A ordem serpentina fica visível o tempo
-            todo.
+            {adminView
+              ? "Confira a ordem, o estado de cada turno e o impacto atual no elenco de cada equipe."
+              : "Uma coluna por equipe e uma linha por rodada. A ordem serpentina fica visível o tempo todo."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -687,7 +1011,11 @@ function DraftBoard({
                       </div>
                       {isLive && canPick ? (
                         <Badge className="mt-3" variant="secondary">
-                          {mode === "admin" ? "Escolha disponível" : "Sua escolha"}
+                          {adminView
+                            ? "Ação disponível"
+                            : mode === "admin"
+                              ? "Escolha disponível"
+                              : "Sua escolha"}
                         </Badge>
                       ) : null}
                     </>
@@ -701,9 +1029,13 @@ function DraftBoard({
         </div>
       </div>
       <div className="border-t px-4 py-3 text-xs text-muted-foreground sm:px-6">
-        {isLive
-          ? "Atualiza automaticamente enquanto o draft está ao vivo."
-          : "A ordem e as escolhas confirmadas permanecem registradas neste quadro."}
+        {adminView
+          ? isLive
+            ? "A grade é atualizada automaticamente. Use o histórico abaixo para revisar uma escolha."
+            : "A ordem e as escolhas confirmadas permanecem registradas para a organização."
+          : isLive
+            ? "Atualiza automaticamente enquanto o draft está ao vivo."
+            : "A ordem e as escolhas confirmadas permanecem registradas neste quadro."}
       </div>
     </section>
   );
@@ -713,12 +1045,14 @@ function PlayerPool({
   data,
   draft,
   mode,
+  adminView = false,
   onProjection,
 }: {
   data: DraftData;
   draft: Draft;
   session: ApiAccountSession | null;
   mode: "admin" | "public";
+  adminView?: boolean;
   onProjection: (draft: DraftData["draft"]) => void;
 }) {
   const pick = useServerFn(makeChampionshipDraftPickFn);
@@ -773,19 +1107,28 @@ function PlayerPool({
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <UserPlus className="size-4 text-primary" />
-            <h3 className="font-semibold">Mesa de escolha</h3>
+            <h3 className="font-semibold">
+              {adminView ? "Registro de escolha" : "Mesa de escolha"}
+            </h3>
           </div>
           <p className="text-sm text-muted-foreground">
             {targetTurn && targetTeam
-              ? `${mode === "admin" ? "Escolha para" : "Sua vez: "}${targetTeam.name} · rodada ${numberValue(targetTurn.round)} · escolha #${numberValue(targetTurn.sequence)}`
-              : "Acompanhe as opções que continuam disponíveis."}
+              ? (adminView ? "Registrar para" : mode === "admin" ? "Escolha para" : "Sua vez: ") +
+                targetTeam.name +
+                " · rodada " +
+                numberValue(targetTurn.round) +
+                " · escolha #" +
+                numberValue(targetTurn.sequence)
+              : adminView
+                ? "Selecione um participante e registre a próxima escolha da fila."
+                : "Acompanhe as opções que continuam disponíveis."}
           </p>
         </div>
         <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Buscar jogador"
-            placeholder="Buscar jogador"
+            aria-label={adminView ? "Buscar participante para registrar" : "Buscar jogador"}
+            placeholder={adminView ? "Buscar participante" : "Buscar jogador"}
             className="pl-9"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -860,7 +1203,13 @@ function PlayerPool({
                     onClick={() => setPendingPick(participant)}
                   >
                     <UserPlus />
-                    {busyId === participant.uuid ? "Escolhendo…" : "Escolher"}
+                    {busyId === participant.uuid
+                      ? adminView
+                        ? "Registrando…"
+                        : "Escolhendo…"
+                      : adminView
+                        ? "Registrar escolha"
+                        : "Escolher"}
                   </Button>
                 ) : (
                   <span className="text-xs text-muted-foreground">Disponível</span>
@@ -873,10 +1222,13 @@ function PlayerPool({
       <Dialog open={pendingPick !== null} onOpenChange={(open) => !open && setPendingPick(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar escolha</DialogTitle>
+            <DialogTitle>
+              {adminView ? "Registrar escolha para a equipe" : "Confirmar escolha"}
+            </DialogTitle>
             <DialogDescription>
-              A escolha entra no quadro ao vivo imediatamente e não pode ser alterada sem uma
-              correção da organização.
+              {adminView
+                ? "Confirme o participante, a equipe e o turno. O registro atualizará a grade operacional imediatamente."
+                : "A escolha entra no quadro ao vivo imediatamente e não pode ser alterada sem uma correção da organização."}
             </DialogDescription>
           </DialogHeader>
           {pendingPick && targetTurn && targetTeam ? (
@@ -908,7 +1260,7 @@ function PlayerPool({
               onClick={() => pendingPick && void choose(pendingPick)}
             >
               <Check />
-              {busyId ? "Confirmando…" : "Confirmar escolha"}
+              {busyId ? "Confirmando…" : adminView ? "Registrar escolha" : "Confirmar escolha"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -921,6 +1273,7 @@ function DraftFeed({
   data,
   draft,
   mode,
+  adminView = false,
   canCancel,
   onCancel,
   onProjection,
@@ -928,6 +1281,7 @@ function DraftFeed({
   data: DraftData;
   draft: Draft;
   mode: "admin" | "public";
+  adminView?: boolean;
   canCancel: boolean;
   onCancel: () => void;
   onProjection: (draft: DraftData["draft"]) => void;
@@ -998,8 +1352,14 @@ function DraftFeed({
     <aside className="bfl-panel overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
-          <h3 className="text-sm font-semibold">Linha do tempo</h3>
-          <p className="text-xs text-muted-foreground">Escolhas mais recentes primeiro</p>
+          <h3 className="text-sm font-semibold">
+            {adminView ? "Histórico e correções" : "Linha do tempo"}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {adminView
+              ? "Revise escolhas, reabra um turno e acompanhe o registro operacional."
+              : "Escolhas mais recentes primeiro"}
+          </p>
         </div>
         <History className="size-4 text-muted-foreground" />
       </div>
@@ -1027,7 +1387,7 @@ function DraftFeed({
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="Revisar e corrigir escolha"
+                  title={adminView ? "Revisar impacto da escolha" : "Revisar e corrigir escolha"}
                   onClick={() => void inspect(turn)}
                 >
                   <RotateCcw />
@@ -1037,7 +1397,9 @@ function DraftFeed({
           ))
         ) : (
           <div className="px-5 py-12 text-center text-sm text-muted-foreground">
-            A primeira escolha aparecerá aqui.
+            {adminView
+              ? "O histórico aparecerá aqui quando a primeira escolha for registrada."
+              : "A primeira escolha aparecerá aqui."}
           </div>
         )}
       </div>
@@ -1068,9 +1430,13 @@ function DraftFeed({
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Corrigir escolha</DialogTitle>
+            <DialogTitle>
+              {adminView ? "Revisar escolha do registro" : "Corrigir escolha"}
+            </DialogTitle>
             <DialogDescription>
-              A escolha será reaberta imediatamente. Confira todo o impacto antes de confirmar.
+              {adminView
+                ? "Confira o impacto no elenco e na fila antes de reabrir esta escolha."
+                : "A escolha será reaberta imediatamente. Confira todo o impacto antes de confirmar."}
             </DialogDescription>
           </DialogHeader>
           {!impact ? (
@@ -1118,10 +1484,12 @@ function TradeDesk({
   data,
   draft,
   mode,
+  adminView = false,
 }: {
   data: DraftData;
   draft: Draft;
   mode: "admin" | "public";
+  adminView?: boolean;
 }) {
   const createTrade = useServerFn(createChampionshipTradeFn);
   const accept = useServerFn(acceptChampionshipTradeFn);
@@ -1186,10 +1554,14 @@ function TradeDesk({
         <div>
           <div className="flex items-center gap-2">
             <ArrowLeftRight className="size-4 text-primary" />
-            <h3 className="font-semibold">Central de trocas</h3>
+            <h3 className="font-semibold">
+              {adminView ? "Operação de trocas" : "Central de trocas"}
+            </h3>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Valores congelados e impacto no teto são revalidados na confirmação.
+            {adminView
+              ? "Acompanhe propostas, decisões e impacto no elenco antes da confirmação."
+              : "Valores congelados e impacto no teto são revalidados na confirmação."}
           </p>
         </div>
         <Badge variant="outline">{data.trades.items.length} negociações visíveis</Badge>
@@ -1295,7 +1667,9 @@ function TradeDesk({
           })
         ) : (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">
-            Nenhuma troca concluída ou aguardando sua equipe.
+            {adminView
+              ? "Nenhuma negociação foi registrada nesta edição."
+              : "Nenhuma troca concluída ou aguardando sua equipe."}
           </div>
         )}
       </div>

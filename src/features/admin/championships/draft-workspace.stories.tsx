@@ -28,6 +28,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Setup: Story = story("setup", "admin");
+export const AdminLive: Story = story("live", "admin");
 export const Live: Story = story("live", "public");
 export const MultipleOverdue: Story = story("overdue", "admin");
 export const CompletedWithAcceptedTrade: Story = story("completed", "public");
