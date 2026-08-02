@@ -36,13 +36,15 @@ export type PeriodScore = {
 
 export type EvidenceOrientation = "aligned" | "swapped";
 
+type EvidenceScoreValue = number | string | null | undefined;
+
 export function numberValue(value: string | number | null | undefined): number {
   const result = Number(value ?? 0);
   return Number.isFinite(result) ? result : 0;
 }
 
 export function championshipEvidenceScore(
-  score: { red?: number | null; blue?: number | null } | null | undefined,
+  score: { red?: EvidenceScoreValue; blue?: EvidenceScoreValue } | null | undefined,
   orientation: EvidenceOrientation,
 ) {
   const red = numberValue(score?.red);
