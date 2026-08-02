@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, BarChart3, DoorOpen, MessageCircle, Video } from "lucide-react";
+import { Activity, BarChart3, DoorOpen, MessageCircle, Scissors, Video } from "lucide-react";
 import { ActionButton } from "#/components/ds/action-button";
 import { BrandLogo } from "#/components/ds/brand-logo";
 import { HomeSocialLink } from "./home-social-link";
@@ -38,6 +38,12 @@ export function HomeHero() {
               <Link to="/matches">
                 <Activity className="size-4" />
                 Partidas
+              </Link>
+            </ActionButton>
+            <ActionButton asChild tone="quiet">
+              <Link to="/clips">
+                <Scissors className="size-4" />
+                Clipes
               </Link>
             </ActionButton>
             <ActionButton asChild tone="quiet">

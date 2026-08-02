@@ -23,6 +23,8 @@ import { Route as AdminRoomProgramsRouteImport } from './routes/admin/room-progr
 import { Route as AdminRoomsRouteImport } from './routes/admin/rooms'
 import { Route as ChampionshipsIndexRouteImport } from './routes/championships/index'
 import { Route as ChampionshipsSlugRouteImport } from './routes/championships/$slug'
+import { Route as ClipsIndexRouteImport } from './routes/clips/index'
+import { Route as ClipsClipIdRouteImport } from './routes/clips/$clipId'
 import { Route as MatchesIndexRouteImport } from './routes/matches/index'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
 import { Route as PubsIndexRouteImport } from './routes/pubs/index'
@@ -105,6 +107,16 @@ const ChampionshipsSlugRoute = ChampionshipsSlugRouteImport.update({
   path: '/championships/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClipsIndexRoute = ClipsIndexRouteImport.update({
+  id: '/clips/',
+  path: '/clips/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClipsClipIdRoute = ClipsClipIdRouteImport.update({
+  id: '/clips/$clipId',
+  path: '/clips/$clipId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MatchesIndexRoute = MatchesIndexRouteImport.update({
   id: '/matches/',
   path: '/matches/',
@@ -175,11 +187,13 @@ export interface FileRoutesByFullPath {
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/championships/$slug': typeof ChampionshipsSlugRoute
+  '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/championships/': typeof ChampionshipsIndexRoute
+  '/clips/': typeof ClipsIndexRoute
   '/matches/': typeof MatchesIndexRoute
   '/pubs/': typeof PubsIndexRoute
   '/rooms/': typeof RoomsIndexRoute
@@ -202,11 +216,13 @@ export interface FileRoutesByTo {
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/championships/$slug': typeof ChampionshipsSlugRoute
+  '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account': typeof AccountIndexRoute
   '/admin': typeof AdminIndexRoute
   '/championships': typeof ChampionshipsIndexRoute
+  '/clips': typeof ClipsIndexRoute
   '/matches': typeof MatchesIndexRoute
   '/pubs': typeof PubsIndexRoute
   '/rooms': typeof RoomsIndexRoute
@@ -230,11 +246,13 @@ export interface FileRoutesById {
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/championships/$slug': typeof ChampionshipsSlugRoute
+  '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/championships/': typeof ChampionshipsIndexRoute
+  '/clips/': typeof ClipsIndexRoute
   '/matches/': typeof MatchesIndexRoute
   '/pubs/': typeof PubsIndexRoute
   '/rooms/': typeof RoomsIndexRoute
@@ -259,11 +277,13 @@ export interface FileRouteTypes {
     | '/admin/room-programs'
     | '/admin/rooms'
     | '/championships/$slug'
+    | '/clips/$clipId'
     | '/matches/$matchId'
     | '/rooms/$roomId'
     | '/account/'
     | '/admin/'
     | '/championships/'
+    | '/clips/'
     | '/matches/'
     | '/pubs/'
     | '/rooms/'
@@ -286,11 +306,13 @@ export interface FileRouteTypes {
     | '/admin/room-programs'
     | '/admin/rooms'
     | '/championships/$slug'
+    | '/clips/$clipId'
     | '/matches/$matchId'
     | '/rooms/$roomId'
     | '/account'
     | '/admin'
     | '/championships'
+    | '/clips'
     | '/matches'
     | '/pubs'
     | '/rooms'
@@ -313,11 +335,13 @@ export interface FileRouteTypes {
     | '/admin/room-programs'
     | '/admin/rooms'
     | '/championships/$slug'
+    | '/clips/$clipId'
     | '/matches/$matchId'
     | '/rooms/$roomId'
     | '/account/'
     | '/admin/'
     | '/championships/'
+    | '/clips/'
     | '/matches/'
     | '/pubs/'
     | '/rooms/'
@@ -341,11 +365,13 @@ export interface RootRouteChildren {
   AdminRoomProgramsRoute: typeof AdminRoomProgramsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
   ChampionshipsSlugRoute: typeof ChampionshipsSlugRoute
+  ClipsClipIdRoute: typeof ClipsClipIdRoute
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
   RoomsRoomIdRoute: typeof RoomsRoomIdRoute
   AccountIndexRoute: typeof AccountIndexRoute
   AdminIndexRoute: typeof AdminIndexRoute
   ChampionshipsIndexRoute: typeof ChampionshipsIndexRoute
+  ClipsIndexRoute: typeof ClipsIndexRoute
   MatchesIndexRoute: typeof MatchesIndexRoute
   PubsIndexRoute: typeof PubsIndexRoute
   RoomsIndexRoute: typeof RoomsIndexRoute
@@ -457,6 +483,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChampionshipsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clips/': {
+      id: '/clips/'
+      path: '/clips'
+      fullPath: '/clips/'
+      preLoaderRoute: typeof ClipsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clips/$clipId': {
+      id: '/clips/$clipId'
+      path: '/clips/$clipId'
+      fullPath: '/clips/$clipId'
+      preLoaderRoute: typeof ClipsClipIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/matches/': {
       id: '/matches/'
       path: '/matches'
@@ -549,11 +589,13 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoomProgramsRoute: AdminRoomProgramsRoute,
   AdminRoomsRoute: AdminRoomsRoute,
   ChampionshipsSlugRoute: ChampionshipsSlugRoute,
+  ClipsClipIdRoute: ClipsClipIdRoute,
   MatchesMatchIdRoute: MatchesMatchIdRoute,
   RoomsRoomIdRoute: RoomsRoomIdRoute,
   AccountIndexRoute: AccountIndexRoute,
   AdminIndexRoute: AdminIndexRoute,
   ChampionshipsIndexRoute: ChampionshipsIndexRoute,
+  ClipsIndexRoute: ClipsIndexRoute,
   MatchesIndexRoute: MatchesIndexRoute,
   PubsIndexRoute: PubsIndexRoute,
   RoomsIndexRoute: RoomsIndexRoute,

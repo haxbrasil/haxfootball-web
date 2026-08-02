@@ -7,11 +7,15 @@ import {
   type components,
   type ConfirmAccountResponse,
   type Championship,
+  type Clip,
   type CreateRoleInput,
+  type CreateClipInput,
   type CreateRoomInput,
   type ListAccountsResponse,
   type ListChampionshipsResponse,
   type ListChampionshipHonorDefinitionsResponse,
+  type ListClipsQuery,
+  type ListClipsResponse,
   type ListMatchesResponse,
   type ListPermissionsResponse,
   type ListPlayerMatchesResponse,
@@ -45,6 +49,7 @@ import {
   type DiscoverRoomProgramVersionsResponse,
   type UpdateRoomProgramInput,
   type UpdateRoleInput,
+  type UpdateClipInput,
 } from "@haxbrasil/haxfootball-api-sdk";
 import type { PageInfo, PaginationQuery } from "#/lib/pagination/page";
 import type { Serializable } from "#/server/api/championship-api";
@@ -70,6 +75,8 @@ import { cachedJson, deleteCachedJson } from "#/server/cache";
 import { getServerEnv } from "#/server/env";
 
 export type { ListMatchesResponse, ListRoomsResponse, MatchSummary };
+
+export type { Clip, ListClipsResponse };
 
 export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];
 export type ListAccountLinkedSessionEntriesResponse = ListPlayersResponse;
@@ -193,6 +200,16 @@ export type MatchDetail = {
   featuredMetrics: WebQueryMatchMetricsResponse["meta"]["featuredMetrics"];
   visualizations: import("#/features/visualizations/types").VisualizationDashboard;
 };
+
+export type ClipMutationResult =
+  | {
+      ok: true;
+      clip: Clip;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
 
 export async function getMatchVisualizations(id: string) {
   const client = getApiClient();
@@ -433,6 +450,62 @@ export async function listMatches(query: PaginationQuery = {}): Promise<ListMatc
         async () => (await unwrap(client.matches.list(apiQuery))) ?? emptyPage(),
       )
     : emptyPage();
+}
+
+export async function listClips(query: ListClipsQuery = {}): Promise<ListClipsResponse> {
+  const client = getApiClient();
+
+  return client
+    ? ((await unwrap(client.clips.list(query))) ?? emptyPage<Clip>())
+    : emptyPage<Clip>();
+}
+
+export async function getClip(id: string): Promise<Clip | null> {
+  const client = getApiClient();
+
+  return client ? await unwrap(client.clips.get(id)) : null;
+}
+
+export async function createClip(input: CreateClipInput): Promise<ClipMutationResult> {
+  const client = getApiClient();
+
+  if (!client) {
+    return {
+      ok: false,
+      message: "O serviço de clipes não está disponível.",
+    };
+  }
+
+  const result = await client.clips.create(input);
+
+  return result.ok ? { ok: true, clip: result.data } : { ok: false, message: result.error.message };
+}
+
+export async function updateClip(id: string, input: UpdateClipInput): Promise<ClipMutationResult> {
+  const client = getApiClient();
+
+  if (!client) {
+    return {
+      ok: false,
+      message: "O serviço de clipes não está disponível.",
+    };
+  }
+
+  const result = await client.clips.update(id, input);
+
+  return result.ok ? { ok: true, clip: result.data } : { ok: false, message: result.error.message };
+}
+
+export async function archiveClip(id: string): Promise<boolean> {
+  const client = getApiClient();
+
+  if (!client) {
+    return false;
+  }
+
+  const result = await client.clips.archive(id);
+
+  return result.ok;
 }
 
 export async function countMatches(): Promise<number> {

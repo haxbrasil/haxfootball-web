@@ -1,6 +1,6 @@
 type InternalNavigationItem = {
   label: string;
-  to: "/" | "/admin" | "/championships" | "/matches" | "/pubs" | "/rooms";
+  to: "/" | "/admin" | "/championships" | "/clips" | "/matches" | "/pubs" | "/rooms";
 };
 
 type ExternalNavigationItem = {
@@ -16,6 +16,7 @@ export function getNavigation(): NavigationItem[] {
     { to: "/pubs", label: "Pubs" },
     { to: "/championships", label: "Campeonatos" },
     { to: "/matches", label: "Partidas" },
+    { to: "/clips", label: "Clipes" },
     { to: "/rooms", label: "Salas" },
     { href: "https://videos.bfl.haxbrasil.com/", label: "Vídeos" },
   ];

@@ -287,6 +287,16 @@ export async function getCurrentSession(): Promise<ApiAccountSession | null> {
   return (await getCredentialSession()) ?? (await getDiscordSession());
 }
 
+export async function requireCurrentSession(): Promise<ApiAccountSession> {
+  const session = await getCurrentSession();
+
+  if (!session) {
+    throw redirect({ to: "/account/login" });
+  }
+
+  return session;
+}
+
 export async function requireApiPermission(permission: string): Promise<ApiAccountSession> {
   const session = await getCurrentSession();
 

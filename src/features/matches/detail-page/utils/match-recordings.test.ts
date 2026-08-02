@@ -7,11 +7,16 @@ describe("matchRecordingOptions", () => {
       matchRecordingOptions({
         kind: "single",
         id: "match-1",
-        recording: { url: "https://recs.example/single.hbr2" },
+        recording: {
+          id: "recording-1",
+          format: "hbr2",
+          url: "https://recs.example/single.hbr2",
+        },
       } as never),
     ).toEqual([
       {
-        id: "match-1",
+        id: "recording-1",
+        format: "hbr2",
         label: "Partida",
         url: "https://recs.example/single.hbr2",
       },
@@ -27,7 +32,13 @@ describe("matchRecordingOptions", () => {
             kind: "sequential",
             number: 1,
             matchId: "round-1",
-            match: { recording: { url: "https://recs.example/1.hbr2" } },
+            match: {
+              recording: {
+                id: "recording-1",
+                format: "hbr2",
+                url: "https://recs.example/1.hbr2",
+              },
+            },
           },
           {
             kind: "sequential",
@@ -38,18 +49,26 @@ describe("matchRecordingOptions", () => {
           {
             kind: "extra-time",
             matchId: "extra-time",
-            match: { recording: { url: "https://recs.example/extra.hbr2" } },
+            match: {
+              recording: {
+                id: "recording-extra",
+                format: "hbr2",
+                url: "https://recs.example/extra.hbr2",
+              },
+            },
           },
         ],
       } as never),
     ).toEqual([
       {
-        id: "round-1",
+        id: "recording-1",
+        format: "hbr2",
         label: "1º tempo",
         url: "https://recs.example/1.hbr2",
       },
       {
-        id: "extra-time",
+        id: "recording-extra",
+        format: "hbr2",
         label: "Prorrogação",
         url: "https://recs.example/extra.hbr2",
       },

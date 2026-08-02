@@ -4,8 +4,11 @@ import { emptyPage } from "#/lib/pagination/page";
 import { implementedAdminPermissions, visibleAdminSections } from "#/features/admin/admin-sections";
 import {
   countMatches,
+  archiveClip,
+  createClip,
   createRole,
   disableMatchEvent,
+  getClip,
   getMatch,
   getMatchMetrics,
   getMatchVisualizations,
@@ -17,6 +20,7 @@ import {
   getStatsCategoryRankings,
   listAccountLinkedMatches,
   listAccountLinkedSessionEntries,
+  listClips,
   listAdminAccountResources,
   listAdminOverviewResources,
   listAdminRoleResources,
@@ -24,11 +28,13 @@ import {
   listPublicAccounts,
   listRooms,
   updateAccountRole,
+  updateClip,
   updateRole,
   upsertLocalizedValues,
 } from "#/server/api/haxfootball";
 import {
   getCurrentSession,
+  requireCurrentSession,
   requireAnyApiPermission,
   requireApiPermission,
 } from "#/server/auth/session";
@@ -37,6 +43,27 @@ import type { AccountLinkedSessionEntry, ListMatchesResponse } from "./haxfootba
 
 const idInput = z.object({
   id: z.string().min(1),
+});
+
+const clipTickInput = z.number().int().min(0).max(2_147_483_647);
+const clipListInput = z
+  .object({
+    cursor: z.string().min(1).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    recordingId: z.string().min(1).optional(),
+  })
+  .optional();
+const createClipInput = z.object({
+  recordingId: z.string().min(1),
+  startTick: clipTickInput,
+  endTick: clipTickInput,
+  title: z.string().trim().max(120).optional(),
+});
+const updateClipInput = z.object({
+  id: z.string().min(1),
+  startTick: clipTickInput.optional(),
+  endTick: clipTickInput.optional(),
+  title: z.string().trim().max(120).nullable().optional(),
 });
 
 const paginationInput = z
@@ -118,6 +145,42 @@ export const listMatchesFn = createServerFn({ method: "GET" })
   .handler(({ data }) => listMatches(data ?? {}));
 
 export const countMatchesFn = createServerFn({ method: "GET" }).handler(() => countMatches());
+
+export const listClipsFn = createServerFn({ method: "GET" })
+  .inputValidator(clipListInput)
+  .handler(({ data }) => listClips(data ?? {}));
+
+export const getClipFn = createServerFn({ method: "GET" })
+  .inputValidator(idInput)
+  .handler(({ data }) => getClip(data.id));
+
+export const createClipFn = createServerFn({ method: "POST" })
+  .inputValidator(createClipInput)
+  .handler(async ({ data }) => {
+    await requireCurrentSession();
+
+    return createClip(data);
+  });
+
+export const updateClipFn = createServerFn({ method: "POST" })
+  .inputValidator(updateClipInput)
+  .handler(async ({ data }) => {
+    await requireCurrentSession();
+
+    const { id, ...body } = data;
+
+    return updateClip(id, body);
+  });
+
+export const archiveClipFn = createServerFn({ method: "POST" })
+  .inputValidator(idInput)
+  .handler(async ({ data }) => {
+    await requireCurrentSession();
+
+    return (await archiveClip(data.id))
+      ? ({ ok: true } as const)
+      : ({ ok: false, message: "Não foi possível arquivar o clipe." } as const);
+  });
 
 export const getMatchFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)

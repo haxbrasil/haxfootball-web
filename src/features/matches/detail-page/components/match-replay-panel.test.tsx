@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MatchReplayPanel } from "./match-replay-panel";
 
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => async () => undefined,
+}));
+
 vi.mock("@haxbrasil/haxfootball-replay", () => ({
   HaxFootballReplayPlayer: ({ source }: { source: string }) => (
     <div data-testid="replay-player">{source}</div>
@@ -27,12 +31,24 @@ describe("MatchReplayPanel", () => {
                 kind: "sequential",
                 number: 1,
                 matchId: "round-1",
-                match: { recording: { url: "https://recs.example/1.hbr2" } },
+                match: {
+                  recording: {
+                    id: "recording-1",
+                    format: "hbr2",
+                    url: "https://recs.example/1.hbr2",
+                  },
+                },
               },
               {
                 kind: "extra-time",
                 matchId: "extra-time",
-                match: { recording: { url: "https://recs.example/extra.hbr2" } },
+                match: {
+                  recording: {
+                    id: "recording-extra",
+                    format: "hbr2",
+                    url: "https://recs.example/extra.hbr2",
+                  },
+                },
               },
             ],
           } as never
@@ -45,7 +61,7 @@ describe("MatchReplayPanel", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Tempo da gravação"), {
-      target: { value: "extra-time" },
+      target: { value: "recording-extra" },
     });
 
     expect((await screen.findByTestId("replay-player")).textContent).toBe(
