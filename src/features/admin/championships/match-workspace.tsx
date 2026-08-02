@@ -1750,8 +1750,8 @@ function SettlementPanel({
           </p>
           {draft.sideAAdministrativeScore > 0 || draft.sideBAdministrativeScore > 0 ? (
             <p className="mt-2 text-xs text-amber-200">
-              Esses pontos são um ajuste oficial, não um segundo tempo. Para usá-los, selecione um
-              método manual ou de desistência.
+              Pontos administrativos registram um ajuste oficial da organização. Métodos
+              compatíveis: Manual, Desistência durante o jogo ou Registro histórico.
             </p>
           ) : null}
         </div>
