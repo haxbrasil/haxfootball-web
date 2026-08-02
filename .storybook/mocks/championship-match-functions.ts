@@ -5,6 +5,7 @@ async function unavailableInStorybook(): Promise<never> {
 export const attachChampionshipMatchEvidenceFn = unavailableInStorybook;
 export const detachChampionshipMatchEvidenceFn = unavailableInStorybook;
 export const getChampionshipMatchOperationsFn = unavailableInStorybook;
+export const getPublicChampionshipMatchFn = unavailableInStorybook;
 export const getChampionshipStatisticsFn = unavailableInStorybook;
 export const listChampionshipEvidenceCandidatesFn = unavailableInStorybook;
 export const listChampionshipMetricMappingsFn = unavailableInStorybook;

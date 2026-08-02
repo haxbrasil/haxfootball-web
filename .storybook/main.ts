@@ -36,6 +36,12 @@ const config: StorybookConfig = {
       ...config.resolve,
       alias: {
         ...(!Array.isArray(config.resolve?.alias) ? config.resolve?.alias : {}),
+        "@tanstack/react-start/server-only": fileURLToPath(
+          new URL("./mocks/react-start-server-only.ts", import.meta.url),
+        ),
+        "@tanstack/react-start/server": fileURLToPath(
+          new URL("./mocks/react-start-server.ts", import.meta.url),
+        ),
         "@tanstack/react-start": fileURLToPath(new URL("./mocks/react-start.ts", import.meta.url)),
         "#/server/api/championship-functions": fileURLToPath(
           new URL("./mocks/championship-functions.ts", import.meta.url),

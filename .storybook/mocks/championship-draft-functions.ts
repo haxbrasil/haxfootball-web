@@ -4,6 +4,7 @@ async function unavailableInStorybook(): Promise<never> {
 
 export const acceptChampionshipTradeFn = unavailableInStorybook;
 export const cancelChampionshipTradeFn = unavailableInStorybook;
+export const cancelChampionshipDraftFn = unavailableInStorybook;
 export const configureChampionshipDraftFn = unavailableInStorybook;
 export const createChampionshipTradeFn = unavailableInStorybook;
 export const endChampionshipDraftFn = unavailableInStorybook;
