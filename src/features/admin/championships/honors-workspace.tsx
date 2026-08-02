@@ -379,6 +379,9 @@ function HonorDialog({
   const selectedDefinition = definitions.find((definition) =>
     definition.versions.some((version) => version.uuid === definitionVersionUuid),
   );
+  const selectedVersion = selectedDefinition?.versions.find(
+    (version) => version.uuid === definitionVersionUuid,
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -446,7 +449,7 @@ function HonorDialog({
                 {definitions.flatMap((definition) =>
                   definition.versions.slice(0, 1).map((version) => (
                     <NativeSelectOption key={version.uuid} value={version.uuid}>
-                      {definition.draft.name} · versão {version.version}
+                      {version.name}
                     </NativeSelectOption>
                   )),
                 )}
@@ -454,11 +457,11 @@ function HonorDialog({
             </Field>
           ) : null}
 
-          {selectedDefinition ? (
+          {selectedVersion ? (
             <div className="rounded-md border bg-muted/20 p-4 text-sm">
-              <div className="font-medium">{selectedDefinition.draft.name}</div>
+              <div className="font-medium">{selectedVersion.name}</div>
               <div className="mt-1 text-muted-foreground">
-                {selectedDefinition.draft.description ?? "Definição publicada"}
+                {selectedVersion.description ?? "Definição publicada"}
               </div>
             </div>
           ) : null}
