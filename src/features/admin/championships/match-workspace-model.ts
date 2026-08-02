@@ -106,15 +106,15 @@ export function defaultSettlementDraft(operations: MatchOperations): SettlementD
     : null;
   const useEvidenceScore = operations.evidence !== null && operations.result?.method === "played";
   const sideA = useEvidenceScore
-    ? evidenceScore?.a ?? 0
+    ? (evidenceScore?.a ?? 0)
     : operations.result
-    ? numberValue(operations.result.sideAPlayedScore)
-    : evidenceScore?.a ?? 0;
+      ? numberValue(operations.result.sideAPlayedScore)
+      : (evidenceScore?.a ?? 0);
   const sideB = useEvidenceScore
-    ? evidenceScore?.b ?? 0
+    ? (evidenceScore?.b ?? 0)
     : operations.result
-    ? numberValue(operations.result.sideBPlayedScore)
-    : evidenceScore?.b ?? 0;
+      ? numberValue(operations.result.sideBPlayedScore)
+      : (evidenceScore?.b ?? 0);
   const outcomes = outcomeForScores(sideA, sideB);
 
   return {
@@ -123,8 +123,8 @@ export function defaultSettlementDraft(operations: MatchOperations): SettlementD
     sideBPlayedScore: sideB,
     sideAAdministrativeScore: numberValue(operations.result?.sideAAdministrativeScore),
     sideBAdministrativeScore: numberValue(operations.result?.sideBAdministrativeScore),
-    sideAOutcome: useEvidenceScore ? outcomes[0] : operations.result?.sideAOutcome ?? outcomes[0],
-    sideBOutcome: useEvidenceScore ? outcomes[1] : operations.result?.sideBOutcome ?? outcomes[1],
+    sideAOutcome: useEvidenceScore ? outcomes[0] : (operations.result?.sideAOutcome ?? outcomes[0]),
+    sideBOutcome: useEvidenceScore ? outcomes[1] : (operations.result?.sideBOutcome ?? outcomes[1]),
     evidenceQualityReviewed: operations.evidence?.quality === "complete",
     programMismatchReason: null,
     note: operations.result?.note ?? null,
