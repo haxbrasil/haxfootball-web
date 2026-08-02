@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { EntityPicker } from "#/components/ds/forms/entity-picker";
 import {
   Dialog,
   DialogContent,
@@ -1342,20 +1343,21 @@ function TradeSide({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={playerSelectId}>Jogador</Label>
-        <NativeSelect
+        <EntityPicker
           id={playerSelectId}
           value={playerId}
-          onChange={(event) => onPlayer(event.target.value)}
-        >
-          <NativeSelectOption value="">Selecione</NativeSelectOption>
-          {team?.roster
+          onValueChange={onPlayer}
+          ariaLabel={`Jogador de ${team?.name ?? label}`}
+          placeholder="Selecionar jogador"
+          searchPlaceholder="Buscar jogador da equipe…"
+          emptyLabel="Nenhum jogador elegível nesta equipe."
+          options={team?.roster
             .filter((member) => member.role === "player")
-            .map((member) => (
-              <NativeSelectOption key={member.participantUuid} value={member.participantUuid}>
-                {member.displayName}
-              </NativeSelectOption>
-            ))}
-        </NativeSelect>
+            .map((member) => ({
+              value: member.participantUuid,
+              label: member.displayName,
+            })) ?? []}
+        />
       </div>
     </div>
   );

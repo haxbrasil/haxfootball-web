@@ -41,6 +41,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { EntityPicker } from "#/components/ds/forms/entity-picker";
 import { Checkbox } from "#/components/ui/checkbox";
 import {
   Dialog,
@@ -1958,15 +1959,25 @@ function ParticipantSelect({
   return (
     <div className="space-y-2">
       <Label htmlFor={selectId}>{label}</Label>
-      <NativeSelect id={selectId} value={value} onChange={(event) => onChange(event.target.value)}>
-        <NativeSelectOption value="">Selecione um participante</NativeSelectOption>
-        {participants.map((participant) => (
-          <NativeSelectOption key={participant.uuid} value={participant.uuid}>
-            {participant.displayName} · {participant.membership?.teamName} ·{" "}
-            {participant.priceUnits ?? 0}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
+      <EntityPicker
+        id={selectId}
+        value={value}
+        onValueChange={onChange}
+        ariaLabel={label}
+        placeholder="Selecionar participante"
+        searchPlaceholder="Buscar participante…"
+        emptyLabel="Nenhum participante encontrado."
+        options={participants.map((participant) => ({
+          value: participant.uuid,
+          label: participant.displayName,
+          detail: [
+            participant.membership?.teamName,
+            participant.priceUnits === null ? "Sem valor" : String(participant.priceUnits),
+          ]
+            .filter((part): part is string => !!part)
+            .join(" · "),
+        }))}
+      />
     </div>
   );
 }

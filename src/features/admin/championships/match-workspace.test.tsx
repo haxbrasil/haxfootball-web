@@ -148,6 +148,36 @@ describe("championship match workspace", () => {
       }),
     );
   });
+
+  it("uses the roster-backed inverted orientation recommendation when attaching evidence", async () => {
+    server.attach.mockResolvedValue({ ok: true, data: operations() });
+    const recommended = candidates();
+    recommended.items[0]!.orientationRecommendation = {
+      orientation: "swapped",
+      matchedPlayers: 5,
+      opposingPlayers: 0,
+    };
+
+    render(
+      <MatchWorkspace
+        data={workspace()}
+        selectedMatchUuid={matchUuid}
+        onSelectMatch={vi.fn()}
+        initialOperations={operations()}
+        initialCandidates={recommended}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Buscar evidência" }));
+    expect(screen.getByText("Usará lados invertidos")).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: "Vincular" })[0]!);
+
+    await waitFor(() =>
+      expect(server.attach).toHaveBeenCalledWith({
+        data: expect.objectContaining({ logicalMatchId: "aa234567", orientation: "swapped" }),
+      }),
+    );
+  });
 });
 
 const championshipUuid = "10000000-0000-4000-8000-000000000001";
@@ -257,6 +287,7 @@ function evidenceCandidate(
   return {
     expectedProgram: null,
     programCompatible: true,
+    orientationRecommendation: null,
     championshipContext,
     alreadyClaimed: false,
     evidence: {

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Archive, Award, Check, Crown, Medal, Plus, Save, Sparkles, Trophy } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { EntityPicker } from "#/components/ds/forms/entity-picker";
 import {
   Dialog,
   DialogContent,
@@ -377,6 +378,9 @@ function AwardDialog({
   const initialTargetType = award?.target.type ?? "participant";
   const [targetType, setTargetType] = useState<AwardTargetType>(initialTargetType);
   const targetOptions = useMemo(() => awardTargets(data, targetType), [data, targetType]);
+  const [targetUuid, setTargetUuid] = useState(
+    award?.target.type === initialTargetType ? award.target.uuid : "",
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -390,7 +394,7 @@ function AwardDialog({
       rank: optionalInteger(form.get("rank")),
       target: {
         type: targetType,
-        uuid: String(form.get("targetUuid") ?? ""),
+        uuid: targetUuid,
       },
       displayLabel: String(form.get("displayLabel") ?? ""),
       note: nullableText(form.get("note")),
@@ -441,7 +445,10 @@ function AwardDialog({
             <Field label="Tipo de destino">
               <NativeSelect
                 value={targetType}
-                onChange={(event) => setTargetType(event.target.value as AwardTargetType)}
+                onChange={(event) => {
+                  setTargetType(event.target.value as AwardTargetType);
+                  setTargetUuid("");
+                }}
               >
                 <NativeSelectOption value="participant">Participante</NativeSelectOption>
                 <NativeSelectOption value="team">Equipe</NativeSelectOption>
@@ -451,19 +458,16 @@ function AwardDialog({
               </NativeSelect>
             </Field>
             <Field label="Destino">
-              <NativeSelect
+              <EntityPicker
                 name="targetUuid"
-                required
-                defaultValue={
-                  award?.target.type === targetType ? award.target.uuid : targetOptions[0]?.uuid
-                }
-              >
-                {targetOptions.map((option) => (
-                  <NativeSelectOption key={option.uuid} value={option.uuid}>
-                    {option.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                value={targetUuid}
+                onValueChange={setTargetUuid}
+                ariaLabel="Destino do prêmio"
+                placeholder="Selecionar destino"
+                searchPlaceholder="Buscar destino…"
+                emptyLabel="Nenhum destino disponível."
+                options={targetOptions.map((option) => ({ value: option.uuid, label: option.label }))}
+              />
             </Field>
           </div>
           <Field label="Colocação associada">
@@ -481,7 +485,7 @@ function AwardDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={busy || targetOptions.length === 0}>
+            <Button type="submit" disabled={busy || !targetUuid}>
               <Award />
               {busy ? "Registrando" : "Registrar"}
             </Button>

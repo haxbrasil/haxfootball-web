@@ -38,6 +38,7 @@ import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
+import { EntityPicker } from "#/components/ds/forms/entity-picker";
 import {
   Dialog,
   DialogContent,
@@ -772,7 +773,9 @@ function EvidenceSearchDialog({
     return () => observer.disconnect();
   }, [candidates?.nextCursor, loadMore, open]);
 
-  async function selectCandidate(logicalMatchId: string) {
+  async function selectCandidate(candidate: EvidenceCandidate) {
+    const logicalMatchId = candidate.evidence.id;
+    const recommendedOrientation = candidate.orientationRecommendation?.orientation ?? orientation;
     setMessage(null);
     setAttachingId(logicalMatchId);
     const result = await attach({
@@ -783,7 +786,7 @@ function EvidenceSearchDialog({
         expectedRevision: numberValue(operations.championshipRevision),
         expectedEvidenceRevision: numberValue(operations.match.evidenceRevision),
         logicalMatchId,
-        orientation,
+        orientation: recommendedOrientation,
         note: "Selecionada manualmente no cockpit do campeonato",
       },
     });
@@ -1023,6 +1026,13 @@ function EvidenceSearchDialog({
                           Programa não autorizado
                         </Badge>
                       ) : null}
+                      {candidate.orientationRecommendation ? (
+                        <Badge variant="outline" className="border-emerald-400/45 text-emerald-300">
+                          {candidate.orientationRecommendation.orientation === "aligned"
+                            ? "Lados compatíveis"
+                            : "Usará lados invertidos"}
+                        </Badge>
+                      ) : null}
                       {candidate.alreadyClaimed ? (
                         <Badge variant="destructive">Já vinculada</Badge>
                       ) : null}
@@ -1084,7 +1094,7 @@ function EvidenceSearchDialog({
                     <Button
                       size="sm"
                       disabled={candidate.alreadyClaimed || attachingId !== null}
-                      onClick={() => selectCandidate(candidate.evidence.id)}
+                      onClick={() => selectCandidate(candidate)}
                     >
                       {attachingId === candidate.evidence.id ? (
                         <LoaderCircle className="animate-spin" />
@@ -1547,31 +1557,31 @@ function AttributionControls({
         <NativeSelectOption value="redirect">Redirecionar</NativeSelectOption>
       </NativeSelect>
       {attribution.mode === "redirect" ? (
-        <NativeSelect
-          aria-label={`Destino de ${appearance.displayName}`}
+        <EntityPicker
+          ariaLabel={`Destino de ${appearance.displayName}`}
           value={attribution.targetParticipantUuid ?? ""}
-          onChange={(event) =>
+          onValueChange={(value) =>
             onAttributions(
               attributions.map((item, itemIndex) =>
                 itemIndex === index
                   ? {
-                      ...item,
-                      targetParticipantUuid: event.target.value || null,
-                    }
-                  : item,
+                    ...item,
+                    targetParticipantUuid: value || null,
+                  }
+                : item,
               ),
             )
           }
-        >
-          <NativeSelectOption value="">Escolha o destino</NativeSelectOption>
-          {data.participants.items
+          placeholder="Escolha o destino"
+          searchPlaceholder="Buscar participante…"
+          emptyLabel="Nenhum participante ativo encontrado."
+          options={data.participants.items
             .filter((participant) => participant.status === "active")
-            .map((participant) => (
-              <NativeSelectOption key={participant.uuid} value={participant.uuid}>
-                {participant.displayName}
-              </NativeSelectOption>
-            ))}
-        </NativeSelect>
+            .map((participant) => ({
+              value: participant.uuid,
+              label: participant.displayName,
+            }))}
+        />
       ) : null}
     </div>
   );

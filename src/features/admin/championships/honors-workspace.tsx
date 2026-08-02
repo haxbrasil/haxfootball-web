@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { formatMetricLabel } from "#/lib/stats-metrics/labels";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { EntityPicker } from "#/components/ds/forms/entity-picker";
 import {
   Dialog,
   DialogContent,
@@ -923,6 +924,7 @@ function GrantDialog({
   const router = useRouter();
   const grant = useServerFn(createChampionshipHonorGrantFn);
   const [type, setType] = useState<RecipientType>(honor.definition.recipientTypes[0]!);
+  const [targetUuid, setTargetUuid] = useState("");
   const [busy, setBusy] = useState(false);
   const options = useMemo(() => targetOptions(data, type), [data, type]);
 
@@ -937,7 +939,7 @@ function GrantDialog({
           honorUuid: honor.uuid,
           commandUuid: crypto.randomUUID(),
           expectedRevision: Number(data.championship.revision),
-          target: { type, uuid: String(form.get("targetUuid") ?? "") },
+          target: { type, uuid: targetUuid },
           rank: optionalInteger(form.get("rank")),
           note: nullableText(form.get("note")),
           reason: String(form.get("reason") ?? ""),
@@ -967,7 +969,10 @@ function GrantDialog({
           <Field label="Tipo de vencedor">
             <NativeSelect
               value={type}
-              onChange={(event) => setType(event.target.value as RecipientType)}
+              onChange={(event) => {
+                setType(event.target.value as RecipientType);
+                setTargetUuid("");
+              }}
             >
               {honor.definition.recipientTypes.map((value) => (
                 <NativeSelectOption key={value} value={value}>
@@ -977,13 +982,16 @@ function GrantDialog({
             </NativeSelect>
           </Field>
           <Field label="Vencedor">
-            <NativeSelect name="targetUuid" required>
-              {options.map((option) => (
-                <NativeSelectOption key={option.uuid} value={option.uuid}>
-                  {option.label}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+            <EntityPicker
+              name="targetUuid"
+              value={targetUuid}
+              onValueChange={setTargetUuid}
+              ariaLabel="Vencedor"
+              placeholder="Selecionar vencedor"
+              searchPlaceholder="Buscar vencedor…"
+              emptyLabel="Nenhum vencedor elegível encontrado."
+              options={options.map((option) => ({ value: option.uuid, label: option.label }))}
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
             <Field label="Posição">
@@ -1006,7 +1014,7 @@ function GrantDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={busy || options.length === 0}>
+            <Button type="submit" disabled={busy || !targetUuid}>
               <Award /> {busy ? "Confirmando" : "Confirmar vencedor"}
             </Button>
           </DialogFooter>
