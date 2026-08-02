@@ -85,6 +85,7 @@ import {
   evidenceQualityLabel,
   evidenceQualityTone,
   evidenceUsesUnconfiguredProgram,
+  methodDescription,
   methodLabel,
   numberValue,
   officialScore,
@@ -1544,6 +1545,7 @@ function AttributionControls({
   return (
     <div className={compact ? "grid gap-2" : "flex min-w-72 gap-2"}>
       <NativeSelect
+        className="min-w-44 shrink-0"
         aria-label={`Atribuição de ${appearance.displayName}`}
         value={attribution.mode}
         onChange={(event) =>
@@ -1682,9 +1684,9 @@ function SettlementPanel({
         description="Resultado, estatísticas e progressão em uma decisão"
       />
       <div className="space-y-5 p-4 sm:p-5">
-        {message ? <InlineMessage message={message} /> : null}
         <Field label="Método">
           <NativeSelect
+            className="min-w-52"
             value={draft.method}
             onChange={(event) =>
               setDraft((current) => ({
@@ -1709,6 +1711,7 @@ function SettlementPanel({
             ))}
           </NativeSelect>
         </Field>
+        <p className="-mt-3 text-xs text-muted-foreground">{methodDescription(draft.method)}</p>
         <div>
           <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
             Camadas do placar
@@ -1745,6 +1748,12 @@ function SettlementPanel({
           <p className="mt-2 text-[11px] text-muted-foreground">
             Pontos administrativos contam para a equipe, nunca para estatísticas individuais.
           </p>
+          {draft.sideAAdministrativeScore > 0 || draft.sideBAdministrativeScore > 0 ? (
+            <p className="mt-2 text-xs text-amber-200">
+              Esses pontos são um ajuste oficial, não um segundo tempo. Para usá-los, selecione um
+              método manual ou de desistência.
+            </p>
+          ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <OutcomeField
@@ -1815,6 +1824,7 @@ function SettlementPanel({
             ))}
           </ul>
         ) : null}
+        {message ? <InlineMessage message={message} /> : null}
         <Button className="w-full" disabled={busy || issues.length > 0} onClick={previewDecision}>
           {correction ? <History /> : <Check />}
           {busy

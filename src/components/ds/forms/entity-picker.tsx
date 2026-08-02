@@ -83,11 +83,20 @@ export function EntityPicker({
           aria-label={ariaLabel}
           aria-expanded={open}
           disabled={disabled}
-          className={cn("w-full justify-between font-normal", className)}
+          className={cn(
+            "group w-full justify-between font-normal hover:border-ring hover:bg-muted/80 hover:text-foreground",
+            '[aria-expanded="true"]:border-ring [aria-expanded="true"]:bg-muted [aria-expanded="true"]:text-foreground',
+            className,
+          )}
         >
           <span className="flex min-w-0 items-center gap-2">
             <UserRound className="size-4 shrink-0 text-muted-foreground" />
-            <span className={cn("truncate", !selected && "text-muted-foreground")}>
+            <span
+              className={cn(
+                "truncate",
+                !selected && "text-muted-foreground group-hover:text-foreground",
+              )}
+            >
               {selected?.label ?? placeholder}
             </span>
           </span>
@@ -110,7 +119,7 @@ export function EntityPicker({
                 value={option.value}
                 disabled={option.disabled}
                 onSelect={() => select(option.value)}
-                className="min-h-11"
+                className="min-h-11 hover:bg-muted/80 hover:text-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
               >
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">

@@ -232,6 +232,28 @@ describe("championship match workspace model", () => {
     expect(issues).toHaveLength(3);
   });
 
+  it("requires a compatible method for administrative score adjustments", () => {
+    const issues = validateSettlementDraft(
+      {
+        method: "played",
+        sideAPlayedScore: 14,
+        sideBPlayedScore: 24,
+        sideAAdministrativeScore: 24,
+        sideBAdministrativeScore: 7,
+        sideAOutcome: "win",
+        sideBOutcome: "loss",
+        evidenceQualityReviewed: true,
+        programMismatchReason: null,
+        note: null,
+      },
+      true,
+    );
+
+    expect(issues).toContain(
+      "Para incluir pontos administrativos, escolha Manual, Desistência durante o jogo ou Registro histórico.",
+    );
+  });
+
   it.each([
     [0, "00:00"],
     [59, "00:59"],

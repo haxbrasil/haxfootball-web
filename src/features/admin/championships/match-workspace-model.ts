@@ -160,6 +160,15 @@ export function officialScore(draft: SettlementDraft): [number, number] {
 export function validateSettlementDraft(draft: SettlementDraft, hasEvidence: boolean): string[] {
   const issues: string[] = [];
 
+  if (
+    (draft.sideAAdministrativeScore > 0 || draft.sideBAdministrativeScore > 0) &&
+    !["manual", "mid-game-forfeit", "historical"].includes(draft.method)
+  ) {
+    issues.push(
+      "Para incluir pontos administrativos, escolha Manual, Desistência durante o jogo ou Registro histórico.",
+    );
+  }
+
   if (draft.method === "played" && !hasEvidence) {
     issues.push("Vincule uma partida registrada antes de usar o método jogado.");
   }
@@ -190,6 +199,19 @@ export function validateSettlementDraft(draft: SettlementDraft, hasEvidence: boo
   }
 
   return issues;
+}
+
+export function methodDescription(method: SettlementMethod): string {
+  return {
+    played: "Usa o placar da evidência registrada.",
+    manual:
+      "Define o resultado oficial pela decisão da organização; a evidência pode continuar sustentando estatísticas.",
+    "full-forfeit": "Registra uma vitória por W.O. integral usando a regra da edição.",
+    "mid-game-forfeit":
+      "Registra uma desistência durante o jogo e permite o ajuste administrativo do vencedor.",
+    "double-forfeit": "Registra derrota para os dois lados e placar 0–0.",
+    historical: "Registra um resultado histórico definido pela organização.",
+  }[method];
 }
 
 export function evidenceQualityLabel(quality: string): string {
