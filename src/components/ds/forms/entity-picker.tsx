@@ -9,11 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from "#/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "#/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "#/components/ui/popover";
 import { cn } from "#/lib/utils";
 
 export type EntityPickerOption = {
@@ -98,10 +94,7 @@ export function EntityPicker({
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-[min(30rem,calc(100vw-2rem))] p-0"
-      >
+      <PopoverContent align="start" className="w-[min(30rem,calc(100vw-2rem))] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             value={query}

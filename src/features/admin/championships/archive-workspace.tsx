@@ -466,7 +466,10 @@ function AwardDialog({
                 placeholder="Selecionar destino"
                 searchPlaceholder="Buscar destino…"
                 emptyLabel="Nenhum destino disponível."
-                options={targetOptions.map((option) => ({ value: option.uuid, label: option.label }))}
+                options={targetOptions.map((option) => ({
+                  value: option.uuid,
+                  label: option.label,
+                }))}
               />
             </Field>
           </div>

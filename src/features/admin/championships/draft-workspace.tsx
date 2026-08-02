@@ -1351,12 +1351,14 @@ function TradeSide({
           placeholder="Selecionar jogador"
           searchPlaceholder="Buscar jogador da equipe…"
           emptyLabel="Nenhum jogador elegível nesta equipe."
-          options={team?.roster
-            .filter((member) => member.role === "player")
-            .map((member) => ({
-              value: member.participantUuid,
-              label: member.displayName,
-            })) ?? []}
+          options={
+            team?.roster
+              .filter((member) => member.role === "player")
+              .map((member) => ({
+                value: member.participantUuid,
+                label: member.displayName,
+              })) ?? []
+          }
         />
       </div>
     </div>

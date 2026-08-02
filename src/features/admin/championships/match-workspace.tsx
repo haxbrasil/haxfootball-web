@@ -1565,10 +1565,10 @@ function AttributionControls({
               attributions.map((item, itemIndex) =>
                 itemIndex === index
                   ? {
-                    ...item,
-                    targetParticipantUuid: value || null,
-                  }
-                : item,
+                      ...item,
+                      targetParticipantUuid: value || null,
+                    }
+                  : item,
               ),
             )
           }
