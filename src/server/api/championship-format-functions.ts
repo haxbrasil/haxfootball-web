@@ -117,6 +117,34 @@ const standingsCriterion = z.enum([
   "manual",
 ]);
 
+const standingsVisibleMetric = z.enum([
+  "played",
+  "wins",
+  "draws",
+  "losses",
+  "score-for",
+  "score-against",
+  "score-difference",
+  "points",
+]);
+
+const pointsScoring = z.object({
+  mode: z.literal("points"),
+  win: z.number().int().min(-100).max(100),
+  draw: z.number().int().min(-100).max(100),
+  loss: z.number().int().min(-100).max(100),
+});
+
+const resultsScoring = z.object({
+  mode: z.literal("results"),
+});
+
+const legacyScoring = z.object({
+  win: z.number().int().min(-100).max(100),
+  draw: z.number().int().min(-100).max(100),
+  loss: z.number().int().min(-100).max(100),
+});
+
 export const configureChampionshipStandingsFn = createServerFn({
   method: "POST",
 })
@@ -124,11 +152,8 @@ export const configureChampionshipStandingsFn = createServerFn({
     command.extend({
       stageUuid: uuid,
       expectedStageRevision: z.number().int().min(0),
-      scoring: z.object({
-        win: z.number().int().min(-100).max(100),
-        draw: z.number().int().min(-100).max(100),
-        loss: z.number().int().min(-100).max(100),
-      }),
+      scoring: z.union([pointsScoring, resultsScoring, legacyScoring]),
+      visibleMetrics: z.array(standingsVisibleMetric).min(1).max(8).optional(),
       headToHeadRestart: z.enum(["continue", "restart-for-subgroup"]),
       rules: z
         .array(

@@ -69,6 +69,24 @@ import { numberValue, type FormatProjection, type FormatStage } from "./format-w
 
 type Rule = ChampionshipStandingsData["rules"][number];
 type Criterion = Rule["criterion"];
+type ScoringMode = ChampionshipStandingsData["scoring"]["mode"];
+type VisibleMetric = ChampionshipStandingsData["visibleMetrics"][number];
+type StandingsRowData = ChampionshipStandingsData["rows"][number];
+
+const visibleMetricDefinitions: Array<{
+  key: VisibleMetric;
+  label: string;
+  className: string;
+}> = [
+  { key: "played", label: "J", className: "w-14 text-center" },
+  { key: "wins", label: "V", className: "hidden w-14 text-center sm:table-cell" },
+  { key: "draws", label: "E", className: "hidden w-14 text-center sm:table-cell" },
+  { key: "losses", label: "D", className: "hidden w-14 text-center sm:table-cell" },
+  { key: "score-for", label: "GP", className: "hidden w-20 text-center md:table-cell" },
+  { key: "score-against", label: "GC", className: "hidden w-20 text-center md:table-cell" },
+  { key: "score-difference", label: "SG", className: "w-20 text-center" },
+  { key: "points", label: "Pts", className: "w-20 text-center" },
+];
 
 export function StandingsWorkspace({
   data,
@@ -346,6 +364,10 @@ export function StandingsWorkspace({
 
 function StandingsTable({ standings }: { standings: ChampionshipStandingsData }) {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const metrics = visibleMetricDefinitions.filter((definition) =>
+    standings.visibleMetrics.includes(definition.key),
+  );
+  const columnCount = metrics.length + 3;
 
   return (
     <section className="overflow-hidden">
@@ -353,8 +375,12 @@ function StandingsTable({ standings }: { standings: ChampionshipStandingsData })
         <div>
           <h3 className="font-semibold">{standings.group.name}</h3>
           <p className="text-xs text-muted-foreground">
-            Vitória {standings.scoring.win} · empate {standings.scoring.draw} · derrota{" "}
-            {standings.scoring.loss}
+            {standings.scoring.mode === "points"
+              ? `Pontuação: vitória ${standings.scoring.win} · empate ${standings.scoring.draw} · derrota ${standings.scoring.loss}`
+              : "Classificação por resultados e desempenho"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ordenação: {standings.rules.map((rule) => criterionLabel(rule.criterion)).join(" → ")}
           </p>
         </div>
         {standings.unresolvedTies.length > 0 ? (
@@ -375,14 +401,11 @@ function StandingsTable({ standings }: { standings: ChampionshipStandingsData })
           <TableRow>
             <TableHead className="w-16 text-center">#</TableHead>
             <TableHead>Equipe</TableHead>
-            <TableHead className="w-14 text-center">J</TableHead>
-            <TableHead className="hidden w-14 text-center sm:table-cell">V</TableHead>
-            <TableHead className="hidden w-14 text-center sm:table-cell">E</TableHead>
-            <TableHead className="hidden w-14 text-center sm:table-cell">D</TableHead>
-            <TableHead className="hidden w-20 text-center md:table-cell">GP</TableHead>
-            <TableHead className="hidden w-20 text-center md:table-cell">GC</TableHead>
-            <TableHead className="w-20 text-center">SG</TableHead>
-            <TableHead className="w-20 text-center">Pts</TableHead>
+            {metrics.map((metric) => (
+              <TableHead key={metric.key} className={metric.className}>
+                {metric.label}
+              </TableHead>
+            ))}
             <TableHead className="w-12">
               <span className="sr-only">Explicação</span>
             </TableHead>
@@ -396,6 +419,8 @@ function StandingsTable({ standings }: { standings: ChampionshipStandingsData })
               qualification={standings.qualification.filter(
                 (route) => route.rank === row.rank && route.nextTeam?.uuid === row.team.uuid,
               )}
+              metrics={metrics}
+              columnCount={columnCount}
               expanded={expandedTeam === row.team.uuid}
               onExpanded={(expanded) => setExpandedTeam(expanded ? row.team.uuid : null)}
             />
@@ -409,11 +434,15 @@ function StandingsTable({ standings }: { standings: ChampionshipStandingsData })
 function StandingsRow({
   row,
   qualification,
+  metrics,
+  columnCount,
   expanded,
   onExpanded,
 }: {
   row: ChampionshipStandingsData["rows"][number];
   qualification: ChampionshipStandingsData["qualification"];
+  metrics: typeof visibleMetricDefinitions;
+  columnCount: number;
   expanded: boolean;
   onExpanded: (expanded: boolean) => void;
 }) {
@@ -464,22 +493,14 @@ function StandingsRow({
             </div>
           </div>
         </TableCell>
-        <TableCell className="text-center tabular-nums">{row.played}</TableCell>
-        <TableCell className="hidden text-center tabular-nums sm:table-cell">{row.wins}</TableCell>
-        <TableCell className="hidden text-center tabular-nums sm:table-cell">{row.draws}</TableCell>
-        <TableCell className="hidden text-center tabular-nums sm:table-cell">
-          {row.losses}
-        </TableCell>
-        <TableCell className="hidden text-center tabular-nums md:table-cell">
-          {row.scoreFor}
-        </TableCell>
-        <TableCell className="hidden text-center tabular-nums md:table-cell">
-          {row.scoreAgainst}
-        </TableCell>
-        <TableCell className="text-center tabular-nums">
-          {signed(numberValue(row.scoreDifference))}
-        </TableCell>
-        <TableCell className="text-center text-base font-bold tabular-nums">{row.points}</TableCell>
+        {metrics.map((metric) => (
+          <TableCell
+            key={metric.key}
+            className={`${metric.className} ${metric.key === "points" ? "text-base font-bold" : ""} tabular-nums`}
+          >
+            {metricValue(row, metric.key)}
+          </TableCell>
+        ))}
         <TableCell>
           <Button
             variant="ghost"
@@ -494,7 +515,7 @@ function StandingsRow({
       </TableRow>
       {expanded ? (
         <TableRow className="bg-muted/20 hover:bg-muted/20">
-          <TableCell colSpan={11} className="px-6 py-4">
+          <TableCell colSpan={columnCount} className="px-6 py-4">
             <div className="grid gap-px overflow-hidden border bg-border sm:grid-cols-2 xl:grid-cols-4">
               {row.criteria.map((criterion, index) => (
                 <div key={`${criterion.criterion}-${index}`} className="bg-background px-3 py-2">
@@ -515,6 +536,27 @@ function StandingsRow({
       ) : null}
     </>
   );
+}
+
+function metricValue(row: StandingsRowData, metric: VisibleMetric) {
+  switch (metric) {
+    case "played":
+      return row.played;
+    case "wins":
+      return row.wins;
+    case "draws":
+      return row.draws;
+    case "losses":
+      return row.losses;
+    case "score-for":
+      return row.scoreFor;
+    case "score-against":
+      return row.scoreAgainst;
+    case "score-difference":
+      return signed(numberValue(row.scoreDifference));
+    case "points":
+      return row.points ?? "—";
+  }
 }
 
 function QualificationRail({ standings }: { standings: ChampionshipStandingsData }) {
@@ -885,6 +927,10 @@ function RulesDialog({
   const [win, setWin] = useState(3);
   const [draw, setDraw] = useState(1);
   const [loss, setLoss] = useState(0);
+  const [scoringMode, setScoringMode] = useState<ScoringMode>("points");
+  const [visibleMetrics, setVisibleMetrics] = useState<VisibleMetric[]>([]);
+  const [restoredPointRules, setRestoredPointRules] = useState<Rule[]>([]);
+  const [restorePointsMetric, setRestorePointsMetric] = useState(false);
   const [restart, setRestart] = useState<"continue" | "restart-for-subgroup">("continue");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -896,12 +942,39 @@ function RulesDialog({
     setWin(numberValue(standings.scoring.win));
     setDraw(numberValue(standings.scoring.draw));
     setLoss(numberValue(standings.scoring.loss));
+    setScoringMode(standings.scoring.mode);
+    setVisibleMetrics(standings.visibleMetrics);
+    setRestoredPointRules([]);
+    setRestorePointsMetric(false);
     setRestart(standings.headToHeadRestart);
     setMessage(null);
   }, [open, standings]);
 
   function moveRule(index: number, direction: -1 | 1) {
     setRules((current) => moveItem(current, index, direction));
+  }
+
+  function changeScoringMode(next: ScoringMode) {
+    if (next === scoringMode) return;
+
+    if (next === "results") {
+      setRestoredPointRules(rules.filter((rule) => isPointCriterion(rule.criterion)));
+      setRestorePointsMetric(visibleMetrics.includes("points"));
+      setRules((current) => {
+        const compatible = current.filter((rule) => !isPointCriterion(rule.criterion));
+        return compatible.length > 0 ? compatible : [newRule("score-difference")];
+      });
+      setVisibleMetrics((current) => current.filter((metric) => metric !== "points"));
+    } else {
+      setRules((current) => [...restoredPointRules, ...current]);
+      if (restorePointsMetric) {
+        setVisibleMetrics((current) =>
+          current.includes("points") ? current : [...current, "points"],
+        );
+      }
+    }
+
+    setScoringMode(next);
   }
 
   async function submit() {
@@ -915,7 +988,9 @@ function RulesDialog({
         commandUuid: crypto.randomUUID(),
         expectedRevision: numberValue(projection.championshipRevision),
         expectedStageRevision: numberValue(standings.stage.revision),
-        scoring: { win, draw, loss },
+        scoring:
+          scoringMode === "points" ? { mode: "points", win, draw, loss } : { mode: "results" },
+        visibleMetrics,
         headToHeadRestart: restart,
         rules: rules.map((rule) => ({
           criterion: rule.criterion,
@@ -940,13 +1015,96 @@ function RulesDialog({
         <DialogHeader>
           <DialogTitle>Critérios de classificação</DialogTitle>
           <DialogDescription>
-            Os critérios são avaliados em ordem e apenas dentro de cada grupo ainda empatado.
+            Defina o modelo da etapa, a ordem de classificação e as métricas que a tabela apresenta.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <NumberField label="Vitória" value={win} onChange={setWin} />
-          <NumberField label="Empate" value={draw} onChange={setDraw} />
-          <NumberField label="Derrota" value={loss} onChange={setLoss} />
+        <div className="space-y-2">
+          <Label>Modelo da etapa</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              className={`rounded-lg border p-4 text-left transition-colors ${
+                scoringMode === "points"
+                  ? "border-primary bg-primary/12 text-foreground"
+                  : "border-border bg-background hover:border-primary/60 hover:bg-muted/40"
+              }`}
+              onClick={() => changeScoringMode("points")}
+            >
+              <span className="font-semibold">Pontuação por resultado</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Cada vitória, empate ou derrota acrescenta o valor configurado.
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg border p-4 text-left transition-colors ${
+                scoringMode === "results"
+                  ? "border-primary bg-primary/12 text-foreground"
+                  : "border-border bg-background hover:border-primary/60 hover:bg-muted/40"
+              }`}
+              onClick={() => changeScoringMode("results")}
+            >
+              <span className="font-semibold">Resultados e desempenho</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                A ordem usa vitórias, saldo, placar e os critérios definidos abaixo.
+              </span>
+            </button>
+          </div>
+        </div>
+        {scoringMode === "points" ? (
+          <div className="grid gap-4 rounded-lg border bg-muted/20 p-4 sm:grid-cols-3">
+            <NumberField label="Vitória" value={win} onChange={setWin} />
+            <NumberField label="Empate" value={draw} onChange={setDraw} />
+            <NumberField label="Derrota" value={loss} onChange={setLoss} />
+          </div>
+        ) : (
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] px-4 py-3 text-sm text-muted-foreground">
+            A classificação desta etapa usa diretamente os resultados e as métricas das partidas.
+          </div>
+        )}
+        <div className="space-y-3 rounded-lg border p-4">
+          <div>
+            <Label>Métricas visíveis</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Escolha os indicadores que aparecem na tabela. Eles são independentes da ordem de
+              classificação.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {visibleMetricDefinitions
+              .filter((metric) => scoringMode === "points" || metric.key !== "points")
+              .map((metric) => {
+                const id = `standings-metric-${metric.key}`;
+                return (
+                  <label
+                    key={metric.key}
+                    htmlFor={id}
+                    className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <Checkbox
+                      id={id}
+                      checked={visibleMetrics.includes(metric.key)}
+                      onCheckedChange={(checked) => {
+                        setVisibleMetrics((current) => {
+                          if (checked === true) {
+                            return current.includes(metric.key)
+                              ? current
+                              : [...current, metric.key];
+                          }
+                          return current.length > 1
+                            ? current.filter((value) => value !== metric.key)
+                            : current;
+                        });
+                      }}
+                    />
+                    <span>
+                      <span className="block font-medium">{metricLabel(metric.key)}</span>
+                      <span className="block text-xs text-muted-foreground">{metric.label}</span>
+                    </span>
+                  </label>
+                );
+              })}
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="head-to-head-restart">Subgrupo no confronto direto</Label>
@@ -991,7 +1149,7 @@ function RulesDialog({
                   )
                 }
               >
-                {criterionOptions.map((criterion) => (
+                {criterionOptionsForMode(scoringMode).map((criterion) => (
                   <NativeSelectOption key={criterion} value={criterion}>
                     {criterionLabel(criterion)}
                   </NativeSelectOption>
@@ -1053,18 +1211,7 @@ function RulesDialog({
           ))}
           <Button
             variant="outline"
-            onClick={() =>
-              setRules((current) => [
-                ...current,
-                {
-                  uuid: null,
-                  position: current.length,
-                  criterion: "score-difference",
-                  direction: "desc",
-                  config: null,
-                },
-              ])
-            }
+            onClick={() => setRules((current) => [...current, newRule("score-difference")])}
           >
             <Plus />
             Adicionar critério
@@ -1559,10 +1706,33 @@ const criterionOptions: Criterion[] = [
   "score-difference",
   "score-for",
   "score-against",
+  "head-to-head",
   "head-to-head-points",
   "head-to-head-score-difference",
   "manual",
 ];
+
+function isPointCriterion(criterion: Criterion) {
+  return (
+    criterion === "points" || criterion === "head-to-head" || criterion === "head-to-head-points"
+  );
+}
+
+function criterionOptionsForMode(mode: ScoringMode) {
+  return mode === "points"
+    ? criterionOptions
+    : criterionOptions.filter((criterion) => !isPointCriterion(criterion));
+}
+
+function newRule(criterion: Criterion): Rule {
+  return {
+    uuid: null,
+    position: 0,
+    criterion,
+    direction: criterion === "manual" ? "asc" : "desc",
+    config: null,
+  };
+}
 
 function criterionLabel(criterion: Criterion) {
   return {
@@ -1576,6 +1746,19 @@ function criterionLabel(criterion: Criterion) {
     "head-to-head-score-difference": "Saldo no confronto direto",
     manual: "Ordem manual",
   }[criterion];
+}
+
+function metricLabel(metric: VisibleMetric) {
+  return {
+    played: "Partidas",
+    wins: "Vitórias",
+    draws: "Empates",
+    losses: "Derrotas",
+    "score-for": "Gols marcados",
+    "score-against": "Gols sofridos",
+    "score-difference": "Saldo",
+    points: "Pontuação",
+  }[metric];
 }
 
 function scopeLabel(scope: "overall" | "head-to-head" | "manual") {
