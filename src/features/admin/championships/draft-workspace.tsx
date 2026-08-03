@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Check,
   CircleAlert,
+  ChevronDown,
   Clock3,
   ClipboardCheck,
   Crown,
@@ -36,6 +37,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "#/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
@@ -301,7 +308,7 @@ function AdminDraftWorkspace({
   return (
     <>
       <div className="space-y-4">
-        <AdminDraftHeader data={data} draft={draft} />
+        <AdminDraftHeader data={data} draft={draft} onRecord={() => setRecordedStudioOpen(true)} />
         {isSetup ? (
           <DraftSetup
             data={data}
@@ -309,7 +316,6 @@ function AdminDraftWorkspace({
             adminView
             canCancel={canCancel}
             onCancel={onCancel}
-            onRecord={() => setRecordedStudioOpen(true)}
           />
         ) : draft?.mode === "recorded" ? (
           <RecordedDraftView draft={draft} adminView />
@@ -355,12 +361,21 @@ function AdminDraftWorkspace({
   );
 }
 
-function AdminDraftHeader({ data, draft }: { data: DraftData; draft: Draft | null }) {
+function AdminDraftHeader({
+  data,
+  draft,
+  onRecord,
+}: {
+  data: DraftData;
+  draft: Draft | null;
+  onRecord: () => void;
+}) {
   const completed = draft ? filledTurns(draft).length : 0;
   const total = draft?.turns.items.length ?? 0;
   const available = draft?.availableParticipants.items.length ?? 0;
   const teamCount = draft?.teams.length ?? data.teams.items.length;
   const stateLabel = draft ? draftStateLabel(draft.state) : "Ainda não configurado";
+  const canRecord = draft === null || draft.state === "setup";
 
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
@@ -385,9 +400,27 @@ function AdminDraftHeader({ data, draft }: { data: DraftData; draft: Draft | nul
             trocas sob controle da organização.
           </p>
         </div>
-        <div className="text-left text-sm text-muted-foreground lg:text-right">
-          <div className="font-medium text-foreground">{data.championship.name}</div>
-          <div>{data.championship.editionLabel ?? "Edição atual"}</div>
+        <div className="flex items-start gap-3 lg:justify-end">
+          <div className="text-left text-sm text-muted-foreground lg:text-right">
+            <div className="font-medium text-foreground">{data.championship.name}</div>
+            <div>{data.championship.editionLabel ?? "Edição atual"}</div>
+          </div>
+          {canRecord ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shrink-0">
+                  Ações
+                  <ChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuItem onSelect={onRecord}>
+                  <History />
+                  Registrar draft realizado
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </div>
       <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
@@ -592,7 +625,6 @@ function DraftSetup({
   adminView = false,
   canCancel = false,
   onCancel,
-  onRecord,
   onProjection,
 }: {
   data: DraftData;
@@ -600,7 +632,6 @@ function DraftSetup({
   adminView?: boolean;
   canCancel?: boolean;
   onCancel?: () => void;
-  onRecord?: () => void;
   onProjection?: (draft: DraftData["draft"]) => void;
 }) {
   const configure = useServerFn(configureChampionshipDraftFn);
@@ -849,12 +880,6 @@ function DraftSetup({
               <Play />
               {draft ? "Configurar e iniciar" : "Configurar draft ao vivo"}
             </Button>
-            {adminView && onRecord ? (
-              <Button variant="outline" className="w-full" disabled={busy} onClick={onRecord}>
-                <History />
-                Registrar draft realizado
-              </Button>
-            ) : null}
           </div>
           {draft && canCancel ? (
             <Button
