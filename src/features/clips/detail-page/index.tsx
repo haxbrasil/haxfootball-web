@@ -91,7 +91,7 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Scissors className="size-4 text-primary" />
-                Prévia do clipe
+                Replay do clipe
               </CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
                 {formatClipDuration(currentClip.startTick, currentClip.endTick)}
@@ -100,40 +100,21 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             <div className="overflow-hidden rounded-2xl border bg-slate-950 shadow-inner">
-              {currentClip.preview.videoUrl ? (
-                <video
-                  controls
-                  playsInline
-                  preload="metadata"
-                  poster={currentClip.preview.posterUrl ?? undefined}
-                  src={currentClip.preview.videoUrl}
-                  aria-label={title}
-                  className="aspect-video w-full bg-black object-contain"
-                >
-                  <track
-                    kind="captions"
-                    src="data:text/vtt,WEBVTT%0A%0A"
-                    srcLang="pt-BR"
-                    label="Sem fala"
-                  />
-                </video>
-              ) : (
-                <Suspense
-                  fallback={
-                    <div className="flex aspect-video items-center justify-center">
-                      <Skeleton className="h-full w-full rounded-none" />
-                    </div>
-                  }
-                >
-                  <ReplayPlayer
-                    source={currentClip.recording.url}
-                    frameWindow={{
-                      startFrame: clipTickNumber(currentClip.startTick),
-                      endFrame: clipTickNumber(currentClip.endTick),
-                    }}
-                  />
-                </Suspense>
-              )}
+              <Suspense
+                fallback={
+                  <div className="flex aspect-video items-center justify-center">
+                    <Skeleton className="h-full w-full rounded-none" />
+                  </div>
+                }
+              >
+                <ReplayPlayer
+                  source={currentClip.recording.url}
+                  frameWindow={{
+                    startFrame: clipTickNumber(currentClip.startTick),
+                    endFrame: clipTickNumber(currentClip.endTick),
+                  }}
+                />
+              </Suspense>
             </div>
           </CardContent>
         </Card>
