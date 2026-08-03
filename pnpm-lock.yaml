@@ -1473,7 +1473,7 @@ packages:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
   '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/93e5ddc1b8c2e2e2c69892afa90091892061e218':
-    resolution: {gitHosted: true, integrity: sha512-EKVqzCFKO4Jl2e9uOmnXtayWZaAm/W8hEQp3mnLOMwTPvv+YODbuZPhsBMAjqnRnwZZSBJA7uKENUE0AE3K/HQ==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/93e5ddc1b8c2e2e2c69892afa90091892061e218}
+    resolution: {gitHosted: true, integrity: sha512-XoIUayAhUrKDpBhwCWzv/0/ROaNxqJ1gWSIMd0U3VJGTpSS+/CYVqlzWvMAr54ZYDiJ4PX26DeIFLyqVpRl4Mw==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/93e5ddc1b8c2e2e2c69892afa90091892061e218}
     version: 0.1.1
     engines: {node: '>=20'}
 
