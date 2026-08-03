@@ -206,7 +206,7 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
           Criar clipe
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex h-[min(94dvh,900px)] max-h-[calc(100dvh-1rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="!flex h-[min(94dvh,900px)] max-h-[calc(100dvh-1rem)] w-[min(96vw,1440px)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:!max-w-none">
         <DialogHeader className="shrink-0 border-b bg-muted/20 px-5 py-4 sm:px-7 sm:py-5">
           <div className="flex items-start gap-4 pr-8">
             <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/12 text-primary ring-1 ring-primary/20">
