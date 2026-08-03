@@ -379,7 +379,7 @@ function AdminDraftHeader({
 
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
-      <div className="flex flex-col gap-5 border-b px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-5 border-b px-4 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <ClipboardCheck className="size-4 text-primary" />
@@ -400,11 +400,7 @@ function AdminDraftHeader({
             trocas sob controle da organização.
           </p>
         </div>
-        <div className="flex items-start gap-3 lg:justify-end">
-          <div className="text-left text-sm text-muted-foreground lg:text-right">
-            <div className="font-medium text-foreground">{data.championship.name}</div>
-            <div>{data.championship.editionLabel ?? "Edição atual"}</div>
-          </div>
+        <div className="flex w-full flex-wrap items-start justify-end gap-3 lg:w-auto">
           {canRecord ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
