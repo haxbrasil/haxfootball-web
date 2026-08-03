@@ -9,6 +9,10 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("#/server/api/functions", () => ({
   createClipFn: vi.fn(),
+  getClipConfigurationFn: vi.fn().mockResolvedValue({
+    maxDurationSeconds: 30,
+    maxDurationFrames: 1800,
+  }),
 }));
 
 vi.mock("@haxbrasil/haxfootball-replay", () => ({
@@ -47,14 +51,14 @@ describe("ClipCreatorDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /criar clipe/i }));
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Editor de clipe" })).toBeTruthy();
-    expect(screen.getByText("Linha do tempo")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Criar clipe" })).toBeTruthy();
+    expect(screen.getByText("Janela de corte")).toBeTruthy();
     expect(screen.getByLabelText("Início do clipe")).toBeTruthy();
     expect(screen.getByLabelText("Fim do clipe")).toBeTruthy();
 
     await waitFor(() => expect(screen.getByText("10s selecionados")).toBeTruthy());
 
-    fireEvent.click(screen.getByRole("button", { name: "Replay completo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Prévia da seleção" }));
     expect(screen.getByRole("button", { name: "Parar prévia" })).toBeTruthy();
   });
 });

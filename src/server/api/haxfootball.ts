@@ -8,6 +8,7 @@ import {
   type ConfirmAccountResponse,
   type Championship,
   type Clip,
+  type ClipConfig,
   type CreateRoleInput,
   type CreateClipInput,
   type CreateRoomInput,
@@ -76,7 +77,7 @@ import { getServerEnv } from "#/server/env";
 
 export type { ListMatchesResponse, ListRoomsResponse, MatchSummary };
 
-export type { Clip, ListClipsResponse };
+export type { Clip, ClipConfig, ListClipsResponse };
 
 export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];
 export type ListAccountLinkedSessionEntriesResponse = ListPlayersResponse;
@@ -464,6 +465,12 @@ export async function getClip(id: string): Promise<Clip | null> {
   const client = getApiClient();
 
   return client ? await unwrap(client.clips.get(id)) : null;
+}
+
+export async function getClipConfiguration(): Promise<ClipConfig | null> {
+  const client = getApiClient();
+
+  return client ? await unwrap(client.clips.config()) : null;
 }
 
 export async function createClip(input: CreateClipInput): Promise<ClipMutationResult> {
