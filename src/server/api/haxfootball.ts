@@ -41,6 +41,7 @@ import {
   type Player,
   type QueryMatchMetricsInput,
   type QueryMatchMetricsResponse,
+  type Recording,
   type Role,
   type Room,
   type EventSchema,
@@ -77,7 +78,7 @@ import { getServerEnv } from "#/server/env";
 
 export type { ListMatchesResponse, ListRoomsResponse, MatchSummary };
 
-export type { Clip, ClipConfig, ListClipsResponse };
+export type { Clip, ClipConfig, ListClipsResponse, Recording };
 
 export type ClipPreview = {
   status: "pending" | "ready" | "failed";
@@ -481,6 +482,12 @@ export async function getClip(id: string): Promise<WebClip | null> {
   const client = getApiClient();
 
   return client ? ((await unwrap(client.clips.get(id))) as WebClip | null) : null;
+}
+
+export async function getRecording(id: string): Promise<Recording | null> {
+  const client = getApiClient();
+
+  return client ? await unwrap(client.recordings.get(id)) : null;
 }
 
 export async function getClipConfiguration(): Promise<ClipConfig | null> {

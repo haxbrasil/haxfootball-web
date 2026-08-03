@@ -1,7 +1,7 @@
-import { ArrowLeft, CalendarDays, Download, Film, Scissors } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, Film, Scissors } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { lazy, Suspense, type ReactNode, useEffect, useState } from "react";
+import { Suspense, type ReactNode, useEffect, useState } from "react";
 import { BroadcastPanel } from "#/components/ds/broadcast-panel";
 import { EmptyState } from "#/components/ds/app-shell";
 import { LeagueHeader } from "#/components/ds/league-header";
@@ -16,8 +16,7 @@ import {
   formatClipDuration,
   clipTickNumber,
 } from "../utils/clip-formatting";
-
-const ReplayPlayer = lazy(() => import("#/features/matches/detail-page/components/replay-player"));
+import { ClipReplayPlayer } from "./clip-replay-player";
 
 export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
   const getClip = useServerFn(getClipFn);
@@ -107,7 +106,7 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
                   </div>
                 }
               >
-                <ReplayPlayer
+                <ClipReplayPlayer
                   source={currentClip.recording.url}
                   frameWindow={{
                     startFrame: clipTickNumber(currentClip.startTick),
@@ -133,14 +132,16 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
 
           <BroadcastPanel eyebrow="Arquivo original" title="Replay completo">
             <p className="text-sm leading-6 text-muted-foreground">
-              O clipe continua conectado à gravação completa, para você voltar ao contexto sempre
-              que quiser.
+              Veja a gravação completa em sua própria página, com todos os controles do replay.
             </p>
             <Button asChild className="mt-4 w-full" variant="outline">
-              <a href={currentClip.recording.url} download>
-                <Download className="size-4" />
-                Baixar gravação original
-              </a>
+              <Link
+                to="/recordings/$recordingId"
+                params={{ recordingId: currentClip.recording.id }}
+              >
+                <ExternalLink className="size-4" />
+                Ver gravação completa
+              </Link>
             </Button>
           </BroadcastPanel>
         </div>

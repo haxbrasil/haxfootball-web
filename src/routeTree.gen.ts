@@ -28,6 +28,7 @@ import { Route as ClipsClipIdRouteImport } from './routes/clips/$clipId'
 import { Route as MatchesIndexRouteImport } from './routes/matches/index'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches/$matchId'
 import { Route as PubsIndexRouteImport } from './routes/pubs/index'
+import { Route as RecordingsRecordingIdRouteImport } from './routes/recordings/$recordingId'
 import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
 import { Route as RoomsRoomIdRouteImport } from './routes/rooms/$roomId'
 import { Route as StatsIndexRouteImport } from './routes/stats/index'
@@ -132,6 +133,11 @@ const PubsIndexRoute = PubsIndexRouteImport.update({
   path: '/pubs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecordingsRecordingIdRoute = RecordingsRecordingIdRouteImport.update({
+  id: '/recordings/$recordingId',
+  path: '/recordings/$recordingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoomsIndexRoute = RoomsIndexRouteImport.update({
   id: '/rooms/',
   path: '/rooms/',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/championships/$slug': typeof ChampionshipsSlugRoute
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
+  '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/championships/$slug': typeof ChampionshipsSlugRoute
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
+  '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account': typeof AccountIndexRoute
   '/admin': typeof AdminIndexRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/championships/$slug': typeof ChampionshipsSlugRoute
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
+  '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
   '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/championships/$slug'
     | '/clips/$clipId'
     | '/matches/$matchId'
+    | '/recordings/$recordingId'
     | '/rooms/$roomId'
     | '/account/'
     | '/admin/'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/championships/$slug'
     | '/clips/$clipId'
     | '/matches/$matchId'
+    | '/recordings/$recordingId'
     | '/rooms/$roomId'
     | '/account'
     | '/admin'
@@ -337,6 +348,7 @@ export interface FileRouteTypes {
     | '/championships/$slug'
     | '/clips/$clipId'
     | '/matches/$matchId'
+    | '/recordings/$recordingId'
     | '/rooms/$roomId'
     | '/account/'
     | '/admin/'
@@ -367,6 +379,7 @@ export interface RootRouteChildren {
   ChampionshipsSlugRoute: typeof ChampionshipsSlugRoute
   ClipsClipIdRoute: typeof ClipsClipIdRoute
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
+  RecordingsRecordingIdRoute: typeof RecordingsRecordingIdRoute
   RoomsRoomIdRoute: typeof RoomsRoomIdRoute
   AccountIndexRoute: typeof AccountIndexRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PubsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recordings/$recordingId': {
+      id: '/recordings/$recordingId'
+      path: '/recordings/$recordingId'
+      fullPath: '/recordings/$recordingId'
+      preLoaderRoute: typeof RecordingsRecordingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rooms/': {
       id: '/rooms/'
       path: '/rooms'
@@ -591,6 +611,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChampionshipsSlugRoute: ChampionshipsSlugRoute,
   ClipsClipIdRoute: ClipsClipIdRoute,
   MatchesMatchIdRoute: MatchesMatchIdRoute,
+  RecordingsRecordingIdRoute: RecordingsRecordingIdRoute,
   RoomsRoomIdRoute: RoomsRoomIdRoute,
   AccountIndexRoute: AccountIndexRoute,
   AdminIndexRoute: AdminIndexRoute,

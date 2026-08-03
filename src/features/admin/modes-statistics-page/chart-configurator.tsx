@@ -219,27 +219,47 @@ export function ChartConfigurator({
             <NativeSelectOption value="teams">Equipes do campeonato</NativeSelectOption>
           </NativeSelect>
         </Field>
-        {definition.roles.map((role) =>
-          role.multiple ? (
-            <MultipleFieldPicker
-              key={role.key}
-              role={role}
-              fields={compatibleFields(fields, role.kind)}
-              selected={readFields(current.fields[role.key])}
-              onChange={(value) => updateRole(role.key, value)}
-            />
-          ) : (
-            <Field key={role.key} label={role.label} description={role.description}>
-              <VisualizationFieldPicker
-                value={readFields(current.fields[role.key])[0] ?? ""}
-                options={compatibleFields(fields, role.kind).map(toPickerOption)}
-                onValueChange={(value) => updateRole(role.key, String(value))}
-                ariaLabel={role.label}
-                placeholder="Selecionar estatística"
+        {definition.roles.map((role) => {
+          const roleFields = compatibleFields(fields, role.kind);
+
+          if (role.multiple) {
+            return (
+              <MultipleFieldPicker
+                key={role.key}
+                role={role}
+                fields={roleFields}
+                selected={readFields(current.fields[role.key])}
+                onChange={(value) => updateRole(role.key, value)}
               />
+            );
+          }
+
+          return (
+            <Field key={role.key} label={role.label} description={role.description}>
+              {role.kind === "number" ? (
+                <VisualizationFieldPicker
+                  value={readFields(current.fields[role.key])[0] ?? ""}
+                  options={roleFields.map(toPickerOption)}
+                  onValueChange={(value) => updateRole(role.key, String(value))}
+                  ariaLabel={role.label}
+                  placeholder="Selecionar estatística"
+                />
+              ) : (
+                <NativeSelect
+                  value={readFields(current.fields[role.key])[0] ?? ""}
+                  aria-label={role.label}
+                  onChange={(event) => updateRole(role.key, event.target.value)}
+                >
+                  {roleFields.map((field) => (
+                    <NativeSelectOption key={field.key} value={field.key}>
+                      {field.label}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              )}
             </Field>
-          ),
-        )}
+          );
+        })}
       </section>
 
       <ChartSettings chart={current} update={updateSetting} />
