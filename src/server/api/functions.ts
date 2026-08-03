@@ -9,6 +9,7 @@ import {
   createRole,
   disableMatchEvent,
   getClip,
+  getClipConfiguration,
   getMatch,
   getMatchMetrics,
   getMatchVisualizations,
@@ -153,6 +154,10 @@ export const listClipsFn = createServerFn({ method: "GET" })
 export const getClipFn = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(({ data }) => getClip(data.id));
+
+export const getClipConfigurationFn = createServerFn({ method: "GET" }).handler(() =>
+  getClipConfiguration(),
+);
 
 export const createClipFn = createServerFn({ method: "POST" })
   .inputValidator(createClipInput)

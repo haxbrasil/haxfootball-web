@@ -1,19 +1,6 @@
-import {
-  Check,
-  CirclePlay,
-  Clock3,
-  Flag,
-  History,
-  Loader2,
-  Maximize2,
-  Pause,
-  Play,
-  RotateCcw,
-  Scissors,
-  Target,
-  type LucideIcon,
-} from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2, Pause, Play, Scissors } from "lucide-react";
 import {
   lazy,
   Suspense,
@@ -26,7 +13,6 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { toast } from "sonner";
-import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
   Dialog,
@@ -39,17 +25,20 @@ import {
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
-import { createClipFn } from "#/server/api/functions";
+import { createClipFn, getClipConfigurationFn } from "#/server/api/functions";
 import { type MatchRecordingOption } from "../utils/match-recordings";
 
 const ReplayPlayer = lazy(() => import("./replay-player"));
 const FRAME_RATE = 60;
+const DEFAULT_MAX_DURATION_SECONDS = 30;
 
 export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOption }) {
   const navigate = useNavigate();
+  const getClipConfiguration = useServerFn(getClipConfigurationFn);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [totalFrames, setTotalFrames] = useState(1);
+  const [maxDurationSeconds, setMaxDurationSeconds] = useState(DEFAULT_MAX_DURATION_SECONDS);
   const [startTick, setStartTick] = useState(0);
   const [endTick, setEndTick] = useState(1);
   const [currentTick, setCurrentTick] = useState(0);
@@ -61,6 +50,10 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
   const editorStateRef = useRef({ currentTick, endTick, startTick, totalFrames });
   editorStateRef.current = { currentTick, endTick, startTick, totalFrames };
 
+  const maxDurationFrames = maxDurationSeconds * FRAME_RATE;
+  const selectionDuration = Math.max(0, endTick - startTick);
+  const hasReadyReplay = totalFrames > 1;
+
   useEffect(() => {
     if (!open) {
       return;
@@ -68,6 +61,7 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
 
     setTitle("");
     setTotalFrames(1);
+    setMaxDurationSeconds(DEFAULT_MAX_DURATION_SECONDS);
     setStartTick(0);
     setEndTick(1);
     setCurrentTick(0);
@@ -77,6 +71,30 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
     setPreviewKey(0);
     setSeekRequest(undefined);
   }, [open, recording.id]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let active = true;
+
+    void getClipConfiguration()
+      .then((configuration) => {
+        if (!active || !configuration) {
+          return;
+        }
+
+        setMaxDurationSeconds(Math.max(1, configuration.maxDurationSeconds));
+      })
+      .catch(() => {
+        // The server keeps the same default when the configuration is unavailable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [getClipConfiguration, open]);
 
   useEffect(() => {
     if (!open) {
@@ -100,12 +118,13 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
         totalFrames: total,
       } = editorStateRef.current;
       const step = event.shiftKey ? FRAME_RATE : 1;
+
       if (event.key === "i") {
         event.preventDefault();
-        setStartTick(Math.min(playhead, currentEnd - 1));
+        updateRange(Math.min(playhead, currentEnd - 1), currentEnd);
       } else if (event.key === "o") {
         event.preventDefault();
-        setEndTick(Math.max(playhead, currentStart + 1));
+        updateRange(currentStart, Math.max(playhead, currentStart + 1));
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
         setCurrentTick((value) => clamp(value - step, 0, total));
@@ -117,16 +136,18 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [open]);
-
-  const selectionDuration = Math.max(0, endTick - startTick);
-  const hasReadyReplay = totalFrames > 1;
+  }, [maxDurationFrames, open]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (startTick >= endTick || endTick > totalFrames) {
       toast.error("Escolha uma janela válida para o clipe.");
+      return;
+    }
+
+    if (selectionDuration > maxDurationFrames) {
+      toast.error(`O tamanho máximo deste clipe é de ${maxDurationSeconds} segundos.`);
       return;
     }
 
@@ -158,16 +179,15 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
   }
 
   function updateRange(nextStart: number, nextEnd: number) {
-    setStartTick(clamp(nextStart, 0, Math.max(0, nextEnd - 1)));
-    setEndTick(clamp(nextEnd, Math.min(totalFrames, nextStart + 1), totalFrames));
-  }
+    const safeStart = clamp(nextStart, 0, Math.max(0, totalFrames - 1));
+    const safeEnd = clamp(
+      nextEnd,
+      safeStart + 1,
+      Math.min(totalFrames, safeStart + maxDurationFrames),
+    );
 
-  function markStart() {
-    setStartTick(Math.min(currentTick, endTick - 1));
-  }
-
-  function markEnd() {
-    setEndTick(Math.max(currentTick, startTick + 1));
+    setStartTick(safeStart);
+    setEndTick(safeEnd);
   }
 
   function previewSelection() {
@@ -177,18 +197,6 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
 
     setPreviewWindow({ startFrame: startTick, endFrame: endTick });
     setSeekRequest(startTick);
-    setPreviewing(true);
-    setPreviewKey((value) => value + 1);
-  }
-
-  function previewFullReplay() {
-    if (!hasReadyReplay) {
-      return;
-    }
-
-    setPreviewWindow(null);
-    setSeekRequest(0);
-    setCurrentTick(0);
     setPreviewing(true);
     setPreviewKey((value) => value + 1);
   }
@@ -208,53 +216,27 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
       </DialogTrigger>
       <DialogContent className="!flex h-[min(94dvh,900px)] max-h-[calc(100dvh-1rem)] w-[min(96vw,1440px)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:!max-w-none">
         <DialogHeader className="shrink-0 border-b bg-muted/20 px-5 py-4 sm:px-7 sm:py-5">
-          <div className="flex items-start gap-4 pr-8">
-            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/12 text-primary ring-1 ring-primary/20">
+          <div className="flex items-center gap-3 pr-8">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
               <Scissors className="size-5" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle className="text-xl sm:text-2xl">Editor de clipe</DialogTitle>
-                <Badge variant="outline" className="gap-1.5">
-                  <CirclePlay className="size-3.5" />
-                  Recorte preciso
-                </Badge>
-              </div>
-              <DialogDescription className="mt-1 max-w-2xl text-sm leading-6">
-                Encontre o instante certo, ajuste a janela na linha do tempo e guarde um momento
-                pronto para rever.
+            <div className="min-w-0">
+              <DialogTitle className="text-xl sm:text-2xl">Criar clipe</DialogTitle>
+              <DialogDescription className="mt-1 truncate text-sm">
+                {recording.label}
               </DialogDescription>
-            </div>
-            <div className="hidden shrink-0 items-end gap-5 text-right sm:flex">
-              <HeaderMeta label="Gravação" value={recording.label} />
-              <HeaderMeta label="Formato" value={`.${recording.format ?? "hbr2"}`} />
             </div>
           </div>
         </DialogHeader>
 
         <form id="clip-editor-form" onSubmit={handleSubmit} className="min-h-0 flex-1">
-          <div className="h-full overflow-y-auto">
-            <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <section className="min-w-0 space-y-4">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                      Prévia
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold">Reveja a gravação</h2>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    <p>Playhead</p>
-                    <p className="mt-0.5 font-semibold tabular-nums text-foreground">
-                      {formatClipTicks(currentTick)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1419] shadow-2xl shadow-black/20">
+          <div className="h-full overflow-y-auto px-4 py-5 sm:px-7 sm:py-7">
+            <div className="mx-auto max-w-[1180px]">
+              <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1419] shadow-2xl shadow-black/20">
+                <div className="relative aspect-video">
                   <Suspense
                     fallback={
-                      <div className="flex aspect-video items-center justify-center text-sm text-muted-foreground">
+                      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                         <Loader2 className="mr-2 size-4 animate-spin" />
                         Preparando a prévia…
                       </div>
@@ -269,38 +251,15 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
                       onReady={(info) => {
                         const frames = Math.max(1, info.totalFrames);
                         setTotalFrames(frames);
-                        setEndTick((value) => (value <= 1 ? frames : Math.min(value, frames)));
+                        setEndTick((value) =>
+                          value <= 1
+                            ? Math.min(frames, maxDurationFrames)
+                            : Math.min(value, frames, maxDurationFrames),
+                        );
                       }}
                       onFrameChange={(frame) => setCurrentTick(Math.max(0, frame))}
                     />
                   </Suspense>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="default"
-                    onClick={previewing ? stopPreview : previewSelection}
-                    disabled={!hasReadyReplay || saving}
-                  >
-                    {previewing ? <Pause className="size-4" /> : <Play className="size-4" />}
-                    {previewing ? "Parar prévia" : "Prévia da seleção"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={previewFullReplay}
-                    disabled={!hasReadyReplay || saving}
-                  >
-                    <RotateCcw className="size-4" />
-                    Replay completo
-                  </Button>
-                  <span className="ml-auto hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-                    <Maximize2 className="size-3.5" />
-                    Use a tela cheia do player para inspecionar detalhes
-                  </span>
                 </div>
 
                 <ClipTimeline
@@ -308,7 +267,10 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
                   startFrame={startTick}
                   endFrame={endTick}
                   currentFrame={currentTick}
+                  maxDurationSeconds={maxDurationSeconds}
+                  previewing={previewing}
                   disabled={saving || !hasReadyReplay}
+                  onPreviewToggle={previewing ? stopPreview : previewSelection}
                   onCurrentFrameChange={(frame) => {
                     setCurrentTick(frame);
                     setSeekRequest(frame);
@@ -317,84 +279,29 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
                 />
               </section>
 
-              <aside className="min-w-0 rounded-2xl border bg-muted/10">
-                <div className="flex items-start justify-between gap-3 border-b px-4 py-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                      Inspetor
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold">Janela do clipe</h2>
-                  </div>
-                  <Badge variant="secondary" className="tabular-nums">
-                    {formatClipDuration(selectionDuration)}
-                  </Badge>
+              <div className="mt-5 max-w-xl">
+                <Label htmlFor="clip-title">
+                  Nome do clipe{" "}
+                  <span className="font-normal text-muted-foreground">(opcional)</span>
+                </Label>
+                <Input
+                  id="clip-title"
+                  className="mt-2"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Ex.: touchdown no último segundo"
+                  maxLength={120}
+                  disabled={saving}
+                />
+                <div className="mt-1 flex justify-end text-xs tabular-nums text-muted-foreground">
+                  {title.length}/120
                 </div>
-
-                <div className="space-y-5 p-4">
-                  <div className="space-y-2 rounded-xl border bg-background p-3">
-                    <TimecodeRow
-                      icon={Target}
-                      label="Início"
-                      value={startTick}
-                      onUsePlayhead={markStart}
-                      disabled={saving || !hasReadyReplay}
-                    />
-                    <div className="border-t" />
-                    <TimecodeRow
-                      icon={Flag}
-                      label="Fim"
-                      value={endTick}
-                      onUsePlayhead={markEnd}
-                      disabled={saving || !hasReadyReplay}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="clip-title">Nome do clipe</Label>
-                    <Input
-                      id="clip-title"
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      placeholder="Ex.: touchdown no último segundo"
-                      maxLength={120}
-                      disabled={saving}
-                    />
-                    <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-                      <span>Opcional</span>
-                      <span className="tabular-nums">{title.length}/120</span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
-                        <Check className="size-4" />
-                      </div>
-                      <div>
-                        <p className="font-semibold">Pronto para guardar</p>
-                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                          {formatClipRange(startTick, endTick)} ·{" "}
-                          {formatClipDuration(selectionDuration)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <dl className="grid grid-cols-2 gap-3 text-xs">
-                    <MetaStat label="Duração total" value={formatClipDuration(totalFrames)} />
-                    <MetaStat label="Origem" value={recording.format?.toUpperCase() ?? "HBR2"} />
-                  </dl>
-                </div>
-              </aside>
+              </div>
             </div>
           </div>
         </form>
 
-        <DialogFooter className="shrink-0 border-t bg-background/95 px-5 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
-            <History className="size-3.5 text-primary" />
-            A gravação completa continua disponível no replay original.
-          </div>
+        <DialogFooter className="shrink-0 border-t bg-background/95 px-5 py-4 backdrop-blur sm:px-7">
           <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
             <Button
               type="button"
@@ -428,79 +335,28 @@ interface FrameWindow {
   endFrame: number;
 }
 
-function HeaderMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 max-w-40 truncate text-sm font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function TimecodeRow({
-  icon: Icon,
-  label,
-  value,
-  onUsePlayhead,
-  disabled,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number;
-  onUsePlayhead: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-        <Icon className="size-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-0.5 text-lg font-semibold tabular-nums">{formatClipTicks(value)}</p>
-      </div>
-      <Button
-        type="button"
-        size="icon-sm"
-        variant="ghost"
-        onClick={onUsePlayhead}
-        disabled={disabled}
-        aria-label={`Usar playhead como ${label.toLowerCase()}`}
-        title={`Usar playhead como ${label.toLowerCase()}`}
-      >
-        <Clock3 className="size-4" />
-      </Button>
-    </div>
-  );
-}
-
-function MetaStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-background px-3 py-2.5">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="mt-1 font-semibold tabular-nums">{value}</dd>
-    </div>
-  );
-}
-
 function ClipTimeline({
   totalFrames,
   startFrame,
   endFrame,
   currentFrame,
+  maxDurationSeconds,
+  previewing,
   disabled,
   onCurrentFrameChange,
   onRangeChange,
+  onPreviewToggle,
 }: {
   totalFrames: number;
   startFrame: number;
   endFrame: number;
   currentFrame: number;
+  maxDurationSeconds: number;
+  previewing: boolean;
   disabled: boolean;
   onCurrentFrameChange: (frame: number) => void;
   onRangeChange: (startFrame: number, endFrame: number) => void;
+  onPreviewToggle: () => void;
 }) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<"start" | "end" | null>(null);
@@ -581,30 +437,22 @@ function ClipTimeline({
   const playheadLeft = `${(clamp(currentFrame, 0, safeTotal) / safeTotal) * 100}%`;
 
   return (
-    <section
-      className="rounded-2xl border bg-muted/10 p-4 sm:p-5"
-      aria-label="Linha do tempo do clipe"
-    >
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="border-t border-white/10 bg-muted/10 p-4 sm:p-5" aria-label="Janela de corte">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Linha do tempo
+            Janela de corte
           </p>
-          <h2 className="mt-1 text-lg font-semibold">Ajuste a janela de corte</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Arraste os marcadores para escolher o momento.
+          </p>
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-primary" />
-            Seleção
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-px bg-foreground" />
-            Playhead
-          </span>
+        <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-semibold tabular-nums text-primary">
+          {formatClipDuration(endFrame - startFrame)} / {maxDurationSeconds}s
         </div>
       </div>
 
-      <div className="mt-5 px-1">
+      <div className="mt-4 px-1">
         <div className="relative h-5 text-[10px] tabular-nums text-muted-foreground">
           {ticks.map((tick) => (
             <span
@@ -619,7 +467,7 @@ function ClipTimeline({
 
         <div
           ref={timelineRef}
-          className="relative h-14 touch-none rounded-xl border bg-background/80 shadow-inner"
+          className="relative h-14 touch-none rounded-xl border border-white/10 bg-background/80 shadow-inner"
           onPointerDown={handleTrackPointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
@@ -660,12 +508,28 @@ function ClipTimeline({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span className="font-semibold text-foreground tabular-nums">
+        <span className="font-semibold tabular-nums text-foreground">
           {formatClipTicks(startFrame)} — {formatClipTicks(endFrame)}
         </span>
         <span>{formatClipDuration(endFrame - startFrame)} selecionados</span>
       </div>
-    </section>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span className="text-xs text-muted-foreground">
+          Playhead: {formatClipTicks(currentFrame)}
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant={previewing ? "default" : "outline"}
+          onClick={onPreviewToggle}
+          disabled={disabled}
+        >
+          {previewing ? <Pause className="size-4" /> : <Play className="size-4" />}
+          {previewing ? "Parar prévia" : "Prévia da seleção"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -748,8 +612,4 @@ function formatClipDuration(ticks: number) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s`;
-}
-
-function formatClipRange(startTick: number, endTick: number) {
-  return `${formatClipTicks(startTick)} — ${formatClipTicks(endTick)}`;
 }
