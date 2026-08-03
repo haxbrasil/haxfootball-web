@@ -26,7 +26,7 @@ vi.mock("@haxbrasil/haxfootball-replay", () => ({
     seekFrame?: number;
   }) => {
     useEffect(() => {
-      onReady?.({ totalFrames: 600 });
+      onReady?.({ totalFrames: 6000 });
     }, [onReady]);
     useEffect(() => {
       onFrameChange?.(seekFrame ?? 0);
@@ -56,9 +56,15 @@ describe("ClipCreatorDialog", () => {
     expect(screen.getByLabelText("Início do clipe")).toBeTruthy();
     expect(screen.getByLabelText("Fim do clipe")).toBeTruthy();
 
-    await waitFor(() => expect(screen.getByText("10s selecionados")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("30s / 30s")).toBeTruthy());
 
-    fireEvent.click(screen.getByRole("button", { name: "Prévia da seleção" }));
-    expect(screen.getByRole("button", { name: "Parar prévia" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /prévia/i })).toBeNull();
+
+    fireEvent.keyDown(screen.getByLabelText("Fim do clipe"), { key: "End" });
+    expect(screen.getByText("1m 40s / 30s")).toBeTruthy();
+    expect(screen.getByText("Reduza para até 30s")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "Salvar clipe" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });
