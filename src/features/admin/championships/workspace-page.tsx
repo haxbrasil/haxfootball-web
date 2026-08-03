@@ -171,7 +171,7 @@ export function ChampionshipWorkspacePage({
   }
 
   return (
-    <div className="min-h-dvh w-full overflow-x-clip bg-background">
+    <div className="flex min-h-dvh w-full flex-col overflow-x-clip bg-background">
       <ChampionshipWorkspaceHeader
         data={data}
         inspector={inspector}
@@ -182,7 +182,7 @@ export function ChampionshipWorkspacePage({
       />
 
       <div
-        className={`grid min-h-[calc(100vh-13rem)] ${
+        className={`grid flex-1 ${
           inspector
             ? "xl:grid-cols-[190px_minmax(0,1fr)_330px]"
             : "xl:grid-cols-[190px_minmax(0,1fr)]"
