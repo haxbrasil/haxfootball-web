@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChartNoAxesCombined, Eye, LayoutDashboard, Plus } from "lucide-react";
+import { ChartNoAxesCombined, Eye, EyeOff, LayoutDashboard, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "#/components/ui/button";
 import {
@@ -299,13 +299,14 @@ function PlacementColumn({
                   size="icon"
                   variant="ghost"
                   title={item.visibility === "published" ? "Ocultar" : "Publicar"}
+                  aria-label={`${item.visibility === "published" ? "Ocultar" : "Publicar"} ${item.template.title}`}
                   onClick={() =>
                     onChange(item, {
                       visibility: item.visibility === "published" ? "draft" : "published",
                     })
                   }
                 >
-                  <Eye />
+                  {item.visibility === "published" ? <Eye /> : <EyeOff />}
                 </Button>
               </div>
             </article>

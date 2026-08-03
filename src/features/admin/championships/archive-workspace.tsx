@@ -254,6 +254,8 @@ function PlacementEditor({ data }: { data: ArchiveDataWithAccounts }) {
 }
 
 function PlacementLedger({ history }: { history: ChampionshipHistoryData }) {
+  if (history.placements.items.length === 0) return null;
+
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
       <div className="border-b px-4 py-3">

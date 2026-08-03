@@ -67,4 +67,35 @@ describe("championship archive workspace", () => {
     expect(screen.queryByText("Título agregado a Aurora Football")).toBeNull();
     expect(screen.getByText("Classificação final")).toBeTruthy();
   });
+
+  it("omits the public placement section when no final placements exist", () => {
+    render(
+      <ChampionshipArchiveWorkspace
+        mode="public"
+        data={
+          {
+            championship: { lifecycle: "active", historical: false },
+            teams: { items: [] },
+            participants: { items: [] },
+            honors: { items: [], page: { limit: 100, nextCursor: null } },
+            history: {
+              completeness: {
+                placements: false,
+                awards: false,
+                teams: true,
+                rosters: false,
+                matches: false,
+                detailedStatistics: false,
+              },
+              placements: { items: [], totalCount: 0, truncated: false },
+              awards: { items: [], totalCount: 0, truncated: false },
+              records: { items: [], totalCount: 0, truncated: false },
+            },
+          } as unknown as ChampionshipWorkspaceData
+        }
+      />,
+    );
+
+    expect(screen.queryByText("Classificação final")).toBeNull();
+  });
 });

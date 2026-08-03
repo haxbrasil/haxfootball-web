@@ -41,6 +41,7 @@ import {
   registrationLabel,
 } from "../championship-labels";
 import { formatSalaryUnits } from "../salary-format";
+import { sortPublicChampionshipMatches } from "./championship-match-order";
 
 export function ChampionshipDetailPage({
   data,
@@ -53,13 +54,8 @@ export function ChampionshipDetailPage({
   const salary = championship.rules.salary;
   const [section, setSection] = useState<PublicSection>("overview");
   const matches = useMemo(
-    () =>
-      [...data.format.matches.items].sort(
-        (left, right) =>
-          (left.scheduledAt ?? "9999-12-31").localeCompare(right.scheduledAt ?? "9999-12-31") ||
-          left.label.localeCompare(right.label),
-      ),
-    [data.format.matches.items],
+    () => sortPublicChampionshipMatches(data.format.matches.items, data.format.stages.items),
+    [data.format.matches.items, data.format.stages.items],
   );
 
   return (
