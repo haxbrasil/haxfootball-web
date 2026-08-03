@@ -85,7 +85,10 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
           return;
         }
 
-        setMaxDurationSeconds(Math.max(1, configuration.maxDurationSeconds));
+        const configuredSeconds = Number(configuration.maxDurationSeconds);
+        if (Number.isFinite(configuredSeconds)) {
+          setMaxDurationSeconds(Math.max(1, Math.floor(configuredSeconds)));
+        }
       })
       .catch(() => {
         // The server keeps the same default when the configuration is unavailable.
