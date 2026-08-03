@@ -18,6 +18,23 @@ const tradeDecision = z.object({
   expectedTradeRevision: z.number().int().min(0),
   reason: z.string().trim().min(1).max(1_000).optional(),
 });
+const recordedDraftSlot = z.object({
+  sequence: z.number().int().min(1).max(6_400),
+  round: z.number().int().min(1).max(100),
+  position: z.number().int().min(1).max(64),
+  teamId: uuid,
+  participantId: uuid.nullable(),
+  resolution: z.enum(["selected", "unresolved", "skipped"]),
+  occurredAt: z.string().datetime().optional(),
+  recordedNote: z.string().trim().max(1_000).optional(),
+});
+const recordedDraftDefinition = z.object({
+  teamIds: z.array(uuid).min(2).max(64),
+  rounds: z.number().int().min(1).max(100),
+  occurredAt: z.string().datetime().optional(),
+  recordedNote: z.string().trim().max(4_000).optional(),
+  slots: z.array(recordedDraftSlot).min(1).max(6_400),
+});
 
 export const getChampionshipDraftFn = createServerFn({ method: "GET" })
   .inputValidator(
@@ -82,6 +99,48 @@ export const configureChampionshipDraftFn = createServerFn({ method: "POST" })
     const { championshipUuid, ...input } = data;
 
     return configureChampionshipDraft(championshipUuid, {
+      ...input,
+      actorAccountUuid: session.account.uuid,
+    });
+  });
+
+export const previewChampionshipRecordedDraftFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      championshipUuid: uuid,
+      expectedRevision: z.number().int().min(0),
+      ...recordedDraftDefinition.shape,
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await requireChampionshipAdmin();
+    const { previewChampionshipRecordedDraft } = await import("#/server/api/championship-api");
+    const { championshipUuid, ...definition } = data;
+
+    return previewChampionshipRecordedDraft(championshipUuid, {
+      actorAccountUuid: session.account.uuid,
+      ...definition,
+    });
+  });
+
+export const recordChampionshipDraftFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      championshipUuid: uuid,
+      commandUuid,
+      expectedRevision: z.number().int().min(0),
+      previewHash: z.string().length(64),
+      confirmCapException: z.boolean().optional(),
+      reason: z.string().trim().min(1).max(1_000).optional(),
+      ...recordedDraftDefinition.shape,
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await requireChampionshipAdmin();
+    const { recordChampionshipDraft } = await import("#/server/api/championship-api");
+    const { championshipUuid, ...input } = data;
+
+    return recordChampionshipDraft(championshipUuid, {
       ...input,
       actorAccountUuid: session.account.uuid,
     });

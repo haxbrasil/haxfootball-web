@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Check,
   CircleAlert,
+  ChevronDown,
   Clock3,
   ClipboardCheck,
   Crown,
@@ -36,6 +37,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "#/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
@@ -81,10 +88,11 @@ import {
   type DraftTurn,
   type TradeProjection,
 } from "./draft-workspace-model";
+import { RecordedDraftStudio, RecordedDraftView } from "./recorded-draft-studio";
 
 type DraftData = Pick<
   ChampionshipWorkspaceData | PublicChampionshipDetail,
-  "championship" | "teams" | "draft" | "trades"
+  "championship" | "teams" | "participants" | "salary" | "draft" | "trades"
 >;
 
 export function DraftWorkspace({
@@ -192,30 +200,33 @@ export function DraftWorkspace({
     }
   }
 
-  const publicWorkspace = (
-    <div className="space-y-5">
-      <DraftStatusBand data={data} draft={draft} nowMs={nowMs} mode={mode} session={session} />
-      <DraftBoard data={data} draft={draft} nowMs={nowMs} mode={mode} />
-      <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_350px]">
-        <PlayerPool
-          data={data}
-          draft={draft}
-          session={session}
-          mode={mode}
-          onProjection={setProjection}
-        />
-        <DraftFeed
-          data={data}
-          draft={draft}
-          mode={mode}
-          canCancel={canCancel}
-          onCancel={() => setCancelOpen(true)}
-          onProjection={setProjection}
-        />
+  const publicWorkspace =
+    draft.mode === "recorded" ? (
+      <RecordedDraftView draft={draft} />
+    ) : (
+      <div className="space-y-5">
+        <DraftStatusBand data={data} draft={draft} nowMs={nowMs} mode={mode} session={session} />
+        <DraftBoard data={data} draft={draft} nowMs={nowMs} mode={mode} />
+        <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_350px]">
+          <PlayerPool
+            data={data}
+            draft={draft}
+            session={session}
+            mode={mode}
+            onProjection={setProjection}
+          />
+          <DraftFeed
+            data={data}
+            draft={draft}
+            mode={mode}
+            canCancel={canCancel}
+            onCancel={() => setCancelOpen(true)}
+            onProjection={setProjection}
+          />
+        </div>
+        <TradeDesk data={data} draft={draft} mode={mode} />
       </div>
-      <TradeDesk data={data} draft={draft} mode={mode} />
-    </div>
-  );
+    );
 
   return (
     <>
@@ -292,53 +303,79 @@ function AdminDraftWorkspace({
   onProjection: (draft: DraftData["draft"]) => void;
 }) {
   const isSetup = draft === null || draft.state === "setup";
+  const [recordedStudioOpen, setRecordedStudioOpen] = useState(false);
 
   return (
-    <div className="space-y-4">
-      <AdminDraftHeader data={data} draft={draft} />
-      {isSetup ? (
-        <DraftSetup data={data} draft={draft} adminView canCancel={canCancel} onCancel={onCancel} />
-      ) : (
-        <>
-          {draft.state === "live" ? <AdminDraftControlStrip draft={draft} nowMs={nowMs} /> : null}
-          <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_330px]">
-            <div className="min-w-0 space-y-4">
-              <DraftBoard data={data} draft={draft} nowMs={nowMs} mode="admin" adminView />
-              {draft.state === "live" ? (
-                <PlayerPool
-                  data={data}
-                  draft={draft}
-                  session={session}
-                  mode="admin"
-                  adminView
-                  onProjection={onProjection}
-                />
-              ) : null}
-            </div>
-            <AdminDraftMonitor draft={draft} nowMs={nowMs} />
-          </div>
-          <DraftFeed
+    <>
+      <div className="space-y-4">
+        <AdminDraftHeader data={data} draft={draft} onRecord={() => setRecordedStudioOpen(true)} />
+        {isSetup ? (
+          <DraftSetup
             data={data}
             draft={draft}
-            mode="admin"
             adminView
             canCancel={canCancel}
             onCancel={onCancel}
-            onProjection={onProjection}
           />
-          <TradeDesk data={data} draft={draft} mode="admin" adminView />
-        </>
-      )}
-    </div>
+        ) : draft?.mode === "recorded" ? (
+          <RecordedDraftView draft={draft} adminView />
+        ) : (
+          <>
+            {draft.state === "live" ? <AdminDraftControlStrip draft={draft} nowMs={nowMs} /> : null}
+            <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_330px]">
+              <div className="min-w-0 space-y-4">
+                <DraftBoard data={data} draft={draft} nowMs={nowMs} mode="admin" adminView />
+                {draft.state === "live" ? (
+                  <PlayerPool
+                    data={data}
+                    draft={draft}
+                    session={session}
+                    mode="admin"
+                    adminView
+                    onProjection={onProjection}
+                  />
+                ) : null}
+              </div>
+              <AdminDraftMonitor draft={draft} nowMs={nowMs} />
+            </div>
+            <DraftFeed
+              data={data}
+              draft={draft}
+              mode="admin"
+              adminView
+              canCancel={canCancel}
+              onCancel={onCancel}
+              onProjection={onProjection}
+            />
+            <TradeDesk data={data} draft={draft} mode="admin" adminView />
+          </>
+        )}
+      </div>
+      <RecordedDraftStudio
+        open={recordedStudioOpen}
+        onOpenChange={setRecordedStudioOpen}
+        data={data}
+        draft={draft}
+      />
+    </>
   );
 }
 
-function AdminDraftHeader({ data, draft }: { data: DraftData; draft: Draft | null }) {
+function AdminDraftHeader({
+  data,
+  draft,
+  onRecord,
+}: {
+  data: DraftData;
+  draft: Draft | null;
+  onRecord: () => void;
+}) {
   const completed = draft ? filledTurns(draft).length : 0;
   const total = draft?.turns.items.length ?? 0;
   const available = draft?.availableParticipants.items.length ?? 0;
   const teamCount = draft?.teams.length ?? data.teams.items.length;
   const stateLabel = draft ? draftStateLabel(draft.state) : "Ainda não configurado";
+  const canRecord = draft === null || draft.state === "setup";
 
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
@@ -363,9 +400,27 @@ function AdminDraftHeader({ data, draft }: { data: DraftData; draft: Draft | nul
             trocas sob controle da organização.
           </p>
         </div>
-        <div className="text-left text-sm text-muted-foreground lg:text-right">
-          <div className="font-medium text-foreground">{data.championship.name}</div>
-          <div>{data.championship.editionLabel ?? "Edição atual"}</div>
+        <div className="flex items-start gap-3 lg:justify-end">
+          <div className="text-left text-sm text-muted-foreground lg:text-right">
+            <div className="font-medium text-foreground">{data.championship.name}</div>
+            <div>{data.championship.editionLabel ?? "Edição atual"}</div>
+          </div>
+          {canRecord ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shrink-0">
+                  Ações
+                  <ChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuItem onSelect={onRecord}>
+                  <History />
+                  Registrar draft realizado
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </div>
       <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
@@ -813,17 +868,19 @@ function DraftSetup({
               Ajuste os parâmetros e confira as condições no painel de início.
             </p>
           </div>
-          <Button
-            className="w-full"
-            disabled={busy}
-            onClick={() => {
-              setMessage(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Play />
-            {draft ? "Configurar e iniciar" : "Configurar draft"}
-          </Button>
+          <div className="space-y-2">
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => {
+                setMessage(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Play />
+              {draft ? "Configurar e iniciar" : "Configurar draft ao vivo"}
+            </Button>
+          </div>
           {draft && canCancel ? (
             <Button
               variant="outline"
