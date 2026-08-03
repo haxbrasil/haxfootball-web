@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Check, Layers3, Network, Route, Search, SlidersHorizontal } from "lucide-react";
+import { Layers3, Network, Route, SlidersHorizontal } from "lucide-react";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import { Switch } from "#/components/ui/switch";
 import { formatMetricLabel, humanizeStatKey } from "#/lib/stats-metrics/labels";
 import type { JsonObject, VisualizationSpecification } from "#/features/visualizations/types";
+import { VisualizationFieldPicker } from "./visualization-field-picker";
 
 export type VisualizationField = {
   key: string;
@@ -230,16 +230,13 @@ export function ChartConfigurator({
             />
           ) : (
             <Field key={role.key} label={role.label} description={role.description}>
-              <NativeSelect
+              <VisualizationFieldPicker
                 value={readFields(current.fields[role.key])[0] ?? ""}
-                onChange={(event) => updateRole(role.key, event.target.value)}
-              >
-                {compatibleFields(fields, role.kind).map((item) => (
-                  <NativeSelectOption key={item.key} value={item.key}>
-                    {item.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                options={compatibleFields(fields, role.kind).map(toPickerOption)}
+                onValueChange={(value) => updateRole(role.key, String(value))}
+                ariaLabel={role.label}
+                placeholder="Selecionar estatística"
+              />
             </Field>
           ),
         )}
@@ -376,19 +373,6 @@ function MultipleFieldPicker({
   selected: string[];
   onChange: (value: string[]) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const visible = fields
-    .filter((item) => `${item.label} ${item.key}`.toLowerCase().includes(query.toLowerCase()))
-    .sort((left, right) => {
-      const leftSelected = selected.indexOf(left.key);
-      const rightSelected = selected.indexOf(right.key);
-      if (leftSelected >= 0 || rightSelected >= 0)
-        return (
-          (leftSelected < 0 ? Number.MAX_SAFE_INTEGER : leftSelected) -
-          (rightSelected < 0 ? Number.MAX_SAFE_INTEGER : rightSelected)
-        );
-      return left.label.localeCompare(right.label, "pt-BR");
-    });
   return (
     <div className="space-y-2">
       <div>
@@ -397,53 +381,15 @@ function MultipleFieldPicker({
           {role.description} {role.minimum ? `Selecione pelo menos ${role.minimum}.` : ""}
         </p>
       </div>
-      <div className="border">
-        <div className="relative border-b">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar estatística"
-            className="border-0 pl-9 shadow-none"
-          />
-        </div>
-        <div className="grid max-h-56 grid-cols-1 gap-1 overflow-y-auto p-2 sm:grid-cols-2 xl:grid-cols-1">
-          {visible.map((item) => {
-            const active = selected.includes(item.key);
-            const position = selected.indexOf(item.key);
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() =>
-                  onChange(
-                    active ? selected.filter((key) => key !== item.key) : [...selected, item.key],
-                  )
-                }
-                className={`flex min-w-0 items-center gap-2 px-2 py-2 text-left text-sm transition ${active ? "bg-primary/15 text-foreground" : "hover:bg-muted/50"}`}
-              >
-                <span
-                  className={`grid size-5 shrink-0 place-items-center border ${active ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}
-                >
-                  {active ? (
-                    role.key === "path" ? (
-                      position + 1
-                    ) : (
-                      <Check className="size-3" />
-                    )
-                  ) : null}
-                </span>
-                <span className="truncate">{item.label}</span>
-              </button>
-            );
-          })}
-          {!visible.length ? (
-            <p className="col-span-full px-2 py-4 text-center text-xs text-muted-foreground">
-              Nenhuma estatística encontrada.
-            </p>
-          ) : null}
-        </div>
-      </div>
+      <VisualizationFieldPicker
+        value={selected}
+        options={fields.map(toPickerOption)}
+        onValueChange={(value) => onChange(Array.isArray(value) ? value : [value])}
+        multiple
+        ariaLabel={role.label}
+        placeholder="Selecionar estatísticas"
+        selectedLabel="estatísticas selecionadas"
+      />
     </div>
   );
 }
@@ -601,6 +547,13 @@ function readFields(value: string | string[] | undefined) {
 function compatibleFields(fields: VisualizationField[], kind: Role["kind"]) {
   const compatible = fields.filter((item) => kind === "any" || item.kind === kind);
   return compatible.length ? compatible : fields;
+}
+function toPickerOption(field: VisualizationField) {
+  return {
+    value: field.key,
+    label: field.label,
+    searchTerms: [field.key],
+  };
 }
 function defaultsFor(definition: ChartDefinition, fields: VisualizationField[]) {
   const result: Record<string, string | string[]> = {};

@@ -13,6 +13,7 @@ import {
   Save,
   Send,
   Trash2,
+  LoaderCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
@@ -56,6 +57,7 @@ import {
   createVisualizationFieldCatalog,
   type VisualizationFieldCatalog,
 } from "./chart-configurator";
+import { VisualizationFieldPicker } from "./visualization-field-picker";
 
 type GameMode = {
   id: string;
@@ -313,6 +315,7 @@ function ChartStudio({ items, schemas }: { items: Template[]; schemas: EventSche
   });
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [saving, setSaving] = useState<"draft" | "publish" | null>(null);
   useEffect(() => {
     let active = true;
     const timeout = window.setTimeout(() => {
@@ -345,54 +348,74 @@ function ChartStudio({ items, schemas }: { items: Template[]; schemas: EventSche
     setSpec(next);
   };
   const save = async () => {
-    const result = selected
-      ? await saveVisualizationDraftFn({
-          data: {
-            id: selected.id,
-            expectedRevision: selected.draft?.revision ?? 0,
-            name,
-            title,
-            scope,
-            specification: spec,
-          },
-        })
-      : await createVisualizationTemplateFn({ data: { name, title, scope, specification: spec } });
-    if (result.ok) {
-      toast.success("Rascunho salvo");
-      await router.invalidate();
-    } else toast.error(localizeVisualizationError(result.message));
+    if (saving) return;
+    setSaving("draft");
+    try {
+      const result = selected
+        ? await saveVisualizationDraftFn({
+            data: {
+              id: selected.id,
+              expectedRevision: selected.draft?.revision ?? 0,
+              name,
+              title,
+              scope,
+              specification: spec,
+            },
+          })
+        : await createVisualizationTemplateFn({
+            data: { name, title, scope, specification: spec },
+          });
+      if (result.ok) {
+        toast.success("Rascunho salvo");
+        await router.invalidate();
+      } else toast.error(localizeVisualizationError(result.message));
+    } catch (error) {
+      toast.error(localizeVisualizationError(error instanceof Error ? error.message : ""));
+    } finally {
+      setSaving(null);
+    }
   };
   const publish = async () => {
-    const saved = selected
-      ? await saveVisualizationDraftFn({
-          data: {
-            id: selected.id,
-            expectedRevision: selected.draft?.revision ?? 0,
-            name,
-            title,
-            scope,
-            specification: spec,
-          },
-        })
-      : await createVisualizationTemplateFn({ data: { name, title, scope, specification: spec } });
-    if (!saved.ok) {
-      toast.error(localizeVisualizationError(saved.message));
-      return;
+    if (saving) return;
+    setSaving("publish");
+    try {
+      const saved = selected
+        ? await saveVisualizationDraftFn({
+            data: {
+              id: selected.id,
+              expectedRevision: selected.draft?.revision ?? 0,
+              name,
+              title,
+              scope,
+              specification: spec,
+            },
+          })
+        : await createVisualizationTemplateFn({
+            data: { name, title, scope, specification: spec },
+          });
+      if (!saved.ok) {
+        toast.error(localizeVisualizationError(saved.message));
+        return;
+      }
+      const revision = saved.template.draft?.revision;
+      if (revision === undefined) {
+        toast.error("Não foi possível preparar a visualização para publicação.");
+        return;
+      }
+      const result = await publishVisualizationTemplateFn({
+        data: { id: saved.template.id, expectedRevision: revision },
+      });
+      if (result.ok) {
+        toast.success(
+          result.published ? "Visualização publicada" : "Nenhuma alteração para publicar",
+        );
+        await router.invalidate();
+      } else toast.error(localizeVisualizationError(result.message));
+    } catch (error) {
+      toast.error(localizeVisualizationError(error instanceof Error ? error.message : ""));
+    } finally {
+      setSaving(null);
     }
-    const revision = saved.template.draft?.revision;
-    if (revision === undefined) {
-      toast.error("Não foi possível preparar a visualização para publicação.");
-      return;
-    }
-    const result = await publishVisualizationTemplateFn({
-      data: { id: saved.template.id, expectedRevision: revision },
-    });
-    if (result.ok) {
-      toast.success(
-        result.published ? "Visualização publicada" : "Nenhuma alteração para publicar",
-      );
-      await router.invalidate();
-    } else toast.error(localizeVisualizationError(result.message));
   };
   return (
     <div className="min-h-[760px] overflow-hidden border">
@@ -407,11 +430,13 @@ function ChartStudio({ items, schemas }: { items: Template[]; schemas: EventSche
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={save}>
-            <Save /> Salvar rascunho
+          <Button variant="outline" onClick={() => void save()} disabled={saving !== null}>
+            {saving === "draft" ? <LoaderCircle className="animate-spin" /> : <Save />}
+            {saving === "draft" ? "Salvando…" : "Salvar rascunho"}
           </Button>
-          <Button onClick={publish}>
-            <Send /> Publicar versão
+          <Button onClick={() => void publish()} disabled={saving !== null}>
+            {saving === "publish" ? <LoaderCircle className="animate-spin" /> : <Send />}
+            {saving === "publish" ? "Publicando…" : "Publicar versão"}
           </Button>
         </div>
       </header>
@@ -654,16 +679,17 @@ function PipelineOperation({
       </div>
       <div className="grid gap-2 p-3">
         {type !== "limit" && type !== "filter" ? (
-          <NativeSelect
+          <VisualizationFieldPicker
             value={String(operation.field ?? firstField)}
-            onChange={(event) => onChange({ ...operation, field: event.target.value })}
-          >
-            {fields.map((field) => (
-              <NativeSelectOption key={field.key} value={field.key}>
-                {field.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            options={fields.map((field) => ({
+              value: field.key,
+              label: field.label,
+              searchTerms: [field.key],
+            }))}
+            onValueChange={(value) => onChange({ ...operation, field: String(value) })}
+            ariaLabel={`Campo da transformação ${operationLabel(type)}`}
+            placeholder="Selecionar estatística"
+          />
         ) : null}
         {type === "sort" ? (
           <NativeSelect
@@ -686,18 +712,19 @@ function PipelineOperation({
         ) : null}
         {type === "filter" ? (
           <div className="grid gap-2">
-            <NativeSelect
+            <VisualizationFieldPicker
               value={filterField}
-              onChange={(event) =>
-                updateFilter(event.target.value, filterOperator(filterExpression.op), filterValue)
+              options={fields.map((field) => ({
+                value: field.key,
+                label: field.label,
+                searchTerms: [field.key],
+              }))}
+              onValueChange={(value) =>
+                updateFilter(String(value), filterOperator(filterExpression.op), filterValue)
               }
-            >
-              {fields.map((field) => (
-                <NativeSelectOption key={field.key} value={field.key}>
-                  {field.label}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              ariaLabel="Estatística do filtro"
+              placeholder="Selecionar estatística"
+            />
             <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
               <NativeSelect
                 value={filterOperator(filterExpression.op)}
