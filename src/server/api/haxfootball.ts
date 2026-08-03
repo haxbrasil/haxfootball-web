@@ -79,6 +79,22 @@ export type { ListMatchesResponse, ListRoomsResponse, MatchSummary };
 
 export type { Clip, ClipConfig, ListClipsResponse };
 
+export type ClipPreview = {
+  status: "pending" | "ready" | "failed";
+  posterStatus: "pending" | "ready" | "failed";
+  videoStatus: "pending" | "ready" | "failed";
+  posterUrl: string | null;
+  videoUrl: string | null;
+  width: number | null;
+  height: number | null;
+  durationTicks: number | null;
+};
+
+export type WebClip = Clip & { preview: ClipPreview };
+export type WebListClipsResponse = Omit<ListClipsResponse, "items"> & {
+  items: WebClip[];
+};
+
 export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];
 export type ListAccountLinkedSessionEntriesResponse = ListPlayersResponse;
 
@@ -205,7 +221,7 @@ export type MatchDetail = {
 export type ClipMutationResult =
   | {
       ok: true;
-      clip: Clip;
+      clip: WebClip;
     }
   | {
       ok: false;
@@ -453,18 +469,18 @@ export async function listMatches(query: PaginationQuery = {}): Promise<ListMatc
     : emptyPage();
 }
 
-export async function listClips(query: ListClipsQuery = {}): Promise<ListClipsResponse> {
+export async function listClips(query: ListClipsQuery = {}): Promise<WebListClipsResponse> {
   const client = getApiClient();
 
   return client
-    ? ((await unwrap(client.clips.list(query))) ?? emptyPage<Clip>())
-    : emptyPage<Clip>();
+    ? (((await unwrap(client.clips.list(query))) as WebListClipsResponse) ?? emptyPage<WebClip>())
+    : emptyPage<WebClip>();
 }
 
-export async function getClip(id: string): Promise<Clip | null> {
+export async function getClip(id: string): Promise<WebClip | null> {
   const client = getApiClient();
 
-  return client ? await unwrap(client.clips.get(id)) : null;
+  return client ? ((await unwrap(client.clips.get(id))) as WebClip | null) : null;
 }
 
 export async function getClipConfiguration(): Promise<ClipConfig | null> {
@@ -485,7 +501,9 @@ export async function createClip(input: CreateClipInput): Promise<ClipMutationRe
 
   const result = await client.clips.create(input);
 
-  return result.ok ? { ok: true, clip: result.data } : { ok: false, message: result.error.message };
+  return result.ok
+    ? { ok: true, clip: result.data as WebClip }
+    : { ok: false, message: result.error.message };
 }
 
 export async function updateClip(id: string, input: UpdateClipInput): Promise<ClipMutationResult> {
@@ -500,7 +518,9 @@ export async function updateClip(id: string, input: UpdateClipInput): Promise<Cl
 
   const result = await client.clips.update(id, input);
 
-  return result.ok ? { ok: true, clip: result.data } : { ok: false, message: result.error.message };
+  return result.ok
+    ? { ok: true, clip: result.data as WebClip }
+    : { ok: false, message: result.error.message };
 }
 
 export async function archiveClip(id: string): Promise<boolean> {

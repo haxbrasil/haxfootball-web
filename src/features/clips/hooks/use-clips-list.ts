@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import type { Clip, ListClipsResponse } from "#/server/api/haxfootball";
+import type { WebClip, WebListClipsResponse } from "#/server/api/haxfootball";
 import { useInfinitePage } from "#/hooks/use-infinite-page";
 import { listClipsFn } from "#/server/api/functions";
 
-export function useClipsList(initialClips: ListClipsResponse) {
+export function useClipsList(initialClips: WebListClipsResponse) {
   const listClips = useServerFn(listClipsFn);
   const limit = initialClips.page.limit;
 
@@ -13,7 +13,7 @@ export function useClipsList(initialClips: ListClipsResponse) {
     [limit, listClips],
   );
 
-  return useInfinitePage<Clip, ListClipsResponse>({
+  return useInfinitePage<WebClip, WebListClipsResponse>({
     initialPage: initialClips,
     loadPage,
     resetKey: "clips",
