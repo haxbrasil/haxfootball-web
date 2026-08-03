@@ -217,4 +217,9 @@
     background: color-mix(in oklch, var(--primary) 48%, var(--border));
     background-clip: content-box;
   }
+
+  .clip-editor-player .hfr-seek {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }

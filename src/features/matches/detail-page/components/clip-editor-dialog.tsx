@@ -1,9 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Pause, Play, Scissors } from "lucide-react";
+import { Loader2, Scissors } from "lucide-react";
 import {
   lazy,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -43,12 +44,21 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
   const [endTick, setEndTick] = useState(1);
   const [currentTick, setCurrentTick] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [previewWindow, setPreviewWindow] = useState<FrameWindow | null>(null);
-  const [previewing, setPreviewing] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0);
+  const [playerWindow, setPlayerWindow] = useState<FrameWindow | null>(null);
   const [seekRequest, setSeekRequest] = useState<number | undefined>(undefined);
   const editorStateRef = useRef({ currentTick, endTick, startTick, totalFrames });
   editorStateRef.current = { currentTick, endTick, startTick, totalFrames };
+
+  const updateRange = useCallback(
+    (nextStart: number, nextEnd: number) => {
+      const safeStart = clamp(nextStart, 0, Math.max(0, totalFrames - 1));
+      const safeEnd = clamp(nextEnd, safeStart + 1, totalFrames);
+
+      setStartTick(safeStart);
+      setEndTick(safeEnd);
+    },
+    [totalFrames],
+  );
 
   const maxDurationFrames = maxDurationSeconds * FRAME_RATE;
   const selectionDuration = Math.max(0, endTick - startTick);
@@ -66,9 +76,7 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
     setEndTick(1);
     setCurrentTick(0);
     setSaving(false);
-    setPreviewWindow(null);
-    setPreviewing(false);
-    setPreviewKey(0);
+    setPlayerWindow(null);
     setSeekRequest(undefined);
   }, [open, recording.id]);
 
@@ -139,7 +147,7 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [maxDurationFrames, open]);
+  }, [open, updateRange]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -181,32 +189,13 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
     }
   }
 
-  function updateRange(nextStart: number, nextEnd: number) {
-    const safeStart = clamp(nextStart, 0, Math.max(0, totalFrames - 1));
-    const safeEnd = clamp(
-      nextEnd,
-      safeStart + 1,
-      Math.min(totalFrames, safeStart + maxDurationFrames),
-    );
-
-    setStartTick(safeStart);
-    setEndTick(safeEnd);
-  }
-
-  function previewSelection() {
-    if (!hasReadyReplay) {
+  function commitSelection(nextStart: number, nextEnd: number) {
+    if (!hasReadyReplay || nextStart >= nextEnd) {
       return;
     }
 
-    setPreviewWindow({ startFrame: startTick, endFrame: endTick });
-    setSeekRequest(startTick);
-    setPreviewing(true);
-    setPreviewKey((value) => value + 1);
-  }
-
-  function stopPreview() {
-    setPreviewing(false);
-    setPreviewKey((value) => value + 1);
+    setPlayerWindow({ startFrame: nextStart, endFrame: nextEnd });
+    setSeekRequest(nextStart);
   }
 
   return (
@@ -235,52 +224,53 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
         <form id="clip-editor-form" onSubmit={handleSubmit} className="min-h-0 flex-1">
           <div className="h-full overflow-y-auto px-4 py-5 sm:px-7 sm:py-7">
             <div className="mx-auto max-w-[1180px]">
-              <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1419] shadow-2xl shadow-black/20">
-                <div className="relative aspect-video">
-                  <Suspense
-                    fallback={
-                      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Preparando a prévia…
-                      </div>
-                    }
-                  >
-                    <ReplayPlayer
-                      key={`${recording.id}-${previewKey}`}
-                      source={recording.url}
-                      autoPlay={previewing}
-                      frameWindow={previewWindow ?? undefined}
-                      seekFrame={seekRequest}
-                      onReady={(info) => {
-                        const frames = Math.max(1, info.totalFrames);
-                        setTotalFrames(frames);
-                        setEndTick((value) =>
-                          value <= 1
-                            ? Math.min(frames, maxDurationFrames)
-                            : Math.min(value, frames, maxDurationFrames),
-                        );
-                      }}
-                      onFrameChange={(frame) => setCurrentTick(Math.max(0, frame))}
-                    />
-                  </Suspense>
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0d1419] shadow-2xl shadow-black/20">
+                <Suspense
+                  fallback={
+                    <div className="flex aspect-video items-center justify-center text-sm text-muted-foreground">
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Preparando a prévia…
+                    </div>
+                  }
+                >
+                  <ReplayPlayer
+                    source={recording.url}
+                    className="clip-editor-player"
+                    frameWindow={playerWindow ?? undefined}
+                    seekFrame={seekRequest}
+                    onReady={(info) => {
+                      const frames = Math.max(1, info.totalFrames);
+                      const initialEnd =
+                        endTick <= 1
+                          ? Math.min(frames, maxDurationFrames)
+                          : Math.min(endTick, frames);
+                      setTotalFrames(frames);
+                      setEndTick(initialEnd);
+                      setPlayerWindow(
+                        (value) => value ?? { startFrame: startTick, endFrame: initialEnd },
+                      );
+                      setSeekRequest((value) => value ?? startTick);
+                    }}
+                    onFrameChange={(frame) => setCurrentTick(Math.max(0, frame))}
+                  />
+                </Suspense>
+                <div className="pointer-events-none absolute inset-x-3 bottom-[4.1rem] z-20 sm:inset-x-5">
+                  <ClipTimeline
+                    totalFrames={totalFrames}
+                    startFrame={startTick}
+                    endFrame={endTick}
+                    currentFrame={currentTick}
+                    maxDurationSeconds={maxDurationSeconds}
+                    disabled={saving || !hasReadyReplay}
+                    onCurrentFrameChange={(frame) => {
+                      setCurrentTick(frame);
+                      setSeekRequest(frame);
+                    }}
+                    onRangeChange={updateRange}
+                    onRangeCommit={commitSelection}
+                  />
                 </div>
-
-                <ClipTimeline
-                  totalFrames={totalFrames}
-                  startFrame={startTick}
-                  endFrame={endTick}
-                  currentFrame={currentTick}
-                  maxDurationSeconds={maxDurationSeconds}
-                  previewing={previewing}
-                  disabled={saving || !hasReadyReplay}
-                  onPreviewToggle={previewing ? stopPreview : previewSelection}
-                  onCurrentFrameChange={(frame) => {
-                    setCurrentTick(frame);
-                    setSeekRequest(frame);
-                  }}
-                  onRangeChange={updateRange}
-                />
-              </section>
+              </div>
 
               <div className="mt-5 max-w-xl">
                 <Label htmlFor="clip-title">
@@ -317,7 +307,13 @@ export function ClipCreatorDialog({ recording }: { recording: MatchRecordingOpti
             <Button
               form="clip-editor-form"
               type="submit"
-              disabled={saving || !hasReadyReplay || startTick >= endTick || endTick > totalFrames}
+              disabled={
+                saving ||
+                !hasReadyReplay ||
+                startTick >= endTick ||
+                endTick > totalFrames ||
+                selectionDuration > maxDurationFrames
+              }
             >
               {saving ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -344,27 +340,34 @@ function ClipTimeline({
   endFrame,
   currentFrame,
   maxDurationSeconds,
-  previewing,
   disabled,
   onCurrentFrameChange,
   onRangeChange,
-  onPreviewToggle,
+  onRangeCommit,
 }: {
   totalFrames: number;
   startFrame: number;
   endFrame: number;
   currentFrame: number;
   maxDurationSeconds: number;
-  previewing: boolean;
   disabled: boolean;
   onCurrentFrameChange: (frame: number) => void;
   onRangeChange: (startFrame: number, endFrame: number) => void;
-  onPreviewToggle: () => void;
+  onRangeCommit: (startFrame: number, endFrame: number) => void;
 }) {
   const timelineRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<"start" | "end" | null>(null);
+  const dragRef = useRef<"start" | "end" | "range" | null>(null);
+  const rangeDragOriginRef = useRef<{
+    pointerFrame: number;
+    startFrame: number;
+    endFrame: number;
+  } | null>(null);
+  const rangeRef = useRef({ startFrame, endFrame });
+  rangeRef.current = { startFrame, endFrame };
   const safeTotal = Math.max(1, totalFrames);
   const ticks = useMemo(() => buildTimelineTicks(safeTotal), [safeTotal]);
+  const selectionDuration = Math.max(0, endFrame - startFrame);
+  const withinLimit = selectionDuration <= maxDurationSeconds * FRAME_RATE;
 
   function frameAtPointer(event: ReactPointerEvent<HTMLDivElement>) {
     const bounds = timelineRef.current?.getBoundingClientRect();
@@ -387,6 +390,11 @@ function ClipTimeline({
     onCurrentFrameChange(frameAtPointer(event));
   }
 
+  function emitRange(nextStart: number, nextEnd: number) {
+    rangeRef.current = { startFrame: nextStart, endFrame: nextEnd };
+    onRangeChange(nextStart, nextEnd);
+  }
+
   function beginDrag(side: "start" | "end", event: ReactPointerEvent<HTMLButtonElement>) {
     if (disabled) {
       return;
@@ -395,6 +403,23 @@ function ClipTimeline({
     event.preventDefault();
     event.stopPropagation();
     dragRef.current = side;
+    rangeDragOriginRef.current = null;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function beginRangeDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (disabled) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    dragRef.current = "range";
+    rangeDragOriginRef.current = {
+      pointerFrame: frameAtPointer(event),
+      startFrame,
+      endFrame,
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -405,15 +430,29 @@ function ClipTimeline({
     }
 
     const frame = frameAtPointer(event);
+    const currentRange = rangeRef.current;
     if (side === "start") {
-      onRangeChange(Math.min(frame, endFrame - 1), endFrame);
-    } else {
-      onRangeChange(startFrame, Math.max(frame, startFrame + 1));
+      emitRange(Math.min(frame, currentRange.endFrame - 1), currentRange.endFrame);
+    } else if (side === "end") {
+      emitRange(currentRange.startFrame, Math.max(frame, currentRange.startFrame + 1));
+    } else if (rangeDragOriginRef.current) {
+      const origin = rangeDragOriginRef.current;
+      const duration = origin.endFrame - origin.startFrame;
+      const nextStart = clamp(
+        origin.startFrame + frame - origin.pointerFrame,
+        0,
+        Math.max(0, safeTotal - duration),
+      );
+      emitRange(nextStart, nextStart + duration);
     }
   }
 
   function endDrag() {
+    if (dragRef.current) {
+      onRangeCommit(rangeRef.current.startFrame, rangeRef.current.endFrame);
+    }
     dragRef.current = null;
+    rangeDragOriginRef.current = null;
   }
 
   function handleHandleKeyDown(
@@ -430,8 +469,15 @@ function ClipTimeline({
     else return;
 
     event.preventDefault();
-    if (side === "start") onRangeChange(nextFrame, endFrame);
-    else onRangeChange(startFrame, nextFrame);
+    if (side === "start") {
+      const safeStart = Math.min(nextFrame, endFrame - 1);
+      emitRange(safeStart, endFrame);
+      onRangeCommit(safeStart, endFrame);
+    } else {
+      const safeEnd = Math.max(nextFrame, startFrame + 1);
+      emitRange(startFrame, safeEnd);
+      onRangeCommit(startFrame, safeEnd);
+    }
   }
 
   const selectionLeft = `${(startFrame / safeTotal) * 100}%`;
@@ -440,27 +486,31 @@ function ClipTimeline({
   const playheadLeft = `${(clamp(currentFrame, 0, safeTotal) / safeTotal) * 100}%`;
 
   return (
-    <div className="border-t border-white/10 bg-muted/10 p-4 sm:p-5" aria-label="Janela de corte">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Janela de corte
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Arraste os marcadores para escolher o momento.
-          </p>
-        </div>
-        <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-semibold tabular-nums text-primary">
-          {formatClipDuration(endFrame - startFrame)} / {maxDurationSeconds}s
-        </div>
+    <div
+      className="pointer-events-auto rounded-xl border border-white/15 bg-[#0d1419]/95 px-3 py-2.5 shadow-2xl shadow-black/30 backdrop-blur-md sm:px-4"
+      aria-label="Janela de corte"
+    >
+      <div className="flex items-center justify-between gap-3 text-[11px]">
+        <span className="font-semibold uppercase tracking-[0.14em] text-white/75">
+          Janela de corte
+        </span>
+        <span
+          className={
+            withinLimit
+              ? "font-semibold tabular-nums text-primary"
+              : "font-semibold tabular-nums text-amber-300"
+          }
+        >
+          {formatClipDuration(selectionDuration)} / {maxDurationSeconds}s
+        </span>
       </div>
 
-      <div className="mt-4 px-1">
-        <div className="relative h-5 text-[10px] tabular-nums text-muted-foreground">
+      <div className="mt-1.5 px-1">
+        <div className="relative h-4 text-[9px] tabular-nums text-white/55">
           {ticks.map((tick) => (
             <span
               key={tick}
-              className="absolute -translate-x-1/2"
+              className="absolute -translate-x-1/2 whitespace-nowrap"
               style={{ left: `${(tick / safeTotal) * 100}%` }}
             >
               {formatClipTicks(tick)}
@@ -470,7 +520,7 @@ function ClipTimeline({
 
         <div
           ref={timelineRef}
-          className="relative h-14 touch-none rounded-xl border border-white/10 bg-background/80 shadow-inner"
+          className="relative h-9 touch-none rounded-lg border border-white/15 bg-black/35 shadow-inner"
           onPointerDown={handleTrackPointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
@@ -480,13 +530,18 @@ function ClipTimeline({
           }}
           aria-label="Seleção de intervalo"
         >
-          <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-muted" />
+          <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/15" />
           <div
-            className="absolute top-1/2 h-4 -translate-y-1/2 rounded-full bg-primary/70 shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
+            className={
+              withinLimit
+                ? "absolute top-1/2 h-3 -translate-y-1/2 cursor-grab rounded-full bg-primary/85 shadow-[0_0_0_2px_color-mix(in_oklch,var(--primary)_25%,transparent)] active:cursor-grabbing"
+                : "absolute top-1/2 h-3 -translate-y-1/2 cursor-grab rounded-full bg-amber-300/80 shadow-[0_0_0_2px_rgb(252_211_77_/_25%)] active:cursor-grabbing"
+            }
             style={{ left: selectionLeft, width: selectionWidth }}
+            onPointerDown={beginRangeDrag}
           />
           <div
-            className="pointer-events-none absolute inset-y-2 w-px bg-foreground/90 shadow-[0_0_0_1px_color-mix(in_oklch,var(--background)_60%,transparent)]"
+            className="pointer-events-none absolute inset-y-1 w-px bg-white shadow-[0_0_0_1px_rgb(0_0_0_/_50%)]"
             style={{ left: playheadLeft }}
           />
           <TimelineHandle
@@ -510,27 +565,13 @@ function ClipTimeline({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span className="font-semibold tabular-nums text-foreground">
+      <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] tabular-nums">
+        <span className="font-semibold text-white/85">
           {formatClipTicks(startFrame)} — {formatClipTicks(endFrame)}
         </span>
-        <span>{formatClipDuration(endFrame - startFrame)} selecionados</span>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="text-xs text-muted-foreground">
-          Playhead: {formatClipTicks(currentFrame)}
+        <span className={withinLimit ? "text-white/55" : "text-amber-300"}>
+          {withinLimit ? "Pronto para salvar" : `Reduza para até ${maxDurationSeconds}s`}
         </span>
-        <Button
-          type="button"
-          size="sm"
-          variant={previewing ? "default" : "outline"}
-          onClick={onPreviewToggle}
-          disabled={disabled}
-        >
-          {previewing ? <Pause className="size-4" /> : <Play className="size-4" />}
-          {previewing ? "Parar prévia" : "Prévia da seleção"}
-        </Button>
       </div>
     </div>
   );
