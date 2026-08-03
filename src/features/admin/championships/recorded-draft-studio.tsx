@@ -318,8 +318,8 @@ export function RecordedDraftStudio({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !recording && onOpenChange(next)}>
-      <DialogContent className="max-w-[min(96vw,1220px)] gap-0 overflow-hidden p-0">
-        <div className="border-b bg-muted/15 px-5 py-5 sm:px-7">
+      <DialogContent className="!flex max-h-[calc(100vh-2rem)] w-[min(96vw,1220px)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:!max-w-none">
+        <div className="shrink-0 border-b bg-muted/15 px-5 py-5 pr-16 sm:px-7 sm:pr-16">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
@@ -337,7 +337,7 @@ export function RecordedDraftStudio({
                 registro preserva lacunas, escolhas puladas e o impacto de cada equipe.
               </p>
             </div>
-            <div className="hidden items-center gap-2 text-right text-xs text-muted-foreground md:flex">
+            <div className="hidden shrink-0 items-center gap-2 text-right text-xs text-muted-foreground md:flex">
               <CalendarClock className="size-4" />
               {occurredAt ? formatDate(occurredAt) : "Data opcional"}
             </div>
@@ -370,7 +370,7 @@ export function RecordedDraftStudio({
           </div>
         </div>
 
-        <div className="max-h-[calc(100vh-19rem)] overflow-y-auto px-5 py-6 sm:px-7">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7">
           {step === 1 ? (
             <StructureStep
               data={data}
@@ -416,7 +416,7 @@ export function RecordedDraftStudio({
           ) : null}
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t bg-muted/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t bg-muted/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
           <Button variant="outline" disabled={recording} onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
