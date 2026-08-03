@@ -7,6 +7,7 @@ import type {
   ChampionshipCompetitionType,
   ChampionshipDetail,
   ChampionshipDraft,
+  ChampionshipRecordedDraftPreview,
   ChampionshipDraftCorrectionPreview,
   ChampionshipDraftQuery,
   ChampionshipFormat,
@@ -72,6 +73,8 @@ import type {
   CreateChampionshipInput,
   CreateChampionshipTeamInput,
   ConfigureChampionshipDraftInput,
+  PreviewChampionshipRecordedDraftInput,
+  RecordChampionshipDraftInput,
   CancelChampionshipDraftInput,
   CreateChampionshipCompetitionRoundInput,
   CreateChampionshipLogicalMatchInput,
@@ -1024,6 +1027,24 @@ export async function configureChampionshipDraft(
   input: ConfigureChampionshipDraftInput,
 ): Promise<ChampionshipMutationResult<Serializable<ChampionshipDraft>>> {
   return mutationResult(requireClient().championships.draft.configure(championshipUuid, input));
+}
+
+export async function previewChampionshipRecordedDraft(
+  championshipUuid: string,
+  input: PreviewChampionshipRecordedDraftInput,
+): Promise<Serializable<ChampionshipRecordedDraftPreview>> {
+  return serialize(
+    await requireResult(
+      requireClient().championships.draft.previewRecorded(championshipUuid, input),
+    ),
+  );
+}
+
+export async function recordChampionshipDraft(
+  championshipUuid: string,
+  input: RecordChampionshipDraftInput,
+): Promise<ChampionshipMutationResult<Serializable<ChampionshipDraft>>> {
+  return mutationResult(requireClient().championships.draft.record(championshipUuid, input));
 }
 
 export async function startChampionshipDraft(

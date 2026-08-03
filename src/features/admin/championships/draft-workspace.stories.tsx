@@ -12,7 +12,7 @@ import { DraftWorkspace } from "./draft-workspace";
 
 type DraftStoryData = Pick<
   ChampionshipWorkspaceData,
-  "championship" | "teams" | "draft" | "trades"
+  "championship" | "teams" | "participants" | "salary" | "draft" | "trades"
 >;
 
 const meta = {
@@ -253,6 +253,21 @@ function fixture(state: FixtureState): DraftStoryData {
     teams: {
       items: teams,
       page: { limit: 64, nextCursor: null },
+    },
+    participants: {
+      items: [],
+      page: { limit: 100, nextCursor: null },
+    },
+    salary: {
+      championshipUuid: "10000000-0000-4000-8000-000000000001",
+      enabled: true,
+      capUnits: 100,
+      displayLabel: "M",
+      priceState: "locked",
+      visibility: "admin",
+      participants: { items: [], page: { limit: 100, nextCursor: null } },
+      teams: { items: [], page: { limit: 64, nextCursor: null } },
+      validation: { canFreeze: false, missingParticipantIds: [], missingPriceCount: 0 },
     },
     draft: {
       draft: {
