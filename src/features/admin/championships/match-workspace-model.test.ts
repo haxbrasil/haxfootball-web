@@ -153,6 +153,31 @@ describe("championship match workspace model", () => {
     ]);
   });
 
+  it("keeps independent round scores while using the final round as the match score", () => {
+    const scores = evidencePeriodScores({
+      scoreMode: "last-round",
+      rounds: [
+        {
+          matchId: "first",
+          kind: "sequential",
+          number: 1,
+          normalizedScore: { red: 34, blue: 20 },
+        },
+        {
+          matchId: "second",
+          kind: "sequential",
+          number: 2,
+          normalizedScore: { red: 21, blue: 13 },
+        },
+      ],
+    } as never);
+
+    expect(scores.map(({ sideA, sideB }) => ({ sideA, sideB }))).toEqual([
+      { sideA: 34, sideB: 20 },
+      { sideA: 21, sideB: 13 },
+    ]);
+  });
+
   it("keeps administrative points visible in official score", () => {
     expect(
       officialScore({

@@ -165,7 +165,8 @@ describe("championship match workspace", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Adicionar tempo" })[0]!);
 
     expect(screen.getByRole("heading", { name: "Composição de tempos" })).toBeTruthy();
-    expect(screen.getByText("7 – 3")).toBeTruthy();
+    expect(screen.getByText("Placar final · último tempo")).toBeTruthy();
+    expect(screen.getByText("4 – 2")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Compor e vincular" }));
 

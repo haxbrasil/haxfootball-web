@@ -893,268 +893,273 @@ function EvidenceSearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] grid-rows-[auto_auto_auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-5xl">
+      <DialogContent className="grid max-h-[min(900px,calc(100vh-2rem))] grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Buscar partida registrada</DialogTitle>
           <DialogDescription>
             Compare placar, participantes, programa e qualidade antes de vincular.
           </DialogDescription>
         </DialogHeader>
-        <form
-          className="grid gap-3 border-y py-4 sm:grid-cols-[minmax(0,1fr)_170px_auto]"
-          onSubmit={runSearch}
-        >
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-            <Input
-              aria-label="Jogador ou código da partida"
-              className="pl-8"
-              placeholder="Jogador ou código"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-          <NativeSelect
-            aria-label="Qualidade"
-            value={quality}
-            onChange={(event) => setQuality(event.target.value as typeof quality)}
+        <div className="bfl-scrollbar min-h-0 overflow-y-auto pr-1">
+          <form
+            className="grid gap-3 border-y py-4 sm:grid-cols-[minmax(0,1fr)_170px_auto]"
+            onSubmit={runSearch}
           >
-            <NativeSelectOption value="all">Toda qualidade</NativeSelectOption>
-            <NativeSelectOption value="complete">Completa</NativeSelectOption>
-            <NativeSelectOption value="recovered">Recuperada</NativeSelectOption>
-            <NativeSelectOption value="partial">Parcial</NativeSelectOption>
-            <NativeSelectOption value="legacy">Proveniência indisponível</NativeSelectOption>
-          </NativeSelect>
-          <Button type="submit" variant="outline" disabled={state === "loading"}>
-            <RefreshCw className={state === "loading" ? "animate-spin" : ""} />
-            Atualizar
-          </Button>
-          <label
-            htmlFor="include-all-programs"
-            className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2"
-          >
-            <Checkbox
-              id="include-all-programs"
-              checked={includeAllPrograms}
-              onCheckedChange={(value) => setIncludeAllPrograms(value === true)}
-            />
-            Incluir programas não autorizados nesta edição
-          </label>
-          <label
-            htmlFor="show-claimed-evidence"
-            className="flex items-center gap-2 text-xs text-muted-foreground"
-          >
-            <Checkbox
-              id="show-claimed-evidence"
-              checked={showClaimed}
-              onCheckedChange={(value) => setShowClaimed(value === true)}
-            />
-            Mostrar partidas já vinculadas
-          </label>
-          <div className="flex items-center justify-end gap-1 text-xs">
-            <span className="mr-1 text-muted-foreground">Orientação</span>
-            <Button
-              type="button"
-              size="sm"
-              variant={orientation === "aligned" ? "secondary" : "ghost"}
-              onClick={() => setOrientation("aligned")}
-            >
-              Normal
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={orientation === "swapped" ? "secondary" : "ghost"}
-              onClick={() => setOrientation("swapped")}
-            >
-              <ArrowLeftRight />
-              Invertida
-            </Button>
-          </div>
-        </form>
-        {compositionGames.length ? (
-          <EvidenceCompositionBuilder
-            games={compositionGames}
-            lastGameIsOvertime={lastGameIsOvertime}
-            sideAName={operations.match.sideA?.abbreviation ?? "Lado A"}
-            sideBName={operations.match.sideB?.abbreviation ?? "Lado B"}
-            championshipOrientation={orientation}
-            busy={composeBusy}
-            onMove={moveCompositionGame}
-            onRemove={(candidate) => toggleCompositionGame(candidate)}
-            onOrientation={setCompositionOrientation}
-            onLastGameIsOvertime={setLastGameIsOvertime}
-            onSubmit={composeAndAttach}
-          />
-        ) : null}
-        {message ? <InlineError message={message} /> : null}
-        <div
-          ref={resultsScrollRef}
-          className="min-h-72 overflow-y-auto rounded-md border bg-background/30"
-        >
-          {state === "loading" ? (
-            <div className="space-y-2 py-2">
-              {Array.from({ length: 4 }, (_, index) => (
-                <Skeleton key={index} className="h-24 w-full" />
-              ))}
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+              <Input
+                aria-label="Jogador ou código da partida"
+                className="pl-8"
+                placeholder="Jogador ou código"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
             </div>
-          ) : candidates?.items.length ? (
-            <div className="divide-y">
-              {candidates.items.map((candidate) => (
-                <article
-                  key={candidate.evidence.id}
-                  className="grid gap-4 p-4 transition-colors hover:bg-muted/25 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm font-semibold">
-                        {candidate.evidence.id}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={evidenceQualityTone(candidate.evidence.quality)}
-                      >
-                        {evidenceQualityLabel(candidate.evidence.quality)}
-                      </Badge>
-                      {candidate.championshipContext === "matched" ? (
-                        <Badge variant="outline" className="border-cyan-400/45 text-cyan-300">
-                          <Link2 />
-                          Sala deste campeonato
-                        </Badge>
-                      ) : candidate.championshipContext === "other" ? (
-                        <Badge variant="outline" className="border-amber-400/45 text-amber-300">
-                          Outra competição
-                        </Badge>
-                      ) : null}
-                      {!candidate.programCompatible ? (
-                        <Badge variant="outline" className="border-amber-400/50 text-amber-300">
-                          Programa não autorizado
-                        </Badge>
-                      ) : null}
-                      {candidate.orientationRecommendation ? (
-                        <Badge variant="outline" className="border-emerald-400/45 text-emerald-300">
-                          {candidate.orientationRecommendation.orientation === "aligned"
-                            ? "Lados compatíveis"
-                            : "Usará lados invertidos"}
-                        </Badge>
-                      ) : null}
-                      {candidate.alreadyClaimed ? (
-                        <Badge variant="destructive">Já vinculada</Badge>
-                      ) : null}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
-                      <span className="font-mono text-base text-foreground">
-                        {(() => {
-                          const score = championshipEvidenceScore(
-                            candidate.evidence.score,
-                            candidate.orientationRecommendation?.orientation ?? orientation,
-                          );
-                          return `${score.a} – ${score.b}`;
-                        })()}
-                      </span>
-                      <span>{candidate.evidence.rounds.length} tempos</span>
-                      {candidate.evidence.rounds[0]?.initiatedAt ? (
-                        <span>
-                          <CalendarClock className="mr-1 inline size-3" />
-                          {formatDateTime(candidate.evidence.rounds[0].initiatedAt)}
+            <NativeSelect
+              aria-label="Qualidade"
+              value={quality}
+              onChange={(event) => setQuality(event.target.value as typeof quality)}
+            >
+              <NativeSelectOption value="all">Toda qualidade</NativeSelectOption>
+              <NativeSelectOption value="complete">Completa</NativeSelectOption>
+              <NativeSelectOption value="recovered">Recuperada</NativeSelectOption>
+              <NativeSelectOption value="partial">Parcial</NativeSelectOption>
+              <NativeSelectOption value="legacy">Proveniência indisponível</NativeSelectOption>
+            </NativeSelect>
+            <Button type="submit" variant="outline" disabled={state === "loading"}>
+              <RefreshCw className={state === "loading" ? "animate-spin" : ""} />
+              Atualizar
+            </Button>
+            <label
+              htmlFor="include-all-programs"
+              className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2"
+            >
+              <Checkbox
+                id="include-all-programs"
+                checked={includeAllPrograms}
+                onCheckedChange={(value) => setIncludeAllPrograms(value === true)}
+              />
+              Incluir programas não autorizados nesta edição
+            </label>
+            <label
+              htmlFor="show-claimed-evidence"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              <Checkbox
+                id="show-claimed-evidence"
+                checked={showClaimed}
+                onCheckedChange={(value) => setShowClaimed(value === true)}
+              />
+              Mostrar partidas já vinculadas
+            </label>
+            <div className="flex items-center justify-end gap-1 text-xs">
+              <span className="mr-1 text-muted-foreground">Orientação</span>
+              <Button
+                type="button"
+                size="sm"
+                variant={orientation === "aligned" ? "secondary" : "ghost"}
+                onClick={() => setOrientation("aligned")}
+              >
+                Normal
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={orientation === "swapped" ? "secondary" : "ghost"}
+                onClick={() => setOrientation("swapped")}
+              >
+                <ArrowLeftRight />
+                Invertida
+              </Button>
+            </div>
+          </form>
+          {compositionGames.length ? (
+            <EvidenceCompositionBuilder
+              games={compositionGames}
+              lastGameIsOvertime={lastGameIsOvertime}
+              sideAName={operations.match.sideA?.abbreviation ?? "Lado A"}
+              sideBName={operations.match.sideB?.abbreviation ?? "Lado B"}
+              championshipOrientation={orientation}
+              busy={composeBusy}
+              onMove={moveCompositionGame}
+              onRemove={(candidate) => toggleCompositionGame(candidate)}
+              onOrientation={setCompositionOrientation}
+              onLastGameIsOvertime={setLastGameIsOvertime}
+              onSubmit={composeAndAttach}
+            />
+          ) : null}
+          {message ? <InlineError message={message} /> : null}
+          <div
+            ref={resultsScrollRef}
+            className="min-h-72 max-h-[min(48vh,34rem)] overflow-y-auto rounded-md border bg-background/30"
+          >
+            {state === "loading" ? (
+              <div className="space-y-2 py-2">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <Skeleton key={index} className="h-24 w-full" />
+                ))}
+              </div>
+            ) : candidates?.items.length ? (
+              <div className="divide-y">
+                {candidates.items.map((candidate) => (
+                  <article
+                    key={candidate.evidence.id}
+                    className="grid gap-4 p-4 transition-colors hover:bg-muted/25 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">
+                          {candidate.evidence.id}
                         </span>
-                      ) : null}
-                      <span>
-                        {Array.from(
-                          new Set(
-                            candidate.evidence.rounds
-                              .map((round) => round.provenance?.program.name)
-                              .filter((name): name is string => !!name),
-                          ),
-                        ).join(", ") || "Sem programa registrado"}
-                      </span>
-                      <span>
-                        {candidate.evidence.rounds
-                          .flatMap((round) =>
-                            round.participants.items.map((item) => item.player.name),
-                          )
-                          .filter((name, index, all) => all.indexOf(name) === index)
-                          .slice(0, 6)
-                          .join(", ") || "Sem participantes"}
-                      </span>
+                        <Badge
+                          variant="outline"
+                          className={evidenceQualityTone(candidate.evidence.quality)}
+                        >
+                          {evidenceQualityLabel(candidate.evidence.quality)}
+                        </Badge>
+                        {candidate.championshipContext === "matched" ? (
+                          <Badge variant="outline" className="border-cyan-400/45 text-cyan-300">
+                            <Link2 />
+                            Sala deste campeonato
+                          </Badge>
+                        ) : candidate.championshipContext === "other" ? (
+                          <Badge variant="outline" className="border-amber-400/45 text-amber-300">
+                            Outra competição
+                          </Badge>
+                        ) : null}
+                        {!candidate.programCompatible ? (
+                          <Badge variant="outline" className="border-amber-400/50 text-amber-300">
+                            Programa não autorizado
+                          </Badge>
+                        ) : null}
+                        {candidate.orientationRecommendation ? (
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-400/45 text-emerald-300"
+                          >
+                            {candidate.orientationRecommendation.orientation === "aligned"
+                              ? "Lados compatíveis"
+                              : "Usará lados invertidos"}
+                          </Badge>
+                        ) : null}
+                        {candidate.alreadyClaimed ? (
+                          <Badge variant="destructive">Já vinculada</Badge>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                        <span className="font-mono text-base text-foreground">
+                          {(() => {
+                            const score = championshipEvidenceScore(
+                              candidate.evidence.score,
+                              candidate.orientationRecommendation?.orientation ?? orientation,
+                            );
+                            return `${score.a} – ${score.b}`;
+                          })()}
+                        </span>
+                        <span>{candidate.evidence.rounds.length} tempos</span>
+                        {candidate.evidence.rounds[0]?.initiatedAt ? (
+                          <span>
+                            <CalendarClock className="mr-1 inline size-3" />
+                            {formatDateTime(candidate.evidence.rounds[0].initiatedAt)}
+                          </span>
+                        ) : null}
+                        <span>
+                          {Array.from(
+                            new Set(
+                              candidate.evidence.rounds
+                                .map((round) => round.provenance?.program.name)
+                                .filter((name): name is string => !!name),
+                            ),
+                          ).join(", ") || "Sem programa registrado"}
+                        </span>
+                        <span>
+                          {candidate.evidence.rounds
+                            .flatMap((round) =>
+                              round.participants.items.map((item) => item.player.name),
+                            )
+                            .filter((name, index, all) => all.indexOf(name) === index)
+                            .slice(0, 6)
+                            .join(", ") || "Sem participantes"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    {candidate.evidence.kind === "single" ? (
-                      <Button
-                        size="sm"
-                        variant={
-                          compositionGames.some(
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {candidate.evidence.kind === "single" ? (
+                        <Button
+                          size="sm"
+                          variant={
+                            compositionGames.some(
+                              (item) => item.candidate.evidence.id === candidate.evidence.id,
+                            )
+                              ? "secondary"
+                              : "outline"
+                          }
+                          disabled={candidate.alreadyClaimed || attachingId !== null}
+                          onClick={() => toggleCompositionGame(candidate)}
+                        >
+                          <Layers3 />
+                          {compositionGames.some(
                             (item) => item.candidate.evidence.id === candidate.evidence.id,
                           )
-                            ? "secondary"
-                            : "outline"
-                        }
+                            ? "Selecionado"
+                            : "Adicionar tempo"}
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
                         disabled={candidate.alreadyClaimed || attachingId !== null}
-                        onClick={() => toggleCompositionGame(candidate)}
+                        onClick={() => selectCandidate(candidate)}
                       >
-                        <Layers3 />
-                        {compositionGames.some(
-                          (item) => item.candidate.evidence.id === candidate.evidence.id,
-                        )
-                          ? "Selecionado"
-                          : "Adicionar tempo"}
+                        {attachingId === candidate.evidence.id ? (
+                          <LoaderCircle className="animate-spin" />
+                        ) : (
+                          <Link2 />
+                        )}
+                        {attachingId === candidate.evidence.id ? "Vinculando" : "Vincular"}
                       </Button>
-                    ) : null}
-                    <Button
-                      size="sm"
-                      disabled={candidate.alreadyClaimed || attachingId !== null}
-                      onClick={() => selectCandidate(candidate)}
-                    >
-                      {attachingId === candidate.evidence.id ? (
-                        <LoaderCircle className="animate-spin" />
-                      ) : (
-                        <Link2 />
-                      )}
-                      {attachingId === candidate.evidence.id ? "Vinculando" : "Vincular"}
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="flex min-h-72 items-center justify-center text-center">
-              <div>
-                <FileSearch className="mx-auto size-8 text-muted-foreground" />
-                <p className="mt-3 text-sm font-medium">Nenhuma candidata encontrada</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Amplie os filtros ou confirme o código do registro.
-                </p>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </div>
-          )}
-          {candidates && state !== "loading" ? (
-            <div
-              ref={loadMoreRef}
-              className="flex h-14 items-center justify-center gap-2 border-t text-xs text-muted-foreground"
-            >
-              {loadingMore ? (
-                <>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Carregando mais partidas
-                </>
-              ) : candidates.nextCursor ? (
-                "Role para carregar mais"
-              ) : (
-                "Todas as partidas encontradas foram exibidas"
-              )}
-            </div>
-          ) : null}
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{candidates ? `${candidates.totalInspected} registros inspecionados` : ""}</span>
-          <span>
-            {candidates?.nextCursor
-              ? "Mais resultados disponíveis"
-              : candidates
-                ? "Fim dos resultados"
-                : ""}
-          </span>
+            ) : (
+              <div className="flex min-h-72 items-center justify-center text-center">
+                <div>
+                  <FileSearch className="mx-auto size-8 text-muted-foreground" />
+                  <p className="mt-3 text-sm font-medium">Nenhuma candidata encontrada</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Amplie os filtros ou confirme o código do registro.
+                  </p>
+                </div>
+              </div>
+            )}
+            {candidates && state !== "loading" ? (
+              <div
+                ref={loadMoreRef}
+                className="flex h-14 items-center justify-center gap-2 border-t text-xs text-muted-foreground"
+              >
+                {loadingMore ? (
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    Carregando mais partidas
+                  </>
+                ) : candidates.nextCursor ? (
+                  "Role para carregar mais"
+                ) : (
+                  "Todas as partidas encontradas foram exibidas"
+                )}
+              </div>
+            ) : null}
+          </div>
+          <div className="flex justify-between gap-3 py-2 text-xs text-muted-foreground">
+            <span>{candidates ? `${candidates.totalInspected} registros inspecionados` : ""}</span>
+            <span>
+              {candidates?.nextCursor
+                ? "Mais resultados disponíveis"
+                : candidates
+                  ? "Fim dos resultados"
+                  : ""}
+            </span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -1186,22 +1191,12 @@ function EvidenceCompositionBuilder({
   onLastGameIsOvertime: (value: boolean) => void;
   onSubmit: () => void;
 }) {
-  const logicalScore = games.reduce(
-    (total, item) => {
-      const score = item.candidate.evidence.score;
-      const red = numberValue(score?.red);
-      const blue = numberValue(score?.blue);
-
-      return item.orientation === "aligned"
-        ? { red: total.red + red, blue: total.blue + blue }
-        : { red: total.red + blue, blue: total.blue + red };
-    },
-    { red: 0, blue: 0 },
-  );
+  const finalGame = games.at(-1);
+  const finalScore = finalGame
+    ? championshipEvidenceScore(finalGame.candidate.evidence.score, finalGame.orientation)
+    : { a: 0, b: 0 };
   const championshipScore =
-    championshipOrientation === "aligned"
-      ? { a: logicalScore.red, b: logicalScore.blue }
-      : { a: logicalScore.blue, b: logicalScore.red };
+    championshipOrientation === "aligned" ? finalScore : { a: finalScore.b, b: finalScore.a };
 
   return (
     <section className="-mx-6 border-b bg-primary/5 px-6 py-4" aria-label="Composição de tempos">
@@ -1210,15 +1205,22 @@ function EvidenceCompositionBuilder({
           <Layers3 className="size-4 text-primary" />
           <div>
             <h3 className="text-sm font-semibold">Composição de tempos</h3>
-            <p className="text-xs text-muted-foreground">{games.length} jogos registrados</p>
+            <p className="text-xs text-muted-foreground">
+              {games.length} {games.length === 1 ? "tempo registrado" : "tempos registrados"}
+            </p>
           </div>
         </div>
-        <div className="flex items-baseline gap-3 font-mono tabular-nums">
-          <span className="text-xs text-muted-foreground">{sideAName}</span>
-          <strong className="text-xl">
-            {championshipScore.a} – {championshipScore.b}
-          </strong>
-          <span className="text-xs text-muted-foreground">{sideBName}</span>
+        <div className="text-right">
+          <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            Placar final · último tempo
+          </p>
+          <div className="flex items-baseline justify-end gap-3 font-mono tabular-nums">
+            <span className="text-xs text-muted-foreground">{sideAName}</span>
+            <strong className="text-xl">
+              {championshipScore.a} – {championshipScore.b}
+            </strong>
+            <span className="text-xs text-muted-foreground">{sideBName}</span>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto border bg-background/50">
@@ -1227,7 +1229,7 @@ function EvidenceCompositionBuilder({
             <TableRow>
               <TableHead className="w-24">Ordem</TableHead>
               <TableHead>Registro</TableHead>
-              <TableHead className="w-32">Placar bruto</TableHead>
+              <TableHead className="w-32">Placar registrado</TableHead>
               <TableHead className="w-48">Lados</TableHead>
               <TableHead className="w-12">
                 <span className="sr-only">Remover</span>
@@ -1240,7 +1242,10 @@ function EvidenceCompositionBuilder({
               const label = isLast && lastGameIsOvertime ? "Prorrogação" : `${index + 1}º tempo`;
 
               return (
-                <TableRow key={item.candidate.evidence.id}>
+                <TableRow
+                  key={item.candidate.evidence.id}
+                  className={isLast ? "bg-primary/5" : undefined}
+                >
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button
@@ -1268,7 +1273,10 @@ function EvidenceCompositionBuilder({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="block text-xs font-semibold">{label}</span>
+                    <span className="block text-xs font-semibold">
+                      {label}
+                      {isLast ? <Badge className="ml-2 align-middle">Placar final</Badge> : null}
+                    </span>
                     <span className="font-mono text-xs text-muted-foreground">
                       {item.candidate.evidence.id}
                     </span>
@@ -1317,16 +1325,19 @@ function EvidenceCompositionBuilder({
           </TableBody>
         </Table>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <label htmlFor="last-game-is-overtime" className="flex items-center gap-2 text-xs">
-          <Checkbox
-            id="last-game-is-overtime"
-            checked={lastGameIsOvertime}
-            disabled={games.length < 2}
-            onCheckedChange={(value) => onLastGameIsOvertime(value === true)}
-          />
-          Último jogo é prorrogação
-        </label>
+      <div className="sticky bottom-0 z-10 -mx-6 mt-3 flex flex-wrap items-center justify-between gap-3 border-t bg-background/95 px-6 py-3 backdrop-blur">
+        <div className="space-y-1 text-xs">
+          <label htmlFor="last-game-is-overtime" className="flex items-center gap-2">
+            <Checkbox
+              id="last-game-is-overtime"
+              checked={lastGameIsOvertime}
+              disabled={games.length < 2}
+              onCheckedChange={(value) => onLastGameIsOvertime(value === true)}
+            />
+            Último tempo é prorrogação
+          </label>
+          <p className="text-muted-foreground">O último tempo selecionado define o placar final.</p>
+        </div>
         <Button type="button" disabled={games.length < 2 || busy} onClick={onSubmit}>
           <Link2 />
           {busy ? "Associando" : "Compor e vincular"}

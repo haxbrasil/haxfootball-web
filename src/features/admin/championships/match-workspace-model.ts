@@ -61,23 +61,21 @@ export function evidencePeriodScores(
 
   let accumulatedA = 0;
   let accumulatedB = 0;
+  const independentRoundScores =
+    evidence.scoreMode === "per-game" || evidence.scoreMode === "last-round";
 
   return evidence.rounds.map((round, index) => {
     const normalizedScore = championshipEvidenceScore(round.normalizedScore, orientation);
     const normalizedSideA = normalizedScore.a;
     const normalizedSideB = normalizedScore.b;
-    const sideA =
-      evidence.scoreMode === "per-game"
-        ? normalizedSideA
-        : Math.max(0, normalizedSideA - accumulatedA);
-    const sideB =
-      evidence.scoreMode === "per-game"
-        ? normalizedSideB
-        : Math.max(0, normalizedSideB - accumulatedB);
-    const cumulativeSideA =
-      evidence.scoreMode === "per-game" ? accumulatedA + sideA : normalizedSideA;
-    const cumulativeSideB =
-      evidence.scoreMode === "per-game" ? accumulatedB + sideB : normalizedSideB;
+    const sideA = independentRoundScores
+      ? normalizedSideA
+      : Math.max(0, normalizedSideA - accumulatedA);
+    const sideB = independentRoundScores
+      ? normalizedSideB
+      : Math.max(0, normalizedSideB - accumulatedB);
+    const cumulativeSideA = independentRoundScores ? accumulatedA + sideA : normalizedSideA;
+    const cumulativeSideB = independentRoundScores ? accumulatedB + sideB : normalizedSideB;
     const item = {
       id: round.matchId,
       label:
