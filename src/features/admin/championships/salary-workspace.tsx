@@ -1382,7 +1382,7 @@ function TeamCapComparison({
   );
 }
 
-function TeamConfigurationMenu({
+export function TeamConfigurationMenu({
   team,
   participants,
   onMoveRequest,
@@ -1391,11 +1391,20 @@ function TeamConfigurationMenu({
   participants: SalaryParticipant[];
   onMoveRequest: (request: RosterMoveRequest) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [managersOpen, setManagersOpen] = useState(false);
+  const openManagersAfterMenuClose = useRef(false);
+
+  useEffect(() => {
+    if (menuOpen || !openManagersAfterMenuClose.current) return;
+
+    openManagersAfterMenuClose.current = false;
+    setManagersOpen(true);
+  }, [menuOpen]);
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" size="icon-sm" title={`Configurar ${team.name}`}>
             <Settings2 />
@@ -1403,7 +1412,13 @@ function TeamConfigurationMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onSelect={() => setManagersOpen(true)}>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              openManagersAfterMenuClose.current = true;
+              setMenuOpen(false);
+            }}
+          >
             <Crown />
             Gerenciar General Managers
           </DropdownMenuItem>
