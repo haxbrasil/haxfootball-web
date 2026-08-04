@@ -87,6 +87,7 @@ import {
   evidenceUsesUnconfiguredProgram,
   methodDescription,
   methodLabel,
+  matchTeamLabel,
   numberValue,
   officialScore,
   outcomeLabel,
@@ -273,8 +274,7 @@ function MatchQueue({
               <span className="min-w-0">
                 <span className="block truncate text-xs font-semibold">{match.label}</span>
                 <span className="mt-1 block truncate text-xs text-muted-foreground">
-                  {match.sideA.team?.abbreviation ?? "A definir"} ·{" "}
-                  {match.sideB.team?.abbreviation ?? "A definir"}
+                  {matchTeamLabel(match.sideA.team)} · {matchTeamLabel(match.sideB.team)}
                 </span>
               </span>
               <span className="flex items-center gap-1.5">

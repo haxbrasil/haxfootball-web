@@ -1393,14 +1393,15 @@ export function TeamConfigurationMenu({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [managersOpen, setManagersOpen] = useState(false);
-  const openManagersAfterMenuClose = useRef(false);
+  const managersOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (menuOpen || !openManagersAfterMenuClose.current) return;
-
-    openManagersAfterMenuClose.current = false;
-    setManagersOpen(true);
-  }, [menuOpen]);
+    return () => {
+      if (managersOpenTimer.current !== null) {
+        clearTimeout(managersOpenTimer.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -1413,10 +1414,15 @@ export function TeamConfigurationMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              openManagersAfterMenuClose.current = true;
+            onSelect={() => {
               setMenuOpen(false);
+              if (managersOpenTimer.current !== null) {
+                clearTimeout(managersOpenTimer.current);
+              }
+              managersOpenTimer.current = setTimeout(() => {
+                managersOpenTimer.current = null;
+                setManagersOpen(true);
+              }, 0);
             }}
           >
             <Crown />

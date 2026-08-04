@@ -10,6 +10,10 @@ export type SettlementPreview = ChampionshipSettlementPreviewData;
 export type EvidenceRound = NonNullable<MatchOperations["evidence"]>["rounds"][number];
 export type SettlementMethod = NonNullable<MatchOperations["result"]>["method"];
 export type MatchOutcome = NonNullable<MatchOperations["result"]>["sideAOutcome"];
+export type MatchTeamLabelSource =
+  | { abbreviation?: string | null; name?: string | null }
+  | null
+  | undefined;
 
 export type SettlementDraft = {
   method: SettlementMethod;
@@ -41,6 +45,14 @@ type EvidenceScoreValue = number | string | null | undefined;
 export function numberValue(value: string | number | null | undefined): number {
   const result = Number(value ?? 0);
   return Number.isFinite(result) ? result : 0;
+}
+
+export function matchTeamLabel(team: MatchTeamLabelSource): string {
+  const abbreviation = team?.abbreviation?.trim();
+  if (abbreviation) return abbreviation;
+
+  const name = team?.name?.trim();
+  return name || "A definir";
 }
 
 export function championshipEvidenceScore(

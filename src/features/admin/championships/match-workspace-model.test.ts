@@ -8,6 +8,7 @@ import {
   evidenceUsesUnconfiguredProgram,
   evidenceQualityLabel,
   evidencePeriodScores,
+  matchTeamLabel,
   numberValue,
   officialScore,
   outcomeForScores,
@@ -15,6 +16,12 @@ import {
 } from "./match-workspace-model";
 
 describe("championship match workspace model", () => {
+  it("uses a team's name when its optional abbreviation is missing", () => {
+    expect(matchTeamLabel({ name: "Equipe Gabinho", abbreviation: null })).toBe("Equipe Gabinho");
+    expect(matchTeamLabel({ name: "Equipe Gabinho", abbreviation: "GAB" })).toBe("GAB");
+    expect(matchTeamLabel(null)).toBe("A definir");
+  });
+
   it.each([
     [0, 0, "draw", "draw"],
     [1, 0, "win", "loss"],
