@@ -638,6 +638,8 @@ function BracketMatchNode({
         projection={projection}
         spotUuid={match.sideA.spotUuid}
         team={match.sideA.team}
+        score={match.result?.sideAOfficialScore ?? null}
+        outcome={match.result?.sideAOutcome ?? null}
         admin={admin}
         onProjection={onProjection}
       />
@@ -646,6 +648,8 @@ function BracketMatchNode({
         projection={projection}
         spotUuid={match.sideB.spotUuid}
         team={match.sideB.team}
+        score={match.result?.sideBOfficialScore ?? null}
+        outcome={match.result?.sideBOutcome ?? null}
         admin={admin}
         onProjection={onProjection}
       />
@@ -663,6 +667,8 @@ function BracketTeamSpot({
   projection,
   spotUuid,
   team,
+  score,
+  outcome,
   admin,
   onProjection,
 }: {
@@ -670,6 +676,8 @@ function BracketTeamSpot({
   projection: FormatProjection;
   spotUuid: string;
   team: FormatMatch["sideA"]["team"];
+  score: number | null;
+  outcome: NonNullable<FormatMatch["result"]>["sideAOutcome"] | null;
   admin: boolean;
   onProjection: (format: FormatProjection) => void;
 }) {
@@ -794,7 +802,17 @@ function BracketTeamSpot({
         <span className="min-w-0 flex-1 truncate text-xs font-medium">
           {busy ? "Movendo…" : (team?.name ?? "A definir")}
         </span>
-        {team ? (
+        {score !== null ? (
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 font-mono text-xs font-semibold tabular-nums ${
+              outcome === "win" ? "text-primary" : "text-muted-foreground"
+            }`}
+            title={outcome === "win" ? "Vencedor" : outcome === "draw" ? "Empate" : "Derrota"}
+          >
+            {numberValue(score)}
+            {outcome === "win" ? <Check className="size-3" aria-label="Vencedor" /> : null}
+          </span>
+        ) : team?.abbreviation ? (
           <span className="text-[10px] text-muted-foreground">{team.abbreviation}</span>
         ) : null}
       </button>
