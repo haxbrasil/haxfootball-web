@@ -1477,7 +1477,7 @@ function EliminationGenerator({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="grid max-h-[calc(100vh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>
             {engine === "standings"
@@ -1494,263 +1494,265 @@ function EliminationGenerator({
                 : "Confira toda a estrutura antes de materializar spots, rotas e períodos editáveis."}
           </DialogDescription>
         </DialogHeader>
-        {data.championship.competitionType.cadence === "single-event" ? (
-          <div className="flex flex-col gap-3 border-y border-emerald-500/30 bg-emerald-500/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-sm font-medium">Competição de evento único</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Use um único período para todas as partidas do dia.
+        <div className="bfl-scrollbar min-h-0 overflow-y-auto pr-1">
+          {data.championship.competitionType.cadence === "single-event" ? (
+            <div className="flex flex-col gap-3 border-y border-emerald-500/30 bg-emerald-500/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-medium">Competição de evento único</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  Use um único período para todas as partidas do dia.
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  selectEngine("single");
+                  setCompetitionRoundMode("single-period");
+                  setRoundHours(24);
+                  setName("Evento principal");
+                  if (data.championship.startsAt) {
+                    setFirstRound(toLocalDateTime(data.championship.startsAt));
+                  }
+                }}
+              >
+                <CalendarClock />
+                Aplicar fluxo de um dia
+              </Button>
             </div>
+          ) : null}
+          <div className="grid border p-0.5 sm:grid-cols-2 lg:grid-cols-4">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                selectEngine("single");
-                setCompetitionRoundMode("single-period");
-                setRoundHours(24);
-                setName("Evento principal");
-                if (data.championship.startsAt) {
-                  setFirstRound(toLocalDateTime(data.championship.startsAt));
-                }
-              }}
+              variant={engine === "single" ? "secondary" : "ghost"}
+              onClick={() => selectEngine("single")}
             >
-              <CalendarClock />
-              Aplicar fluxo de um dia
+              Eliminação simples
+            </Button>
+            <Button
+              variant={engine === "double" ? "secondary" : "ghost"}
+              onClick={() => selectEngine("double")}
+            >
+              Dupla eliminação
+            </Button>
+            <Button
+              variant={engine === "standings" ? "secondary" : "ghost"}
+              onClick={() => selectEngine("standings")}
+            >
+              Tabela e grupos
+            </Button>
+            <Button
+              variant={engine === "manual" ? "secondary" : "ghost"}
+              onClick={() => selectEngine("manual")}
+            >
+              Formato manual
             </Button>
           </div>
-        ) : null}
-        <div className="grid border p-0.5 sm:grid-cols-2 lg:grid-cols-4">
-          <Button
-            variant={engine === "single" ? "secondary" : "ghost"}
-            onClick={() => selectEngine("single")}
-          >
-            Eliminação simples
-          </Button>
-          <Button
-            variant={engine === "double" ? "secondary" : "ghost"}
-            onClick={() => selectEngine("double")}
-          >
-            Dupla eliminação
-          </Button>
-          <Button
-            variant={engine === "standings" ? "secondary" : "ghost"}
-            onClick={() => selectEngine("standings")}
-          >
-            Tabela e grupos
-          </Button>
-          <Button
-            variant={engine === "manual" ? "secondary" : "ghost"}
-            onClick={() => selectEngine("manual")}
-          >
-            Formato manual
-          </Button>
-        </div>
-        <div className="grid gap-5 py-2 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="format-name">Nome da etapa</Label>
-              <Input
-                id="format-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            {engine !== "standings" && engine !== "manual" ? (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="format-start">Início</Label>
-                  <Input
-                    id="format-start"
-                    type="datetime-local"
-                    value={firstRound}
-                    onChange={(event) => setFirstRound(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="format-duration">Horas por fase</Label>
-                  <Input
-                    id="format-duration"
-                    type="number"
-                    min={1}
-                    max={744}
-                    value={roundHours}
-                    onChange={(event) => setRoundHours(Number(event.target.value))}
-                  />
-                </div>
-              </div>
-            ) : engine === "standings" ? (
-              <div className="border-y py-4">
-                <Label htmlFor="format-group-count">Quantidade de grupos</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {[1, 2, 3, 4].map((count) => (
-                    <Button
-                      key={count}
-                      type="button"
-                      size="sm"
-                      variant={groupCount === count ? "secondary" : "outline"}
-                      disabled={count > teamIds.length}
-                      onClick={() => setGroupCount(count)}
-                    >
-                      {count === 1 ? "Grupo único" : `${count} grupos`}
-                    </Button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  As equipes selecionadas serão distribuídas alternadamente, de forma equilibrada.
-                </p>
-              </div>
-            ) : null}
-            {engine !== "standings" && engine !== "manual" ? (
-              <label
-                htmlFor="single-period-format"
-                className="flex items-start gap-3 border-y py-3 text-sm"
-              >
-                <Checkbox
-                  id="single-period-format"
-                  checked={competitionRoundMode === "single-period"}
-                  onCheckedChange={(checked) =>
-                    setCompetitionRoundMode(
-                      checked === true ? "single-period" : "per-bracket-round",
-                    )
-                  }
-                />
-                <span>
-                  <span className="block font-medium">Um único período para toda a chave</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Todas as fases acontecem dentro da mesma janela de tempo.
-                  </span>
-                </span>
-              </label>
-            ) : null}
-            {data.roomPrograms ? (
+          <div className="grid gap-5 py-2 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="format-program">Programa padrão</Label>
-                <NativeSelect
-                  id="format-program"
-                  value={programId}
-                  onChange={(event) => setProgramId(event.target.value)}
-                >
-                  <NativeSelectOption value="">Padrão do campeonato</NativeSelectOption>
-                  {data.roomPrograms.items.map((program) => (
-                    <NativeSelectOption key={program.id} value={program.id}>
-                      {program.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </div>
-            ) : null}
-            {engine === "double" ? (
-              <label
-                htmlFor="grand-final-reset"
-                className="flex items-start gap-3 border-y py-3 text-sm"
-              >
-                <Checkbox
-                  id="grand-final-reset"
-                  checked={grandFinalReset}
-                  onCheckedChange={(checked) => setGrandFinalReset(checked === true)}
+                <Label htmlFor="format-name">Nome da etapa</Label>
+                <Input
+                  id="format-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
                 />
-                <span>
-                  <span className="block font-medium">Final com reset condicional</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    A final decisiva só é ativada quando a equipe da chave inferior vence a primeira
-                    final.
+              </div>
+              {engine !== "standings" && engine !== "manual" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="format-start">Início</Label>
+                    <Input
+                      id="format-start"
+                      type="datetime-local"
+                      value={firstRound}
+                      onChange={(event) => setFirstRound(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="format-duration">Horas por fase</Label>
+                    <Input
+                      id="format-duration"
+                      type="number"
+                      min={1}
+                      max={744}
+                      value={roundHours}
+                      onChange={(event) => setRoundHours(Number(event.target.value))}
+                    />
+                  </div>
+                </div>
+              ) : engine === "standings" ? (
+                <div className="border-y py-4">
+                  <Label htmlFor="format-group-count">Quantidade de grupos</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[1, 2, 3, 4].map((count) => (
+                      <Button
+                        key={count}
+                        type="button"
+                        size="sm"
+                        variant={groupCount === count ? "secondary" : "outline"}
+                        disabled={count > teamIds.length}
+                        onClick={() => setGroupCount(count)}
+                      >
+                        {count === 1 ? "Grupo único" : `${count} grupos`}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    As equipes selecionadas serão distribuídas alternadamente, de forma equilibrada.
+                  </p>
+                </div>
+              ) : null}
+              {engine !== "standings" && engine !== "manual" ? (
+                <label
+                  htmlFor="single-period-format"
+                  className="flex items-start gap-3 border-y py-3 text-sm"
+                >
+                  <Checkbox
+                    id="single-period-format"
+                    checked={competitionRoundMode === "single-period"}
+                    onCheckedChange={(checked) =>
+                      setCompetitionRoundMode(
+                        checked === true ? "single-period" : "per-bracket-round",
+                      )
+                    }
+                  />
+                  <span>
+                    <span className="block font-medium">Um único período para toda a chave</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Todas as fases acontecem dentro da mesma janela de tempo.
+                    </span>
                   </span>
-                </span>
-              </label>
-            ) : null}
-            {engine === "single" && sourceGroups.length > 0 ? (
-              <div className="space-y-2 border-y py-4">
-                <Label>Origem das vagas</Label>
-                <div className="grid grid-cols-2 border p-0.5">
-                  <Button
-                    type="button"
-                    variant={singleSource === "teams" ? "secondary" : "ghost"}
-                    onClick={() => setSingleSource("teams")}
+                </label>
+              ) : null}
+              {data.roomPrograms ? (
+                <div className="space-y-2">
+                  <Label htmlFor="format-program">Programa padrão</Label>
+                  <NativeSelect
+                    id="format-program"
+                    value={programId}
+                    onChange={(event) => setProgramId(event.target.value)}
                   >
-                    Equipes definidas
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={singleSource === "classification" ? "secondary" : "ghost"}
-                    onClick={() => setSingleSource("classification")}
-                  >
-                    Classificação dos grupos
-                  </Button>
+                    <NativeSelectOption value="">Padrão do campeonato</NativeSelectOption>
+                    {data.roomPrograms.items.map((program) => (
+                      <NativeSelectOption key={program.id} value={program.id}>
+                        {program.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
                 </div>
-              </div>
-            ) : null}
-            {engine === "single" && singleSource === "classification" ? (
-              <QualificationSourceEditor
-                groups={sourceGroups}
-                size={qualificationSize}
-                sources={qualificationSources}
-                onSize={setQualificationSize}
-                onSources={setQualificationSources}
+              ) : null}
+              {engine === "double" ? (
+                <label
+                  htmlFor="grand-final-reset"
+                  className="flex items-start gap-3 border-y py-3 text-sm"
+                >
+                  <Checkbox
+                    id="grand-final-reset"
+                    checked={grandFinalReset}
+                    onCheckedChange={(checked) => setGrandFinalReset(checked === true)}
+                  />
+                  <span>
+                    <span className="block font-medium">Final com reset condicional</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      A final decisiva só é ativada quando a equipe da chave inferior vence a
+                      primeira final.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+              {engine === "single" && sourceGroups.length > 0 ? (
+                <div className="space-y-2 border-y py-4">
+                  <Label>Origem das vagas</Label>
+                  <div className="grid grid-cols-2 border p-0.5">
+                    <Button
+                      type="button"
+                      variant={singleSource === "teams" ? "secondary" : "ghost"}
+                      onClick={() => setSingleSource("teams")}
+                    >
+                      Equipes definidas
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={singleSource === "classification" ? "secondary" : "ghost"}
+                      onClick={() => setSingleSource("classification")}
+                    >
+                      Classificação dos grupos
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              {engine === "single" && singleSource === "classification" ? (
+                <QualificationSourceEditor
+                  groups={sourceGroups}
+                  size={qualificationSize}
+                  sources={qualificationSources}
+                  onSize={setQualificationSize}
+                  onSources={setQualificationSources}
+                />
+              ) : engine !== "manual" ? (
+                <div>
+                  <Label>
+                    {engine === "standings" ? "Equipes participantes" : "Equipes e ordem de seed"}
+                  </Label>
+                  <div className="mt-2 max-h-56 divide-y overflow-y-auto border-y">
+                    {data.teams.items.map((team, index) => (
+                      <label key={team.uuid} className="flex h-11 items-center gap-3 px-2 text-sm">
+                        <Checkbox
+                          checked={teamIds.includes(team.uuid)}
+                          onCheckedChange={(checked) =>
+                            setTeamIds((current) =>
+                              checked
+                                ? [...current, team.uuid]
+                                : current.filter((uuid) => uuid !== team.uuid),
+                            )
+                          }
+                        />
+                        <span className="w-5 text-xs tabular-nums text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <TeamMark team={team} />
+                        <span className="truncate">{team.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <section className="border bg-card/30 p-4">
+                  <h3 className="font-medium">Comece pelo que já sabe</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    A etapa nasce vazia. Depois, adicione jogos diretamente escolhendo as equipes;
+                    os spots necessários são criados automaticamente.
+                  </p>
+                </section>
+              )}
+            </div>
+            {engine === "standings" ? (
+              <StandingsGeneratorPreview
+                teams={data.teams.items.filter((team) => teamIds.includes(team.uuid))}
+                groupCount={groupCount}
               />
-            ) : engine !== "manual" ? (
-              <div>
-                <Label>
-                  {engine === "standings" ? "Equipes participantes" : "Equipes e ordem de seed"}
-                </Label>
-                <div className="mt-2 max-h-56 divide-y overflow-y-auto border-y">
-                  {data.teams.items.map((team, index) => (
-                    <label key={team.uuid} className="flex h-11 items-center gap-3 px-2 text-sm">
-                      <Checkbox
-                        checked={teamIds.includes(team.uuid)}
-                        onCheckedChange={(checked) =>
-                          setTeamIds((current) =>
-                            checked
-                              ? [...current, team.uuid]
-                              : current.filter((uuid) => uuid !== team.uuid),
-                          )
-                        }
-                      />
-                      <span className="w-5 text-xs tabular-nums text-muted-foreground">
-                        {index + 1}
-                      </span>
-                      <TeamMark team={team} />
-                      <span className="truncate">{team.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+            ) : engine === "manual" ? (
+              <ManualGeneratorPreview />
             ) : (
-              <section className="border bg-card/30 p-4">
-                <h3 className="font-medium">Comece pelo que já sabe</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  A etapa nasce vazia. Depois, adicione jogos diretamente escolhendo as equipes; os
-                  spots necessários são criados automaticamente.
-                </p>
-              </section>
+              <GeneratorPreview
+                engine={engine}
+                teamCount={
+                  engine === "single" && singleSource === "classification"
+                    ? qualificationSize
+                    : teamIds.length
+                }
+                preview={preview}
+                busy={previewBusy}
+                onPreview={() => void refreshPreview()}
+              />
             )}
           </div>
-          {engine === "standings" ? (
-            <StandingsGeneratorPreview
-              teams={data.teams.items.filter((team) => teamIds.includes(team.uuid))}
-              groupCount={groupCount}
-            />
-          ) : engine === "manual" ? (
-            <ManualGeneratorPreview />
-          ) : (
-            <GeneratorPreview
-              engine={engine}
-              teamCount={
-                engine === "single" && singleSource === "classification"
-                  ? qualificationSize
-                  : teamIds.length
-              }
-              preview={preview}
-              busy={previewBusy}
-              onPreview={() => void refreshPreview()}
-            />
-          )}
+          {message ? (
+            <Alert variant="destructive">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          ) : null}
         </div>
-        {message ? (
-          <Alert variant="destructive">
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        ) : null}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
