@@ -22,6 +22,7 @@ import type {
   ChampionshipHistoryData,
   ChampionshipWorkspaceData,
 } from "#/server/api/championship-api";
+import { ChampionshipSectionHeading } from "#/features/championships/public/championship-section-heading";
 import {
   createChampionshipAwardFn,
   replaceChampionshipPlacementsFn,
@@ -51,24 +52,20 @@ export function ChampionshipArchiveWorkspace({
 }) {
   return (
     <div className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Archive className="size-4 text-primary" />
-            <h2 className="text-lg font-semibold">Títulos e prêmios</h2>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Conquistas em disputa, resultados confirmados e classificação final.
-          </p>
-        </div>
-        {data.championship.lifecycle === "completed" ||
-        data.championship.lifecycle === "archived" ? (
-          <Badge variant="outline" className="border-emerald-400/50 text-emerald-300">
-            <Check />
-            Registro concluído
-          </Badge>
-        ) : null}
-      </header>
+      <ChampionshipSectionHeading
+        icon={Archive}
+        title="Títulos e prêmios"
+        detail="Conquistas em disputa, resultados confirmados e classificação final."
+        action={
+          data.championship.lifecycle === "completed" ||
+          data.championship.lifecycle === "archived" ? (
+            <Badge variant="outline" className="border-emerald-400/50 text-emerald-300">
+              <Check />
+              Registro concluído
+            </Badge>
+          ) : undefined
+        }
+      />
 
       {mode === "admin" || data.honors.items.length ? (
         <ChampionshipHonorsWorkspace data={data} mode={mode} />

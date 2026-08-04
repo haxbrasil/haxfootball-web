@@ -5,7 +5,7 @@ import { TeamConfigurationMenu } from "./salary-workspace";
 afterEach(cleanup);
 
 describe("team configuration menu", () => {
-  it("opens General Manager management after the menu dismisses", async () => {
+  it("opens General Manager management from the team actions popover", async () => {
     render(
       <TeamConfigurationMenu
         team={{ uuid: "team-1", name: "Equipe Aurora" } as never}
@@ -23,11 +23,9 @@ describe("team configuration menu", () => {
     );
 
     const trigger = screen.getByRole("button", { name: "Configurar equipe" });
-    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
-    await waitFor(() =>
-      expect(screen.getByRole("menuitem", { name: "Gerenciar General Managers" })).toBeTruthy(),
-    );
-    fireEvent.click(screen.getByRole("menuitem", { name: "Gerenciar General Managers" }));
+    fireEvent.click(trigger);
+    const action = await screen.findByRole("button", { name: "Gerenciar General Managers" });
+    fireEvent.click(action);
 
     await waitFor(() =>
       expect(

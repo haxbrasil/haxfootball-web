@@ -53,12 +53,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "#/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "#/components/ui/dropdown-menu";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
@@ -72,6 +66,7 @@ import {
   TableRow,
 } from "#/components/ui/table";
 import { Textarea } from "#/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "#/components/ui/popover";
 import type { ChampionshipWorkspaceData } from "#/server/api/championship-api";
 import { formatSalaryUnits } from "#/features/championships/salary-format";
 import {
@@ -1405,16 +1400,31 @@ export function TeamConfigurationMenu({
 
   return (
     <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="icon-sm" title={`Configurar ${team.name}`}>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            title={`Configurar ${team.name}`}
+            onPointerDownCapture={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
             <Settings2 />
             <span className="sr-only">Configurar equipe</span>
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem
-            onSelect={() => {
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-56 p-1"
+          onPointerDownCapture={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={(event) => {
+              event.stopPropagation();
               setMenuOpen(false);
               if (managersOpenTimer.current !== null) {
                 clearTimeout(managersOpenTimer.current);
@@ -1427,9 +1437,9 @@ export function TeamConfigurationMenu({
           >
             <Crown />
             Gerenciar General Managers
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </Button>
+        </PopoverContent>
+      </Popover>
 
       <Dialog open={managersOpen} onOpenChange={setManagersOpen}>
         <DialogContent className="sm:max-w-lg">
