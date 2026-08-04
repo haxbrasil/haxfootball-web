@@ -6,7 +6,7 @@ import { BroadcastPanel } from "#/components/ds/broadcast-panel";
 import { EmptyState } from "#/components/ds/app-shell";
 import { LeagueHeader } from "#/components/ds/league-header";
 import { Button } from "#/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import { Card, CardContent, CardTitle } from "#/components/ui/card";
 import { Skeleton } from "#/components/ui/skeleton";
 import { getClipFn } from "#/server/api/functions";
 import type { WebClip } from "#/server/api/haxfootball";
@@ -85,8 +85,8 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
-        <Card className="overflow-hidden border-primary/20 bg-card shadow-lg shadow-primary/5">
-          <CardHeader className="gap-3 border-b bg-muted/20 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="bfl-panel gap-0 overflow-hidden rounded-xl border border-border/80 p-0 text-card-foreground shadow-lg shadow-primary/5">
+          <div className="bfl-panel-header flex min-h-12 items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Scissors className="size-4 text-primary" />
@@ -96,7 +96,7 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
                 {formatClipDuration(currentClip.startTick, currentClip.endTick)}
               </p>
             </div>
-          </CardHeader>
+          </div>
           <CardContent className="p-4 sm:p-6">
             <div className="overflow-hidden rounded-2xl border bg-slate-950 shadow-inner">
               <Suspense

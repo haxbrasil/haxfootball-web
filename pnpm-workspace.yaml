@@ -4,3 +4,5 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
+minimumReleaseAgeExclude:
+  - "@haxbrasil/haxfootball-replay@0.1.8"

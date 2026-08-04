@@ -29,6 +29,7 @@ import { DraftWorkspace } from "#/features/admin/championships/draft-workspace";
 import { FormatWorkspace } from "#/features/admin/championships/format-workspace";
 import { ChampionshipArchiveWorkspace } from "#/features/admin/championships/archive-workspace";
 import { ChampionshipMatchViewer } from "./championship-match-viewer";
+import { ChampionshipSectionHeading } from "./championship-section-heading";
 import { VisualizationDashboardView } from "#/features/visualizations/visualization-chart";
 import {
   selfRegisterChampionshipFn,
@@ -78,7 +79,7 @@ export function ChampionshipDetailPage({
       ) : null}
       {section === "bracket" ? (
         <section className="space-y-5">
-          <SectionHeading
+          <ChampionshipSectionHeading
             icon={Swords}
             title="Chaves e classificação"
             detail="Acompanhe cada etapa, tabela e caminho até a decisão."
@@ -99,7 +100,7 @@ export function ChampionshipDetailPage({
       ) : null}
       {section === "statistics" ? (
         <section className="space-y-5">
-          <SectionHeading
+          <ChampionshipSectionHeading
             icon={BarChart3}
             title="Estatísticas"
             detail="Visualizações configuradas para acompanhar o desempenho da edição."
@@ -110,7 +111,7 @@ export function ChampionshipDetailPage({
       {section === "honors" ? <ChampionshipArchiveWorkspace data={data} mode="public" /> : null}
       {section === "draft" && data.draft.draft ? (
         <section className="space-y-5">
-          <SectionHeading
+          <ChampionshipSectionHeading
             icon={Crown}
             title="Draft"
             detail="Acompanhe as escolhas e os elencos desta edição."
@@ -297,7 +298,7 @@ function ChampionshipInformation({
 
   return (
     <div className="space-y-6">
-      <SectionHeading
+      <ChampionshipSectionHeading
         icon={BookOpen}
         title="Informações"
         detail="Regras, configuração de elencos e parâmetros desta edição."
@@ -347,28 +348,6 @@ function ChampionshipInformation({
       {championship.rules.salary.enabled && data.salary.priceState === "locked" ? (
         <PublicSalarySection data={data} />
       ) : null}
-    </div>
-  );
-}
-
-function SectionHeading({
-  icon: Icon,
-  title,
-  detail,
-}: {
-  icon: typeof Trophy;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="grid size-10 shrink-0 place-items-center border bg-card text-primary">
-        <Icon className="size-5" />
-      </div>
-      <div>
-        <h2 className="text-xl font-semibold">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
-      </div>
     </div>
   );
 }

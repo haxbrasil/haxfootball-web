@@ -27,8 +27,8 @@ importers:
         specifier: github:haxbrasil/haxfootball-api-sdk#96871384353c1a6d9441a8b40f6eaccae1b3a6fe
         version: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/96871384353c1a6d9441a8b40f6eaccae1b3a6fe
       '@haxbrasil/haxfootball-replay':
-        specifier: 0.1.7
-        version: 0.1.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: 0.1.8
+        version: 0.1.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.76.0(react@19.2.6))
@@ -1477,8 +1477,8 @@ packages:
     version: 0.1.1
     engines: {node: '>=20'}
 
-  '@haxbrasil/haxfootball-replay@0.1.7':
-    resolution: {integrity: sha512-okUWuQ5exsQPejSfINqUy3V42saYzOWsEo/7qjLqa2e8VBOfQ8nvEdgjRSSnigN08+V+Fd/lmDY3b18Dov5x5A==, tarball: https://npm.pkg.github.com/download/@haxbrasil/haxfootball-replay/0.1.7/57bd84edbfcfbdd89be600bcde3523d62e6bcd0b}
+  '@haxbrasil/haxfootball-replay@0.1.8':
+    resolution: {integrity: sha512-9m0VHRYXmvMWlV7I9ruJgFfX6g2fZr+Ox2iLdichGaDxrmL4SpoF5f8RZ7uODwGzadpsVi8czZDD6nk9ix7F4A==, tarball: https://npm.pkg.github.com/download/@haxbrasil/haxfootball-replay/0.1.8/251b448c3c31085099764246c93a5d5d65781e2f}
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
@@ -6304,7 +6304,7 @@ snapshots:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
       graphql: 16.14.2
 
-  '@haxbrasil/haxfootball-replay@0.1.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@haxbrasil/haxfootball-replay@0.1.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       pako: 2.2.0
       react: 19.2.6

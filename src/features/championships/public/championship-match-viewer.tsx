@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarClock, Film, LoaderCircle, Play, Trophy, Users } from "lucide-react";
+import { CalendarClock, Film, LoaderCircle, Play, Swords, Users } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import type {
   PublicChampionshipDetail,
 } from "#/server/api/championship-api";
 import { getPublicChampionshipMatchFn } from "#/server/api/championship-match-functions";
+import { ChampionshipSectionHeading } from "./championship-section-heading";
 import {
   durationLabel,
   evidencePeriodScores,
@@ -48,21 +49,12 @@ export function ChampionshipMatchViewer({
   return (
     <>
       <section className="space-y-5">
-        <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="grid size-10 shrink-0 place-items-center border bg-card text-primary">
-              <Trophy className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Jogos</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Replays, placares por tempo e participações oficiais ficam reunidos em uma única
-                visualização.
-              </p>
-            </div>
-          </div>
-          <Badge variant="outline">{matches.length} partidas</Badge>
-        </div>
+        <ChampionshipSectionHeading
+          icon={Swords}
+          title="Jogos"
+          detail="Replays, placares por tempo e participações oficiais ficam reunidos em uma única visualização."
+          action={<Badge variant="outline">{matches.length} partidas</Badge>}
+        />
         {matches.length ? (
           <div className="grid gap-4 md:grid-cols-2">
             {matches.map((match) => (
