@@ -638,7 +638,7 @@ function BracketMatchNode({
         projection={projection}
         spotUuid={match.sideA.spotUuid}
         team={match.sideA.team}
-        score={match.result?.sideAOfficialScore ?? null}
+        score={match.result ? numberValue(match.result.sideAOfficialScore) : null}
         outcome={match.result?.sideAOutcome ?? null}
         admin={admin}
         onProjection={onProjection}
@@ -648,7 +648,7 @@ function BracketMatchNode({
         projection={projection}
         spotUuid={match.sideB.spotUuid}
         team={match.sideB.team}
-        score={match.result?.sideBOfficialScore ?? null}
+        score={match.result ? numberValue(match.result.sideBOfficialScore) : null}
         outcome={match.result?.sideBOutcome ?? null}
         admin={admin}
         onProjection={onProjection}
