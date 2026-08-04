@@ -259,7 +259,8 @@ export function durationLabel(seconds: number | null): string {
 export function appearanceFindingLabel(finding: string): string {
   return (
     {
-      unregistered: "Conta não registrada",
+      unregistered: "Perfil histórico",
+      "edition-unregistered": "Inscrição da edição pendente",
       "off-roster": "Fora do elenco",
       "wrong-side": "Registrado na equipe adversária",
       "ambiguous-side": "Participação observada nos dois lados",

@@ -1351,7 +1351,12 @@ function normalizeCompositionGames(games: CompositionGame[]): CompositionGame[] 
   return games.map((item, index) => (index === 0 ? { ...item, orientation: "aligned" } : item));
 }
 
-const resolvedAttributionFindingCodes = new Set(["unregistered", "off-roster", "wrong-side"]);
+const resolvedAttributionFindingCodes = new Set([
+  "unregistered",
+  "edition-unregistered",
+  "off-roster",
+  "wrong-side",
+]);
 
 function attributionTargetName(
   data: ChampionshipWorkspaceData,

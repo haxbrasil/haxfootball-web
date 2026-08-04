@@ -290,7 +290,8 @@ describe("championship match workspace model", () => {
   });
 
   it.each([
-    ["unregistered", "Conta não registrada"],
+    ["unregistered", "Perfil histórico"],
+    ["edition-unregistered", "Inscrição da edição pendente"],
     ["off-roster", "Fora do elenco"],
     ["wrong-side", "Registrado na equipe adversária"],
     ["ambiguous-side", "Participação observada nos dois lados"],
