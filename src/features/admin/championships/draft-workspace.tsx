@@ -68,6 +68,7 @@ import {
   reverseChampionshipDraftPickFn,
   startChampionshipDraftFn,
 } from "#/server/api/championship-draft-functions";
+import { updateChampionshipTradeWindowFn } from "#/server/api/championship-trade-functions";
 import {
   activeTurn,
   countdownLabel,
@@ -308,7 +309,16 @@ function AdminDraftWorkspace({
   return (
     <>
       <div className="space-y-4">
-        <AdminDraftHeader data={data} draft={draft} onRecord={() => setRecordedStudioOpen(true)} />
+        <AdminDraftHeader
+          data={data}
+          draft={draft}
+          canManageTrades={
+            session !== null &&
+            (hasApiPermission(session, "championship:admin") ||
+              hasApiPermission(session, "championship:operate"))
+          }
+          onRecord={() => setRecordedStudioOpen(true)}
+        />
         {isSetup ? (
           <DraftSetup
             data={data}
@@ -364,10 +374,12 @@ function AdminDraftWorkspace({
 function AdminDraftHeader({
   data,
   draft,
+  canManageTrades,
   onRecord,
 }: {
   data: DraftData;
   draft: Draft | null;
+  canManageTrades: boolean;
   onRecord: () => void;
 }) {
   const completed = draft ? filledTurns(draft).length : 0;
@@ -401,6 +413,7 @@ function AdminDraftHeader({
           </p>
         </div>
         <div className="flex w-full flex-wrap items-start justify-end gap-3 lg:w-auto">
+          <TradeWindowControl data={data} canManage={canManageTrades} />
           {canRecord ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -432,6 +445,156 @@ function AdminDraftHeader({
         <AdminDraftMetric label="Rodadas" value={draft ? String(numberValue(draft.rounds)) : "—"} />
       </div>
     </section>
+  );
+}
+
+function TradeWindowControl({ data, canManage }: { data: DraftData; canManage: boolean }) {
+  const updateWindow = useServerFn(updateChampionshipTradeWindowFn);
+  const router = useRouter();
+  const [dialogState, setDialogState] = useState<"open" | "closed" | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const isOpen =
+    data.championship.tradeWindowState === "open" &&
+    ["setup", "active"].includes(data.championship.lifecycle);
+  const canToggle = canManage && ["setup", "active"].includes(data.championship.lifecycle);
+  const pendingCount = data.trades.items.filter((trade) => trade.state === "proposed").length;
+
+  async function confirm() {
+    if (!dialogState) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const result = await updateWindow({
+        data: {
+          championshipUuid: data.championship.uuid,
+          commandUuid: crypto.randomUUID(),
+          expectedRevision: numberValue(data.championship.revision),
+          state: dialogState,
+          ...(reason.trim() ? { reason: reason.trim() } : {}),
+        },
+      });
+
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(
+        dialogState === "closed" ? "Janela de trocas encerrada." : "Janela de trocas reaberta.",
+      );
+      setDialogState(null);
+      setReason("");
+      await router.invalidate();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível atualizar a janela de trocas.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <Badge
+          variant="outline"
+          className={
+            isOpen ? "border-emerald-500/50 text-emerald-300" : "border-amber-500/50 text-amber-200"
+          }
+        >
+          <ArrowLeftRight className="size-3" />
+          {isOpen ? "Janela de trocas aberta" : "Janela de trocas encerrada"}
+        </Badge>
+        {canToggle ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                Ações
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem onSelect={() => setDialogState(isOpen ? "closed" : "open")}>
+                {isOpen ? <TimerOff /> : <Play />}
+                {isOpen ? "Encerrar janela de trocas" : "Reabrir janela de trocas"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </div>
+      <Dialog
+        open={dialogState !== null}
+        onOpenChange={(open) => {
+          if (!open && !busy) {
+            setDialogState(null);
+            setReason("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {dialogState === "closed" ? "Encerrar janela de trocas" : "Reabrir janela de trocas"}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogState === "closed"
+                ? "A edição continuará ativa, enquanto a organização controla quando novas negociações podem avançar."
+                : "As equipes poderão voltar a propor e aceitar trocas nesta edição."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 border-y py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border px-3 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                  Estado atual
+                </div>
+                <div className="mt-1 font-medium">
+                  {isOpen ? "Janela aberta" : "Janela encerrada"}
+                </div>
+              </div>
+              <div className="rounded-lg border px-3 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                  Propostas em andamento
+                </div>
+                <div className="mt-1 font-medium tabular-nums">{pendingCount}</div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trade-window-reason">Nota da organização</Label>
+              <Input
+                id="trade-window-reason"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Opcional · início da fase eliminatória"
+                disabled={busy}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => setDialogState(null)}
+            >
+              Voltar
+            </Button>
+            <Button type="button" disabled={busy} onClick={() => void confirm()}>
+              {dialogState === "closed" ? <TimerOff /> : <Play />}
+              {busy
+                ? "Atualizando…"
+                : dialogState === "closed"
+                  ? "Encerrar janela"
+                  : "Reabrir janela"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1680,8 +1843,16 @@ function TradeDesk({
   const [toPlayerId, setToPlayerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const tradeWindowOpen =
+    data.championship.tradeWindowState === "open" &&
+    ["setup", "active"].includes(data.championship.lifecycle);
 
   async function propose() {
+    if (!tradeWindowOpen) {
+      setMessage("A janela de trocas está encerrada pela organização.");
+      return;
+    }
+
     if (!fromPlayerId || !toPlayerId) {
       setMessage("Selecione um jogador de cada equipe.");
       return;
@@ -1742,31 +1913,51 @@ function TradeDesk({
               : "Valores congelados e impacto no teto são revalidados na confirmação."}
           </p>
         </div>
-        <Badge variant="outline">{data.trades.items.length} negociações visíveis</Badge>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Badge
+            variant="outline"
+            className={
+              tradeWindowOpen
+                ? "border-emerald-500/50 text-emerald-300"
+                : "border-amber-500/50 text-amber-200"
+            }
+          >
+            {tradeWindowOpen ? "Janela aberta" : "Janela encerrada"}
+          </Badge>
+          <Badge variant="outline">{data.trades.items.length} negociações visíveis</Badge>
+        </div>
       </div>
       {mode === "admin" || draft.actor.gmTeamIds.length ? (
-        <div className="grid gap-3 border-b px-4 py-4 lg:grid-cols-[1fr_1fr_auto] sm:px-6">
-          <TradeSide
-            label="Equipe que propõe"
-            teamId={fromTeamId}
-            playerId={fromPlayerId}
-            teams={draft.teams}
-            onTeam={setFromTeamId}
-            onPlayer={setFromPlayerId}
-          />
-          <TradeSide
-            label="Equipe que recebe"
-            teamId={toTeamId}
-            playerId={toPlayerId}
-            teams={draft.teams}
-            onTeam={setToTeamId}
-            onPlayer={setToPlayerId}
-          />
-          <Button className="self-end" disabled={busy} onClick={() => void propose()}>
-            <ArrowLeftRight />
-            Propor troca
-          </Button>
-        </div>
+        tradeWindowOpen ? (
+          <div className="grid gap-3 border-b px-4 py-4 lg:grid-cols-[1fr_1fr_auto] sm:px-6">
+            <TradeSide
+              label="Equipe que propõe"
+              teamId={fromTeamId}
+              playerId={fromPlayerId}
+              teams={draft.teams}
+              onTeam={setFromTeamId}
+              onPlayer={setFromPlayerId}
+            />
+            <TradeSide
+              label="Equipe que recebe"
+              teamId={toTeamId}
+              playerId={toPlayerId}
+              teams={draft.teams}
+              onTeam={setToTeamId}
+              onPlayer={setToPlayerId}
+            />
+            <Button className="self-end" disabled={busy} onClick={() => void propose()}>
+              <ArrowLeftRight />
+              Propor troca
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 border-b px-4 py-4 text-sm text-muted-foreground sm:px-6">
+            <TimerOff className="size-4 text-amber-300" />
+            A organização encerrou a janela. As propostas existentes continuam disponíveis no
+            histórico.
+          </div>
+        )
       ) : null}
       {message ? (
         <Alert variant="destructive" className="m-4">
@@ -1811,7 +2002,7 @@ function TradeDesk({
                   >
                     {tradeStateLabel(trade.state)}
                   </Badge>
-                  {trade.actorActions.canAccept ? (
+                  {trade.actorActions.canAccept && tradeWindowOpen ? (
                     <Button size="sm" disabled={busy} onClick={() => void decide(trade, "accept")}>
                       <Check />
                       Aceitar

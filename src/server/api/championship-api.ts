@@ -140,7 +140,7 @@ import type {
 import { getApiClient } from "#/server/api/haxfootball";
 
 export type PublicChampionshipDetail = {
-  championship: Serializable<ChampionshipDetail>;
+  championship: Serializable<ChampionshipDetailWithTradeWindow>;
   teams: Serializable<PaginatedResponse<ChampionshipTeam>>;
   participants: Serializable<PaginatedResponse<ChampionshipParticipant>>;
   salary: Serializable<ChampionshipSalaryProjection>;
@@ -164,7 +164,7 @@ export type ChampionshipAdminIndexData = {
 };
 
 export type ChampionshipWorkspaceData = {
-  championship: Serializable<ChampionshipDetail>;
+  championship: Serializable<ChampionshipDetailWithTradeWindow>;
   teams: Serializable<PaginatedResponse<ChampionshipTeam>>;
   participants: Serializable<PaginatedResponse<ChampionshipParticipant>>;
   teamIdentities: Serializable<PaginatedResponse<ChampionshipTeamIdentity>>;
@@ -184,6 +184,19 @@ export type ChampionshipWorkspaceData = {
   honors: ChampionshipHonorsData;
   honorDefinitions: ChampionshipHonorDefinitionsData;
   accounts: ChampionshipAccountOptions;
+};
+
+export type ChampionshipTradeWindowState = "open" | "closed";
+export type ChampionshipDetailWithTradeWindow = ChampionshipDetail & {
+  tradeWindowState: ChampionshipTradeWindowState;
+};
+
+export type UpdateChampionshipTradeWindowInput = {
+  actorAccountUuid: string;
+  commandUuid: string;
+  expectedRevision: number;
+  state: ChampionshipTradeWindowState;
+  reason?: string;
 };
 
 export type ChampionshipAccountOptions = {
@@ -347,7 +360,7 @@ export async function getPublicChampionshipBySlug(
   ]);
 
   return serialize({
-    championship,
+    championship: championship as ChampionshipDetailWithTradeWindow,
     teams,
     participants,
     salary,
@@ -496,7 +509,7 @@ export async function getChampionshipWorkspace(
   );
 
   return serialize({
-    championship,
+    championship: championship as ChampionshipDetailWithTradeWindow,
     teams,
     participants,
     teamIdentities,
@@ -1104,6 +1117,19 @@ export async function createChampionshipTrade(
   input: CreateChampionshipTradeInput,
 ): Promise<ChampionshipMutationResult<Serializable<ChampionshipTrade>>> {
   return mutationResult(requireClient().championships.trades.create(championshipUuid, input));
+}
+
+export async function updateChampionshipTradeWindow(
+  championshipUuid: string,
+  input: UpdateChampionshipTradeWindowInput,
+): Promise<ChampionshipMutationResult<Serializable<ChampionshipDetailWithTradeWindow>>> {
+  return mutationResult(
+    requireClient().request<ChampionshipDetailWithTradeWindow>({
+      method: "POST",
+      path: `/championships/${encodeURIComponent(championshipUuid)}/trade-window`,
+      body: input,
+    }),
+  );
 }
 
 export async function decideChampionshipTrade(

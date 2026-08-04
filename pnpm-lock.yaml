@@ -24,8 +24,8 @@ importers:
         specifier: ^1.16.1
         version: 1.37.2(vite@8.0.13(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3))(workerd@1.20260518.1)(wrangler@4.93.0)
       '@haxbrasil/haxfootball-api-sdk':
-        specifier: github:haxbrasil/haxfootball-api-sdk#e606120
-        version: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/e60612003063c6ffc75569a8fba9205fb3d44529
+        specifier: github:haxbrasil/haxfootball-api-sdk#080a432602fbb254b80ee77872378ce9412cdffd
+        version: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/080a432602fbb254b80ee77872378ce9412cdffd
       '@haxbrasil/haxfootball-replay':
         specifier: 0.1.8
         version: 0.1.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -1472,8 +1472,8 @@ packages:
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
-  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/e60612003063c6ffc75569a8fba9205fb3d44529':
-    resolution: {gitHosted: true, integrity: sha512-7GGokEQ+5276qvU4A95yM/43PQwB4WHnrtvDJ6VTbOkp9nO+JznkDKMk3Bs6gcKjCbsPn2YURL0DbqOQMGpAfw==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/e60612003063c6ffc75569a8fba9205fb3d44529}
+  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/080a432602fbb254b80ee77872378ce9412cdffd':
+    resolution: {gitHosted: true, integrity: sha512-5Ok6P7CfQAn+gsvr5W+ycO1/XmjfDOX5WtUnbkB6AD381c8m+VkJtxfLOqKmobgVibjXM/O5Mt9GWzARrVGuMQ==, tarball: https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/080a432602fbb254b80ee77872378ce9412cdffd}
     version: 0.1.1
     engines: {node: '>=20'}
 
@@ -6299,7 +6299,7 @@ snapshots:
     dependencies:
       graphql: 16.14.2
 
-  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/e60612003063c6ffc75569a8fba9205fb3d44529':
+  '@haxbrasil/haxfootball-api-sdk@https://codeload.github.com/haxbrasil/haxfootball-api-sdk/tar.gz/080a432602fbb254b80ee77872378ce9412cdffd':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
       graphql: 16.14.2
