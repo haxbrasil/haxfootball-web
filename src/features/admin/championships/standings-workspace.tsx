@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowDown,
@@ -6,7 +6,6 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
-  Ellipsis,
   Info,
   LoaderCircle,
   Plus,
@@ -96,7 +95,7 @@ export function StandingsWorkspace({
   admin,
   showQualificationDestinations = true,
   onProjection,
-  actionsControl,
+  onDeleteStage,
 }: {
   data: FormatData;
   projection: FormatProjection;
@@ -104,7 +103,7 @@ export function StandingsWorkspace({
   admin: boolean;
   showQualificationDestinations?: boolean;
   onProjection: (projection: FormatProjection) => void;
-  actionsControl: ReactNode;
+  onDeleteStage?: () => void;
 }) {
   const groups = useMemo(
     () => projection.groups.items.filter((group) => group.stageUuid === stage.uuid),
@@ -222,12 +221,11 @@ export function StandingsWorkspace({
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      size="icon"
-                      className="shrink-0"
                       title={`Ações de ${stage.name}`}
                       aria-label={`Ações de ${stage.name}`}
                     >
-                      <Ellipsis />
+                      Ações
+                      <ChevronDown />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
@@ -256,8 +254,15 @@ export function StandingsWorkspace({
                       <Sparkles />
                       Gerar partidas
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {actionsControl}
+                    {onDeleteStage ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={onDeleteStage}>
+                          <Trash2 />
+                          Excluir etapa
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>

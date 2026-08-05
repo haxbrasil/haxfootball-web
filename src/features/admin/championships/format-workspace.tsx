@@ -5,9 +5,9 @@ import {
   CalendarClock,
   Bell,
   Check,
+  ChevronDown,
   CircleAlert,
   Clock3,
-  Ellipsis,
   GitBranch,
   LoaderCircle,
   MessageSquareText,
@@ -210,9 +210,7 @@ function StageSection({
           admin={mode === "admin"}
           showQualificationDestinations={showQualificationDestinations}
           onProjection={onProjection}
-          actionsControl={
-            mode === "admin" ? <DeleteStageMenuItem onOpen={() => setDeleteOpen(true)} /> : null
-          }
+          onDeleteStage={mode === "admin" ? () => setDeleteOpen(true) : undefined}
         />
         <StageDeleteDialog
           championshipUuid={data.championship.uuid}
@@ -2155,8 +2153,9 @@ function StageActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="shrink-0" title={label} aria-label={label}>
-          <Ellipsis />
+        <Button variant="outline" title={label} aria-label={label}>
+          Ações
+          <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
