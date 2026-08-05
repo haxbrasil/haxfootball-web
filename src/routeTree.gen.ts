@@ -35,6 +35,7 @@ import { Route as StatsIndexRouteImport } from './routes/stats/index'
 import { Route as AdminChampionshipsChampionshipIdRouteImport } from './routes/admin.championships_.$championshipId'
 import { Route as AdminRoomsRoomIdRouteImport } from './routes/admin.rooms_.$roomId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ChampionshipsSlugDraftRouteImport } from './routes/championships/$slug/draft'
 import { Route as ApiAuthSignInDiscordRouteImport } from './routes/api/auth/sign-in/discord'
 import { Route as ApiChampionshipsChampionshipIdEventsRouteImport } from './routes/api/championships/$championshipId/events'
 
@@ -169,6 +170,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChampionshipsSlugDraftRoute = ChampionshipsSlugDraftRouteImport.update({
+  id: '/draft',
+  path: '/draft',
+  getParentRoute: () => ChampionshipsSlugRoute,
+} as any)
 const ApiAuthSignInDiscordRoute = ApiAuthSignInDiscordRouteImport.update({
   id: '/api/auth/sign-in/discord',
   path: '/api/auth/sign-in/discord',
@@ -192,7 +198,7 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/championships/$slug': typeof ChampionshipsSlugRoute
+  '/championships/$slug': typeof ChampionshipsSlugRouteWithChildren
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/admin/championships/$championshipId': typeof AdminChampionshipsChampionshipIdRoute
   '/admin/rooms/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -222,7 +229,7 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/championships/$slug': typeof ChampionshipsSlugRoute
+  '/championships/$slug': typeof ChampionshipsSlugRouteWithChildren
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/admin/championships/$championshipId': typeof AdminChampionshipsChampionshipIdRoute
   '/admin/rooms/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -253,7 +261,7 @@ export interface FileRoutesById {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/championships/$slug': typeof ChampionshipsSlugRoute
+  '/championships/$slug': typeof ChampionshipsSlugRouteWithChildren
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/admin/championships_/$championshipId': typeof AdminChampionshipsChampionshipIdRoute
   '/admin/rooms_/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/admin/championships/$championshipId'
     | '/admin/rooms/$roomId'
     | '/api/auth/$'
+    | '/championships/$slug/draft'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   fileRoutesByTo: FileRoutesByTo
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/admin/championships/$championshipId'
     | '/admin/rooms/$roomId'
     | '/api/auth/$'
+    | '/championships/$slug/draft'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   id:
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/admin/championships_/$championshipId'
     | '/admin/rooms_/$roomId'
     | '/api/auth/$'
+    | '/championships/$slug/draft'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   fileRoutesById: FileRoutesById
@@ -376,7 +388,7 @@ export interface RootRouteChildren {
   AdminRolesRoute: typeof AdminRolesRoute
   AdminRoomProgramsRoute: typeof AdminRoomProgramsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
-  ChampionshipsSlugRoute: typeof ChampionshipsSlugRoute
+  ChampionshipsSlugRoute: typeof ChampionshipsSlugRouteWithChildren
   ClipsClipIdRoute: typeof ClipsClipIdRoute
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
   RecordingsRecordingIdRoute: typeof RecordingsRecordingIdRoute
@@ -580,6 +592,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/championships/$slug/draft': {
+      id: '/championships/$slug/draft'
+      path: '/draft'
+      fullPath: '/championships/$slug/draft'
+      preLoaderRoute: typeof ChampionshipsSlugDraftRouteImport
+      parentRoute: typeof ChampionshipsSlugRoute
+    }
     '/api/auth/sign-in/discord': {
       id: '/api/auth/sign-in/discord'
       path: '/api/auth/sign-in/discord'
@@ -597,6 +616,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ChampionshipsSlugRouteChildren {
+  ChampionshipsSlugDraftRoute: typeof ChampionshipsSlugDraftRoute
+}
+
+const ChampionshipsSlugRouteChildren: ChampionshipsSlugRouteChildren = {
+  ChampionshipsSlugDraftRoute: ChampionshipsSlugDraftRoute,
+}
+
+const ChampionshipsSlugRouteWithChildren =
+  ChampionshipsSlugRoute._addFileChildren(ChampionshipsSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountLoginRoute: AccountLoginRoute,
@@ -608,7 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRolesRoute: AdminRolesRoute,
   AdminRoomProgramsRoute: AdminRoomProgramsRoute,
   AdminRoomsRoute: AdminRoomsRoute,
-  ChampionshipsSlugRoute: ChampionshipsSlugRoute,
+  ChampionshipsSlugRoute: ChampionshipsSlugRouteWithChildren,
   ClipsClipIdRoute: ClipsClipIdRoute,
   MatchesMatchIdRoute: MatchesMatchIdRoute,
   RecordingsRecordingIdRoute: RecordingsRecordingIdRoute,

@@ -1,10 +1,10 @@
-import { Link } from "@tanstack/react-router";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowLeftRight,
+  ArrowRight,
   BarChart3,
   BookOpen,
   CircleDollarSign,
@@ -12,6 +12,7 @@ import {
   History,
   LayoutDashboard,
   Medal,
+  Radio,
   Shield,
   Swords,
   Trophy,
@@ -85,7 +86,8 @@ export function ChampionshipDetailPage({
       <ChampionshipNavigation
         section={section}
         onSelect={setSection}
-        draft
+        slug={championship.slug}
+        showDraft={hasCompletedOrRecordedDraft(data)}
         showRosterAndTrades={canAccessRosterAndTrades}
         showStatistics={data.visualizations.statistics.items.length > 0}
         showHonors={data.honors.items.length > 0 || Number(data.history.placements.totalCount) > 0}
@@ -126,16 +128,6 @@ export function ChampionshipDetailPage({
         </section>
       ) : null}
       {section === "honors" ? <ChampionshipArchiveWorkspace data={data} mode="public" /> : null}
-      {section === "draft" ? (
-        <section className="space-y-5">
-          <ChampionshipSectionHeading
-            icon={Crown}
-            title="Draft"
-            detail="Acompanhe as escolhas e os elencos desta edição."
-          />
-          <DraftWorkspace data={data} session={session} mode="public" />
-        </section>
-      ) : null}
       {section === "roster-trades" && canAccessRosterAndTrades ? (
         <section className="space-y-5">
           <ChampionshipSectionHeading
@@ -156,7 +148,6 @@ type PublicSection =
   | "matches"
   | "bracket"
   | "statistics"
-  | "draft"
   | "roster-trades"
   | "honors"
   | "info";
@@ -215,14 +206,16 @@ function ChampionshipHero({
 function ChampionshipNavigation({
   section,
   onSelect,
-  draft,
+  slug,
+  showDraft,
   showRosterAndTrades,
   showStatistics,
   showHonors,
 }: {
   section: PublicSection;
   onSelect: (section: PublicSection) => void;
-  draft: boolean;
+  slug: string;
+  showDraft: boolean;
   showRosterAndTrades: boolean;
   showStatistics: boolean;
   showHonors: boolean;
@@ -237,7 +230,6 @@ function ChampionshipNavigation({
     ...(showRosterAndTrades
       ? [{ key: "roster-trades" as const, label: "Meu elenco e trocas", icon: ArrowLeftRight }]
       : []),
-    ...(draft ? [{ key: "draft" as const, label: "Draft", icon: Crown }] : []),
     ...(showHonors ? [{ key: "honors" as const, label: "Títulos e prêmios", icon: Medal }] : []),
     { key: "info", label: "Informações", icon: BookOpen },
   ];
@@ -263,6 +255,16 @@ function ChampionshipNavigation({
             {label}
           </button>
         ))}
+        {showDraft ? (
+          <Link
+            to="/championships/$slug/draft"
+            params={{ slug }}
+            className="flex h-12 items-center gap-2 border-b-2 border-transparent px-4 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+          >
+            <Crown className="size-4" />
+            Draft
+          </Link>
+        ) : null}
       </div>
     </nav>
   );
@@ -288,6 +290,7 @@ function ChampionshipOverview({
 
   return (
     <div className="space-y-6">
+      {data.draft.draft?.state === "live" ? <LiveDraftBanner data={data} /> : null}
       <div
         className={
           registrationIsActionable
@@ -318,6 +321,46 @@ function ChampionshipOverview({
       <VisualizationDashboardView items={data.visualizations.overview.items} />
     </div>
   );
+}
+
+function LiveDraftBanner({ data }: { data: PublicChampionshipDetail }) {
+  const draft = data.draft.draft;
+  const turn =
+    draft?.turns.items.find((item) => item.state === "open") ??
+    draft?.turns.items.find((item) => item.state === "overdue") ??
+    null;
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-emerald-400/35 bg-emerald-500/[0.08]">
+      <div className="grid gap-5 px-5 py-5 sm:px-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-200">
+            <Radio className="size-4" />
+            Draft ao vivo
+          </div>
+          <h2 className="mt-2 text-xl font-semibold">
+            As escolhas desta edição estão acontecendo agora
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {turn
+              ? `${turn.team.name} está na escolha ${Number(turn.sequence)} da rodada ${Number(turn.round)}.`
+              : "Acompanhe a ordem, as escolhas e os elencos em tempo real."}
+          </p>
+        </div>
+        <Button asChild className="w-full md:w-auto">
+          <Link to="/championships/$slug/draft" params={{ slug: data.championship.slug }}>
+            Acompanhar draft
+            <ArrowRight />
+          </Link>
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function hasCompletedOrRecordedDraft(data: PublicChampionshipDetail) {
+  const draft = data.draft.draft;
+  return draft?.state === "completed" || draft?.mode === "recorded";
 }
 
 function ChampionshipInformation({

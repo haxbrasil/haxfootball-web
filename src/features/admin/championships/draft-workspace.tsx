@@ -113,12 +113,14 @@ export function DraftWorkspace({
   mode,
   poll = true,
   focus = "all",
+  includeTrades = mode === "admin",
 }: {
   data: DraftData;
   session: ApiAccountSession | null;
   mode: "admin" | "public";
   poll?: boolean;
   focus?: "all" | "trades";
+  includeTrades?: boolean;
 }) {
   const [projection, setProjection] = useState(data.draft);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -240,7 +242,9 @@ export function DraftWorkspace({
             onProjection={setProjection}
           />
         </div>
-        <TradeDesk data={data} draft={draft} mode={mode} session={session} />
+        {includeTrades ? (
+          <TradeDesk data={data} draft={draft} mode={mode} session={session} />
+        ) : null}
       </div>
     );
 
