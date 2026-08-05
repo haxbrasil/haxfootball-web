@@ -59,6 +59,10 @@ export function ChampionshipDetailPage({
     session !== null &&
     data.selfRegistration?.status === "active" &&
     data.selfRegistration.activeMembership?.role === "gm";
+  const canAccessRosterAndTrades =
+    isGeneralManager &&
+    data.championship.tradeWindowState === "open" &&
+    ["setup", "active"].includes(data.championship.lifecycle);
   const matches = useMemo(
     () => sortPublicChampionshipMatches(data.format.matches.items, data.format.stages.items),
     [data.format.matches.items, data.format.stages.items],
@@ -75,7 +79,7 @@ export function ChampionshipDetailPage({
         section={section}
         onSelect={setSection}
         draft={data.draft.draft !== null}
-        showRosterAndTrades={isGeneralManager && data.draft.draft !== null}
+        showRosterAndTrades={canAccessRosterAndTrades}
         showStatistics={data.visualizations.statistics.items.length > 0}
         showHonors={data.honors.items.length > 0 || Number(data.history.placements.totalCount) > 0}
       />
@@ -125,7 +129,7 @@ export function ChampionshipDetailPage({
           <DraftWorkspace data={data} session={session} mode="public" />
         </section>
       ) : null}
-      {section === "roster-trades" && isGeneralManager && data.draft.draft ? (
+      {section === "roster-trades" && canAccessRosterAndTrades ? (
         <section className="space-y-5">
           <ChampionshipSectionHeading
             icon={ArrowLeftRight}

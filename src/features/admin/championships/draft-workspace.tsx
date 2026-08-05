@@ -97,6 +97,16 @@ type DraftData = Pick<
   "championship" | "teams" | "participants" | "salary" | "draft" | "trades"
 >;
 
+type TradeTeamOption = {
+  uuid: string;
+  name: string;
+  roster: Array<{
+    participantUuid: string;
+    displayName: string;
+    role: "gm" | "player";
+  }>;
+};
+
 export function DraftWorkspace({
   data,
   session,
@@ -206,7 +216,7 @@ export function DraftWorkspace({
 
   const publicWorkspace =
     focus === "trades" ? (
-      <TradeDesk data={data} draft={draft} mode={mode} />
+      <TradeDesk data={data} draft={draft} mode={mode} session={session} />
     ) : draft.mode === "recorded" ? (
       <RecordedDraftView draft={draft} />
     ) : (
@@ -230,7 +240,7 @@ export function DraftWorkspace({
             onProjection={setProjection}
           />
         </div>
-        <TradeDesk data={data} draft={draft} mode={mode} />
+        <TradeDesk data={data} draft={draft} mode={mode} session={session} />
       </div>
     );
 
@@ -362,7 +372,7 @@ function AdminDraftWorkspace({
               onCancel={onCancel}
               onProjection={onProjection}
             />
-            <TradeDesk data={data} draft={draft} mode="admin" adminView />
+            <TradeDesk data={data} draft={draft} mode="admin" session={session} adminView />
           </>
         )}
       </div>
@@ -1427,7 +1437,7 @@ function PlayerPool({
       data: {
         championshipUuid: data.championship.uuid,
         commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(draft.championshipRevision),
+        expectedRevision: numberValue(draft?.championshipRevision ?? data.championship.revision),
         expectedDraftRevision: numberValue(draft.revision),
         participantId: participant.uuid,
         teamId: targetTurn.team.uuid,
@@ -1661,7 +1671,7 @@ function DraftFeed({
         championshipUuid: data.championship.uuid,
         turnUuid: selected.uuid,
         commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(draft.championshipRevision),
+        expectedRevision: numberValue(draft?.championshipRevision ?? data.championship.revision),
         expectedDraftRevision: numberValue(draft.revision),
         reason: "Correção confirmada após visualização do impacto",
       },
@@ -1681,7 +1691,7 @@ function DraftFeed({
       data: {
         championshipUuid: data.championship.uuid,
         commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(draft.championshipRevision),
+        expectedRevision: numberValue(draft?.championshipRevision ?? data.championship.revision),
         expectedDraftRevision: numberValue(draft.revision),
         reason: "Encerrado pela organização",
       },
@@ -1830,11 +1840,13 @@ function TradeDesk({
   data,
   draft,
   mode,
+  session,
   adminView = false,
 }: {
   data: DraftData;
-  draft: Draft;
+  draft: Draft | null;
   mode: "admin" | "public";
+  session: ApiAccountSession | null;
   adminView?: boolean;
 }) {
   const createTrade = useServerFn(createChampionshipTradeFn);
@@ -1843,8 +1855,63 @@ function TradeDesk({
   const cancel = useServerFn(cancelChampionshipTradeFn);
   const getTrades = useServerFn(getChampionshipTradesFn);
   const router = useRouter();
-  const [fromTeamId, setFromTeamId] = useState(draft.teams[0]?.uuid ?? "");
-  const [toTeamId, setToTeamId] = useState(draft.teams[1]?.uuid ?? "");
+  const tradeTeams = useMemo<TradeTeamOption[]>(() => {
+    if (draft) {
+      return draft.teams.map((team) => ({
+        uuid: team.uuid,
+        name: team.name,
+        roster: team.roster.map((member) => ({
+          participantUuid: member.participantUuid,
+          displayName: member.displayName,
+          role: member.role,
+        })),
+      }));
+    }
+
+    return data.teams.items.map((team) => ({
+      uuid: team.uuid,
+      name: team.name,
+      roster: data.participants.items.flatMap((participant) => {
+        const membership = participant.activeMembership;
+        if (!membership || membership.team.uuid !== team.uuid) {
+          return [];
+        }
+
+        return [
+          {
+            participantUuid: participant.uuid,
+            displayName: participant.displayName,
+            role: membership.role,
+          },
+        ];
+      }),
+    }));
+  }, [data.participants.items, data.teams.items, draft]);
+  const gmTeamIds = useMemo(() => {
+    if (draft) {
+      return draft.actor.gmTeamIds;
+    }
+
+    if (!session) {
+      return [];
+    }
+
+    return data.participants.items.flatMap((participant) => {
+      if (
+        participant.identity.kind !== "account" ||
+        participant.identity.accountUuid !== session.account.uuid ||
+        participant.activeMembership?.role !== "gm"
+      ) {
+        return [];
+      }
+
+      return [participant.activeMembership.team.uuid];
+    });
+  }, [data.participants.items, draft, session]);
+  const proposingTeams =
+    mode === "public" ? tradeTeams.filter((team) => gmTeamIds.includes(team.uuid)) : tradeTeams;
+  const [fromTeamId, setFromTeamId] = useState(() => proposingTeams[0]?.uuid ?? "");
+  const [toTeamId, setToTeamId] = useState(() => tradeTeams[1]?.uuid ?? "");
   const [fromPlayerId, setFromPlayerId] = useState("");
   const [toPlayerId, setToPlayerId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1853,6 +1920,17 @@ function TradeDesk({
   const tradeWindowOpen =
     data.championship.tradeWindowState === "open" &&
     ["setup", "active"].includes(data.championship.lifecycle);
+
+  useEffect(() => {
+    if (!proposingTeams.some((team) => team.uuid === fromTeamId)) {
+      setFromTeamId(proposingTeams[0]?.uuid ?? "");
+      setFromPlayerId("");
+    }
+    if (!tradeTeams.some((team) => team.uuid === toTeamId) || toTeamId === fromTeamId) {
+      setToTeamId(tradeTeams.find((team) => team.uuid !== fromTeamId)?.uuid ?? "");
+      setToPlayerId("");
+    }
+  }, [fromTeamId, proposingTeams, toTeamId, tradeTeams]);
 
   useEffect(() => {
     setTrades(data.trades);
@@ -1905,7 +1983,7 @@ function TradeDesk({
       data: {
         championshipUuid: data.championship.uuid,
         commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(draft.championshipRevision),
+        expectedRevision: numberValue(draft?.championshipRevision ?? data.championship.revision),
         proposingTeamId: fromTeamId,
         receivingTeamId: toTeamId,
         proposingParticipantIds: [fromPlayerId],
@@ -1929,7 +2007,7 @@ function TradeDesk({
         championshipUuid: data.championship.uuid,
         tradeUuid: trade.uuid,
         commandUuid: crypto.randomUUID(),
-        expectedRevision: numberValue(draft.championshipRevision),
+        expectedRevision: numberValue(draft?.championshipRevision ?? data.championship.revision),
         expectedTradeRevision: numberValue(trade.revision),
       },
     });
@@ -1941,6 +2019,8 @@ function TradeDesk({
     await refreshTrades();
     await router.invalidate();
   }
+
+  const canTrade = mode === "admin" || gmTeamIds.length > 0;
 
   return (
     <section className="bfl-panel overflow-hidden rounded-xl border">
@@ -1972,14 +2052,14 @@ function TradeDesk({
           <Badge variant="outline">{trades.items.length} negociações visíveis</Badge>
         </div>
       </div>
-      {mode === "admin" || draft.actor.gmTeamIds.length ? (
+      {canTrade ? (
         tradeWindowOpen ? (
           <div className="grid gap-3 border-b px-4 py-4 lg:grid-cols-[1fr_1fr_auto] sm:px-6">
             <TradeSide
               label="Equipe que propõe"
               teamId={fromTeamId}
               playerId={fromPlayerId}
-              teams={draft.teams}
+              teams={proposingTeams}
               onTeam={setFromTeamId}
               onPlayer={setFromPlayerId}
             />
@@ -1987,7 +2067,7 @@ function TradeDesk({
               label="Equipe que recebe"
               teamId={toTeamId}
               playerId={toPlayerId}
-              teams={draft.teams}
+              teams={tradeTeams.filter((team) => team.uuid !== fromTeamId)}
               onTeam={setToTeamId}
               onPlayer={setToPlayerId}
             />
@@ -2102,7 +2182,7 @@ function TradeSide({
   label: string;
   teamId: string;
   playerId: string;
-  teams: Draft["teams"];
+  teams: TradeTeamOption[];
   onTeam: (value: string) => void;
   onPlayer: (value: string) => void;
 }) {
