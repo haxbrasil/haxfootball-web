@@ -74,6 +74,37 @@ export const getPublicChampionshipFn = createServerFn({ method: "GET" })
     };
   });
 
+export const getChampionshipGmWorkspaceFn = createServerFn({ method: "GET" })
+  .inputValidator(slugInput)
+  .handler(async ({ data }) => {
+    const { requireCurrentSession } = await import("#/server/auth/session");
+    const { getPublicChampionshipBySlug } = await import("#/server/api/championship-api");
+    const session = await requireCurrentSession();
+    const championship = await getPublicChampionshipBySlug(data.slug, session.account.uuid);
+
+    if (!championship) {
+      throw notFound();
+    }
+
+    const generalManagerTeamIds = championship.participants.items.flatMap((participant) => {
+      if (
+        participant.identity.kind !== "account" ||
+        participant.identity.accountUuid !== session.account.uuid ||
+        participant.activeMembership?.role !== "gm"
+      ) {
+        return [];
+      }
+
+      return [participant.activeMembership.team.uuid];
+    });
+
+    return {
+      data: championship,
+      session,
+      generalManagerTeamIds,
+    };
+  });
+
 export const listChampionshipAdminIndexFn = createServerFn({
   method: "GET",
 }).handler(async () => {

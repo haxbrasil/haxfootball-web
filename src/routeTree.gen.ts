@@ -36,6 +36,7 @@ import { Route as AdminChampionshipsChampionshipIdRouteImport } from './routes/a
 import { Route as AdminRoomsRoomIdRouteImport } from './routes/admin.rooms_.$roomId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ChampionshipsSlugDraftRouteImport } from './routes/championships/$slug/draft'
+import { Route as ChampionshipsSlugGmRouteImport } from './routes/championships/$slug/gm'
 import { Route as ApiAuthSignInDiscordRouteImport } from './routes/api/auth/sign-in/discord'
 import { Route as ApiChampionshipsChampionshipIdEventsRouteImport } from './routes/api/championships/$championshipId/events'
 
@@ -175,6 +176,11 @@ const ChampionshipsSlugDraftRoute = ChampionshipsSlugDraftRouteImport.update({
   path: '/draft',
   getParentRoute: () => ChampionshipsSlugRoute,
 } as any)
+const ChampionshipsSlugGmRoute = ChampionshipsSlugGmRouteImport.update({
+  id: '/gm',
+  path: '/gm',
+  getParentRoute: () => ChampionshipsSlugRoute,
+} as any)
 const ApiAuthSignInDiscordRoute = ApiAuthSignInDiscordRouteImport.update({
   id: '/api/auth/sign-in/discord',
   path: '/api/auth/sign-in/discord',
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/admin/rooms/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
+  '/championships/$slug/gm': typeof ChampionshipsSlugGmRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -246,6 +253,7 @@ export interface FileRoutesByTo {
   '/admin/rooms/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
+  '/championships/$slug/gm': typeof ChampionshipsSlugGmRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/admin/rooms_/$roomId': typeof AdminRoomsRoomIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
+  '/championships/$slug/gm': typeof ChampionshipsSlugGmRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/admin/rooms/$roomId'
     | '/api/auth/$'
     | '/championships/$slug/draft'
+    | '/championships/$slug/gm'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   fileRoutesByTo: FileRoutesByTo
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/admin/rooms/$roomId'
     | '/api/auth/$'
     | '/championships/$slug/draft'
+    | '/championships/$slug/gm'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   id:
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/admin/rooms_/$roomId'
     | '/api/auth/$'
     | '/championships/$slug/draft'
+    | '/championships/$slug/gm'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   fileRoutesById: FileRoutesById
@@ -599,6 +611,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChampionshipsSlugDraftRouteImport
       parentRoute: typeof ChampionshipsSlugRoute
     }
+    '/championships/$slug/gm': {
+      id: '/championships/$slug/gm'
+      path: '/gm'
+      fullPath: '/championships/$slug/gm'
+      preLoaderRoute: typeof ChampionshipsSlugGmRouteImport
+      parentRoute: typeof ChampionshipsSlugRoute
+    }
     '/api/auth/sign-in/discord': {
       id: '/api/auth/sign-in/discord'
       path: '/api/auth/sign-in/discord'
@@ -618,10 +637,12 @@ declare module '@tanstack/react-router' {
 
 interface ChampionshipsSlugRouteChildren {
   ChampionshipsSlugDraftRoute: typeof ChampionshipsSlugDraftRoute
+  ChampionshipsSlugGmRoute: typeof ChampionshipsSlugGmRoute
 }
 
 const ChampionshipsSlugRouteChildren: ChampionshipsSlugRouteChildren = {
   ChampionshipsSlugDraftRoute: ChampionshipsSlugDraftRoute,
+  ChampionshipsSlugGmRoute: ChampionshipsSlugGmRoute,
 }
 
 const ChampionshipsSlugRouteWithChildren =

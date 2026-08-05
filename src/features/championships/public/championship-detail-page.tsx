@@ -3,7 +3,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
-  ArrowLeftRight,
   ArrowRight,
   BarChart3,
   BookOpen,
@@ -27,7 +26,6 @@ import { Progress } from "#/components/ui/progress";
 import { Separator } from "#/components/ui/separator";
 import type { PublicChampionshipDetail } from "#/server/api/championship-api";
 import type { ApiAccountSession } from "#/server/auth/session";
-import { DraftWorkspace } from "#/features/admin/championships/draft-workspace";
 import { FormatWorkspace } from "#/features/admin/championships/format-workspace";
 import { ChampionshipArchiveWorkspace } from "#/features/admin/championships/archive-workspace";
 import { ChampionshipMatchViewer } from "./championship-match-viewer";
@@ -58,19 +56,12 @@ export function ChampionshipDetailPage({
   const [section, setSection] = useState<PublicSection>("overview");
   const isGeneralManager =
     session !== null &&
-    (data.selfRegistration?.status === "active" &&
-    data.selfRegistration.activeMembership?.role === "gm"
-      ? true
-      : data.participants.items.some(
-          (participant) =>
-            participant.identity.kind === "account" &&
-            participant.identity.accountUuid === session.account.uuid &&
-            participant.activeMembership?.role === "gm",
-        ));
-  const canAccessRosterAndTrades =
-    isGeneralManager &&
-    data.championship.tradeWindowState === "open" &&
-    ["setup", "active"].includes(data.championship.lifecycle);
+    data.participants.items.some(
+      (participant) =>
+        participant.identity.kind === "account" &&
+        participant.identity.accountUuid === session.account.uuid &&
+        participant.activeMembership?.role === "gm",
+    );
   const matches = useMemo(
     () => sortPublicChampionshipMatches(data.format.matches.items, data.format.stages.items),
     [data.format.matches.items, data.format.stages.items],
@@ -82,13 +73,13 @@ export function ChampionshipDetailPage({
         data={data}
         participantCount={participants.items.length}
         teamCount={teams.items.length}
+        showGeneralManagerArea={isGeneralManager}
       />
       <ChampionshipNavigation
         section={section}
         onSelect={setSection}
         slug={championship.slug}
         showDraft={hasCompletedOrRecordedDraft(data)}
-        showRosterAndTrades={canAccessRosterAndTrades}
         showStatistics={data.visualizations.statistics.items.length > 0}
         showHonors={data.honors.items.length > 0 || Number(data.history.placements.totalCount) > 0}
       />
@@ -128,38 +119,23 @@ export function ChampionshipDetailPage({
         </section>
       ) : null}
       {section === "honors" ? <ChampionshipArchiveWorkspace data={data} mode="public" /> : null}
-      {section === "roster-trades" && canAccessRosterAndTrades ? (
-        <section className="space-y-5">
-          <ChampionshipSectionHeading
-            icon={ArrowLeftRight}
-            title="Meu elenco e trocas"
-            detail="Consulte o elenco da sua equipe, proponha trocas e responda às negociações em andamento."
-          />
-          <DraftWorkspace data={data} session={session} mode="public" focus="trades" />
-        </section>
-      ) : null}
       {section === "info" ? <ChampionshipInformation data={data} salary={salary} /> : null}
     </div>
   );
 }
 
-type PublicSection =
-  | "overview"
-  | "matches"
-  | "bracket"
-  | "statistics"
-  | "roster-trades"
-  | "honors"
-  | "info";
+type PublicSection = "overview" | "matches" | "bracket" | "statistics" | "honors" | "info";
 
 function ChampionshipHero({
   data,
   participantCount,
   teamCount,
+  showGeneralManagerArea,
 }: {
   data: PublicChampionshipDetail;
   participantCount: number;
   teamCount: number;
+  showGeneralManagerArea: boolean;
 }) {
   const championship = data.championship;
 
@@ -196,6 +172,14 @@ function ChampionshipHero({
               <HeroFact icon={Users} value={String(participantCount)} label="inscritos" />
               <HeroFact icon={Shield} value={String(teamCount)} label="equipes" />
             </div>
+            {showGeneralManagerArea ? (
+              <Button asChild variant="outline" size="sm">
+                <Link to="/championships/$slug/gm" params={{ slug: championship.slug }}>
+                  <Crown />
+                  Área do General Manager
+                </Link>
+              </Button>
+            ) : null}
           </div>
         }
       />
@@ -208,7 +192,6 @@ function ChampionshipNavigation({
   onSelect,
   slug,
   showDraft,
-  showRosterAndTrades,
   showStatistics,
   showHonors,
 }: {
@@ -216,7 +199,6 @@ function ChampionshipNavigation({
   onSelect: (section: PublicSection) => void;
   slug: string;
   showDraft: boolean;
-  showRosterAndTrades: boolean;
   showStatistics: boolean;
   showHonors: boolean;
 }) {
@@ -226,9 +208,6 @@ function ChampionshipNavigation({
     { key: "bracket", label: "Chaves e classificação", icon: Trophy },
     ...(showStatistics
       ? [{ key: "statistics" as const, label: "Estatísticas", icon: BarChart3 }]
-      : []),
-    ...(showRosterAndTrades
-      ? [{ key: "roster-trades" as const, label: "Meu elenco e trocas", icon: ArrowLeftRight }]
       : []),
     ...(showHonors ? [{ key: "honors" as const, label: "Títulos e prêmios", icon: Medal }] : []),
     { key: "info", label: "Informações", icon: BookOpen },
