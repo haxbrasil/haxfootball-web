@@ -53,7 +53,13 @@ export function ChampionshipGmWorkspacePage({
             Acompanhe a composição atual das equipes sob sua responsabilidade.
           </p>
         </div>
-        <div className="grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        <div
+          className={
+            teams.length === 1
+              ? "divide-y"
+              : "grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0"
+          }
+        >
           {teams.map((team) => {
             const roster = data.participants.items
               .filter((participant) => participant.activeMembership?.team.uuid === team.uuid)
