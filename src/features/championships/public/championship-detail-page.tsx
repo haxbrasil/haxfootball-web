@@ -85,7 +85,7 @@ export function ChampionshipDetailPage({
       <ChampionshipNavigation
         section={section}
         onSelect={setSection}
-        draft={data.draft.draft !== null || isGeneralManager}
+        draft
         showRosterAndTrades={canAccessRosterAndTrades}
         showStatistics={data.visualizations.statistics.items.length > 0}
         showHonors={data.honors.items.length > 0 || Number(data.history.placements.totalCount) > 0}
