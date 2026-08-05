@@ -41,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
 import { Input } from "#/components/ui/input";
@@ -432,23 +433,12 @@ function AdminDraftHeader({
           </p>
         </div>
         <div className="flex w-full flex-wrap items-start justify-end gap-3 lg:w-auto">
-          <TradeWindowControl data={data} canManage={canManageTrades} />
-          {canRecord ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shrink-0">
-                  Ações
-                  <ChevronDown />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuItem onSelect={onRecord}>
-                  <History />
-                  Registrar draft realizado
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          <TradeWindowControl
+            data={data}
+            canManage={canManageTrades}
+            canRecord={canRecord}
+            onRecord={onRecord}
+          />
         </div>
       </div>
       <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
@@ -467,7 +457,17 @@ function AdminDraftHeader({
   );
 }
 
-function TradeWindowControl({ data, canManage }: { data: DraftData; canManage: boolean }) {
+function TradeWindowControl({
+  data,
+  canManage,
+  canRecord,
+  onRecord,
+}: {
+  data: DraftData;
+  canManage: boolean;
+  canRecord: boolean;
+  onRecord: () => void;
+}) {
   const updateWindow = useServerFn(updateChampionshipTradeWindowFn);
   const router = useRouter();
   const [dialogState, setDialogState] = useState<"open" | "closed" | null>(null);
@@ -528,7 +528,7 @@ function TradeWindowControl({ data, canManage }: { data: DraftData; canManage: b
           <ArrowLeftRight className="size-3" />
           {isOpen ? "Janela de trocas aberta" : "Janela de trocas encerrada"}
         </Badge>
-        {canToggle ? (
+        {canToggle || canRecord ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="outline" size="sm">
@@ -537,10 +537,19 @@ function TradeWindowControl({ data, canManage }: { data: DraftData; canManage: b
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuItem onSelect={() => setDialogState(isOpen ? "closed" : "open")}>
-                {isOpen ? <TimerOff /> : <Play />}
-                {isOpen ? "Encerrar janela de trocas" : "Reabrir janela de trocas"}
-              </DropdownMenuItem>
+              {canRecord ? (
+                <DropdownMenuItem onSelect={onRecord}>
+                  <History />
+                  Registrar draft realizado
+                </DropdownMenuItem>
+              ) : null}
+              {canRecord && canToggle ? <DropdownMenuSeparator /> : null}
+              {canToggle ? (
+                <DropdownMenuItem onSelect={() => setDialogState(isOpen ? "closed" : "open")}>
+                  {isOpen ? <TimerOff /> : <Play />}
+                  {isOpen ? "Encerrar janela de trocas" : "Reabrir janela de trocas"}
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}

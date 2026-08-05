@@ -90,6 +90,7 @@ import {
   numberValue,
   roundLabel,
   spotOccupancy,
+  competitionRoundProgress,
   type FormatMatch,
   type FormatProjection,
   type FormatStage,
@@ -295,7 +296,11 @@ function StageSection({
             />
           )}
         </div>
-        <CompetitionRoundRail projection={projection} stage={stage} />
+        <CompetitionRoundRail
+          projection={projection}
+          stage={stage}
+          publicView={mode === "public"}
+        />
         {mode === "admin" ? (
           <TeamBench
             data={data}
@@ -1247,9 +1252,11 @@ function SpotPlacementImpact({ impact }: { impact: ChampionshipSpotPlacementPrev
 function CompetitionRoundRail({
   projection,
   stage,
+  publicView,
 }: {
   projection: FormatProjection;
   stage: FormatStage;
+  publicView: boolean;
 }) {
   const rounds = projection.competitionRounds.items.filter(
     (round) => round.stageUuid === stage.uuid,
@@ -1261,25 +1268,78 @@ function CompetitionRoundRail({
     <section className="border-t">
       <div className="flex items-center gap-2 border-b px-4 py-3 sm:px-6">
         <CalendarClock className="size-4 text-primary" />
-        <h3 className="text-xs font-semibold uppercase">Períodos da competição</h3>
+        <h3 className="text-xs font-semibold uppercase">
+          {publicView ? "Andamento da etapa" : "Períodos da competição"}
+        </h3>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-px bg-border">
         {rounds.map((round) => (
           <div key={round.uuid} className="bg-card px-4 py-4">
-            <div className="text-sm font-semibold">{round.name}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {round.startsAt ? formatDateTime(round.startsAt) : "Início em aberto"}
-              {round.endsAt ? ` até ${formatDateTime(round.endsAt)}` : ""}
-            </div>
-            <div className="mt-2 text-[11px] uppercase text-muted-foreground">
-              {round.schedulingAuthority === "staff"
-                ? "Agenda da organização"
-                : "Agenda negociável"}
-            </div>
+            {publicView ? (
+              <PublicCompetitionRoundSummary
+                round={round}
+                progress={competitionRoundProgress(projection.matches.items, round.uuid)}
+                matches={projection.matches.items}
+              />
+            ) : (
+              <>
+                <div className="text-sm font-semibold">{round.name}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {round.startsAt ? formatDateTime(round.startsAt) : "Início em aberto"}
+                  {round.endsAt ? ` até ${formatDateTime(round.endsAt)}` : ""}
+                </div>
+                <div className="mt-2 text-[11px] uppercase text-muted-foreground">
+                  {round.schedulingAuthority === "staff"
+                    ? "Agenda da organização"
+                    : "Agenda negociável"}
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
     </section>
+  );
+}
+
+function PublicCompetitionRoundSummary({
+  round,
+  progress,
+  matches,
+}: {
+  round: FormatProjection["competitionRounds"]["items"][number];
+  progress: ReturnType<typeof competitionRoundProgress>;
+  matches: FormatMatch[];
+}) {
+  const roundMatches = matches.filter((match) => match.competitionRoundUuid === round.uuid);
+  const settledCount = roundMatches.filter((match) => numberValue(match.resultRevision) > 0).length;
+  const label =
+    progress === "completed"
+      ? "Concluída"
+      : progress === "in-progress"
+        ? "Em andamento"
+        : "Aguardando início";
+  const tone =
+    progress === "completed"
+      ? "border-primary/50 text-primary"
+      : progress === "in-progress"
+        ? "border-amber-400/50 text-amber-300"
+        : "border-border text-muted-foreground";
+
+  return (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm font-semibold">{round.name}</div>
+        <Badge variant="outline" className={tone}>
+          {label}
+        </Badge>
+      </div>
+      <div className="mt-2 text-xs text-muted-foreground">
+        {roundMatches.length > 0
+          ? `${settledCount} de ${roundMatches.length} partidas concluídas`
+          : "Partidas aguardando definição"}
+      </div>
+    </>
   );
 }
 

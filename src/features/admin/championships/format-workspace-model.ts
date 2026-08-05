@@ -258,6 +258,28 @@ export function roundLabel(round: number, roundCount: number): string {
   return `Fase ${round}`;
 }
 
+export type CompetitionRoundProgress = "completed" | "in-progress" | "upcoming";
+
+export function competitionRoundProgress(
+  matches: readonly FormatMatch[],
+  competitionRoundUuid: string,
+): CompetitionRoundProgress {
+  const roundMatches = matches.filter(
+    (match) => match.competitionRoundUuid === competitionRoundUuid,
+  );
+  const settledMatches = roundMatches.filter((match) => numberValue(match.resultRevision) > 0);
+
+  if (roundMatches.length > 0 && settledMatches.length === roundMatches.length) {
+    return "completed";
+  }
+
+  if (settledMatches.length > 0) {
+    return "in-progress";
+  }
+
+  return "upcoming";
+}
+
 export function spotOccupancy(
   projection: FormatProjection,
   stageUuid: string,

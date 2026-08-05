@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBracketLayout,
+  competitionRoundProgress,
   focusedTeamMatchUuids,
   focusedRoute,
   matchContainsTeam,
@@ -75,6 +76,24 @@ describe("championship bracket layout", () => {
 
     expect(focused).toEqual(new Set(["m-1-1", "m-2-1", "l-1-1", "l-2-1", "grand-final-1"]));
     expect(focusedTeamMatchUuids(projection, "stage", null)).toBeNull();
+  });
+
+  it("derives competition period progress from settled matches", () => {
+    const projection = fixture(4);
+    const [first, second, final] = projection.matches.items;
+
+    first!.competitionRoundUuid = "round-1";
+    second!.competitionRoundUuid = "round-1";
+    final!.competitionRoundUuid = "round-2";
+
+    expect(competitionRoundProgress(projection.matches.items, "round-1")).toBe("upcoming");
+
+    first!.resultRevision = 1;
+    expect(competitionRoundProgress(projection.matches.items, "round-1")).toBe("in-progress");
+
+    second!.resultRevision = 1;
+    expect(competitionRoundProgress(projection.matches.items, "round-1")).toBe("completed");
+    expect(competitionRoundProgress(projection.matches.items, "round-2")).toBe("upcoming");
   });
 });
 
