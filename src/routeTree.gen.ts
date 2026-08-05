@@ -35,6 +35,7 @@ import { Route as StatsIndexRouteImport } from './routes/stats/index'
 import { Route as AdminChampionshipsChampionshipIdRouteImport } from './routes/admin.championships_.$championshipId'
 import { Route as AdminRoomsRoomIdRouteImport } from './routes/admin.rooms_.$roomId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ChampionshipsSlugIndexRouteImport } from './routes/championships/$slug/index'
 import { Route as ChampionshipsSlugDraftRouteImport } from './routes/championships/$slug/draft'
 import { Route as ChampionshipsSlugGmRouteImport } from './routes/championships/$slug/gm'
 import { Route as ApiAuthSignInDiscordRouteImport } from './routes/api/auth/sign-in/discord'
@@ -171,6 +172,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChampionshipsSlugIndexRoute = ChampionshipsSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChampionshipsSlugRoute,
+} as any)
 const ChampionshipsSlugDraftRoute = ChampionshipsSlugDraftRouteImport.update({
   id: '/draft',
   path: '/draft',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
   '/championships/$slug/gm': typeof ChampionshipsSlugGmRoute
+  '/championships/$slug/': typeof ChampionshipsSlugIndexRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -236,7 +243,6 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/room-programs': typeof AdminRoomProgramsRoute
   '/admin/rooms': typeof AdminRoomsRoute
-  '/championships/$slug': typeof ChampionshipsSlugRouteWithChildren
   '/clips/$clipId': typeof ClipsClipIdRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/recordings/$recordingId': typeof RecordingsRecordingIdRoute
@@ -254,6 +260,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
   '/championships/$slug/gm': typeof ChampionshipsSlugGmRoute
+  '/championships/$slug': typeof ChampionshipsSlugIndexRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -287,6 +294,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/championships/$slug/draft': typeof ChampionshipsSlugDraftRoute
   '/championships/$slug/gm': typeof ChampionshipsSlugGmRoute
+  '/championships/$slug/': typeof ChampionshipsSlugIndexRoute
   '/api/auth/sign-in/discord': typeof ApiAuthSignInDiscordRoute
   '/api/championships/$championshipId/events': typeof ApiChampionshipsChampionshipIdEventsRoute
 }
@@ -321,6 +329,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/championships/$slug/draft'
     | '/championships/$slug/gm'
+    | '/championships/$slug/'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   fileRoutesByTo: FileRoutesByTo
@@ -335,7 +344,6 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/room-programs'
     | '/admin/rooms'
-    | '/championships/$slug'
     | '/clips/$clipId'
     | '/matches/$matchId'
     | '/recordings/$recordingId'
@@ -353,6 +361,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/championships/$slug/draft'
     | '/championships/$slug/gm'
+    | '/championships/$slug'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   id:
@@ -385,6 +394,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/championships/$slug/draft'
     | '/championships/$slug/gm'
+    | '/championships/$slug/'
     | '/api/auth/sign-in/discord'
     | '/api/championships/$championshipId/events'
   fileRoutesById: FileRoutesById
@@ -604,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/championships/$slug/': {
+      id: '/championships/$slug/'
+      path: '/'
+      fullPath: '/championships/$slug/'
+      preLoaderRoute: typeof ChampionshipsSlugIndexRouteImport
+      parentRoute: typeof ChampionshipsSlugRoute
+    }
     '/championships/$slug/draft': {
       id: '/championships/$slug/draft'
       path: '/draft'
@@ -638,11 +655,13 @@ declare module '@tanstack/react-router' {
 interface ChampionshipsSlugRouteChildren {
   ChampionshipsSlugDraftRoute: typeof ChampionshipsSlugDraftRoute
   ChampionshipsSlugGmRoute: typeof ChampionshipsSlugGmRoute
+  ChampionshipsSlugIndexRoute: typeof ChampionshipsSlugIndexRoute
 }
 
 const ChampionshipsSlugRouteChildren: ChampionshipsSlugRouteChildren = {
   ChampionshipsSlugDraftRoute: ChampionshipsSlugDraftRoute,
   ChampionshipsSlugGmRoute: ChampionshipsSlugGmRoute,
+  ChampionshipsSlugIndexRoute: ChampionshipsSlugIndexRoute,
 }
 
 const ChampionshipsSlugRouteWithChildren =
