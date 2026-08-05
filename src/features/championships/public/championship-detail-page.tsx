@@ -85,7 +85,7 @@ export function ChampionshipDetailPage({
       <ChampionshipNavigation
         section={section}
         onSelect={setSection}
-        draft={data.draft.draft !== null}
+        draft={data.draft.draft !== null || isGeneralManager}
         showRosterAndTrades={canAccessRosterAndTrades}
         showStatistics={data.visualizations.statistics.items.length > 0}
         showHonors={data.honors.items.length > 0 || Number(data.history.placements.totalCount) > 0}
@@ -126,7 +126,7 @@ export function ChampionshipDetailPage({
         </section>
       ) : null}
       {section === "honors" ? <ChampionshipArchiveWorkspace data={data} mode="public" /> : null}
-      {section === "draft" && data.draft.draft ? (
+      {section === "draft" ? (
         <section className="space-y-5">
           <ChampionshipSectionHeading
             icon={Crown}
