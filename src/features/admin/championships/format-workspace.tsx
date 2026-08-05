@@ -5,9 +5,9 @@ import {
   CalendarClock,
   Bell,
   Check,
-  ChevronDown,
   CircleAlert,
   Clock3,
+  Ellipsis,
   GitBranch,
   LoaderCircle,
   MessageSquareText,
@@ -254,7 +254,7 @@ function StageSection({
           onFocus={setFocusTeam}
           actionsControl={
             mode === "admin" ? (
-              <StageActionsMenu>
+              <StageActionsMenu label={`Ações de ${stage.name}`}>
                 <DeleteStageMenuItem onOpen={() => setDeleteOpen(true)} />
               </StageActionsMenu>
             ) : null
@@ -2012,7 +2012,7 @@ function ManualStageWorkspace({
           <div className="flex flex-wrap gap-2">
             {admin ? (
               <>
-                <StageActionsMenu>
+                <StageActionsMenu label={`Ações de ${stage.name}`}>
                   <DropdownMenuItem onSelect={() => setMatchOpen(true)}>
                     <Plus />
                     Adicionar partida
@@ -2145,13 +2145,18 @@ function ManualStageWorkspace({
   );
 }
 
-function StageActionsMenu({ children }: { children: ReactNode }) {
+function StageActionsMenu({
+  children,
+  label = "Ações da etapa",
+}: {
+  children: ReactNode;
+  label?: string;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">
-          Ações
-          <ChevronDown />
+        <Button variant="outline" size="icon" className="shrink-0" title={label} aria-label={label}>
+          <Ellipsis />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

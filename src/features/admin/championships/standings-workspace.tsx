@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
+  Ellipsis,
   Info,
   LoaderCircle,
   Plus,
@@ -219,9 +220,14 @@ export function StandingsWorkspace({
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      Ações
-                      <ChevronDown />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title={`Ações de ${stage.name}`}
+                      aria-label={`Ações de ${stage.name}`}
+                    >
+                      <Ellipsis />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
