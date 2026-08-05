@@ -62,6 +62,7 @@ import {
   createChampionshipTradeFn,
   endChampionshipDraftFn,
   getChampionshipDraftFn,
+  getChampionshipTradesFn,
   makeChampionshipDraftPickFn,
   previewChampionshipDraftCorrectionFn,
   rejectChampionshipTradeFn,
@@ -101,11 +102,13 @@ export function DraftWorkspace({
   session,
   mode,
   poll = true,
+  focus = "all",
 }: {
   data: DraftData;
   session: ApiAccountSession | null;
   mode: "admin" | "public";
   poll?: boolean;
+  focus?: "all" | "trades";
 }) {
   const [projection, setProjection] = useState(data.draft);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -202,7 +205,9 @@ export function DraftWorkspace({
   }
 
   const publicWorkspace =
-    draft.mode === "recorded" ? (
+    focus === "trades" ? (
+      <TradeDesk data={data} draft={draft} mode={mode} />
+    ) : draft.mode === "recorded" ? (
       <RecordedDraftView draft={draft} />
     ) : (
       <div className="space-y-5">
@@ -1836,6 +1841,7 @@ function TradeDesk({
   const accept = useServerFn(acceptChampionshipTradeFn);
   const reject = useServerFn(rejectChampionshipTradeFn);
   const cancel = useServerFn(cancelChampionshipTradeFn);
+  const getTrades = useServerFn(getChampionshipTradesFn);
   const router = useRouter();
   const [fromTeamId, setFromTeamId] = useState(draft.teams[0]?.uuid ?? "");
   const [toTeamId, setToTeamId] = useState(draft.teams[1]?.uuid ?? "");
@@ -1843,9 +1849,46 @@ function TradeDesk({
   const [toPlayerId, setToPlayerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [trades, setTrades] = useState(data.trades);
   const tradeWindowOpen =
     data.championship.tradeWindowState === "open" &&
     ["setup", "active"].includes(data.championship.lifecycle);
+
+  useEffect(() => {
+    setTrades(data.trades);
+  }, [data.trades]);
+
+  useEffect(() => {
+    if (mode !== "public") {
+      return;
+    }
+
+    void getTrades({
+      data: {
+        championshipUuid: data.championship.uuid,
+        visibility: "involved",
+        limit: 50,
+      },
+    })
+      .then(setTrades)
+      .catch(() => undefined);
+  }, [data.championship.uuid, getTrades, mode]);
+
+  async function refreshTrades() {
+    if (mode !== "public") {
+      return;
+    }
+
+    setTrades(
+      await getTrades({
+        data: {
+          championshipUuid: data.championship.uuid,
+          visibility: "involved",
+          limit: 50,
+        },
+      }),
+    );
+  }
 
   async function propose() {
     if (!tradeWindowOpen) {
@@ -1874,6 +1917,7 @@ function TradeDesk({
       setMessage(result.message);
       return;
     }
+    await refreshTrades();
     await router.invalidate();
   }
 
@@ -1894,6 +1938,7 @@ function TradeDesk({
       setMessage(result.message);
       return;
     }
+    await refreshTrades();
     await router.invalidate();
   }
 
@@ -1924,7 +1969,7 @@ function TradeDesk({
           >
             {tradeWindowOpen ? "Janela aberta" : "Janela encerrada"}
           </Badge>
-          <Badge variant="outline">{data.trades.items.length} negociações visíveis</Badge>
+          <Badge variant="outline">{trades.items.length} negociações visíveis</Badge>
         </div>
       </div>
       {mode === "admin" || draft.actor.gmTeamIds.length ? (
@@ -1965,8 +2010,8 @@ function TradeDesk({
         </Alert>
       ) : null}
       <div className="divide-y">
-        {data.trades.items.length ? (
-          data.trades.items.map((trade) => {
+        {trades.items.length ? (
+          trades.items.map((trade) => {
             const balance = tradeBalance(trade);
 
             return (

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
+  ArrowLeftRight,
   BarChart3,
   BookOpen,
   CircleDollarSign,
@@ -54,6 +55,10 @@ export function ChampionshipDetailPage({
   const { championship, teams, participants } = data;
   const salary = championship.rules.salary;
   const [section, setSection] = useState<PublicSection>("overview");
+  const isGeneralManager =
+    session !== null &&
+    data.selfRegistration?.status === "active" &&
+    data.selfRegistration.activeMembership?.role === "gm";
   const matches = useMemo(
     () => sortPublicChampionshipMatches(data.format.matches.items, data.format.stages.items),
     [data.format.matches.items, data.format.stages.items],
@@ -70,6 +75,7 @@ export function ChampionshipDetailPage({
         section={section}
         onSelect={setSection}
         draft={data.draft.draft !== null}
+        showRosterAndTrades={isGeneralManager && data.draft.draft !== null}
         showStatistics={data.visualizations.statistics.items.length > 0}
         showHonors={data.honors.items.length > 0 || Number(data.history.placements.totalCount) > 0}
       />
@@ -119,6 +125,16 @@ export function ChampionshipDetailPage({
           <DraftWorkspace data={data} session={session} mode="public" />
         </section>
       ) : null}
+      {section === "roster-trades" && isGeneralManager && data.draft.draft ? (
+        <section className="space-y-5">
+          <ChampionshipSectionHeading
+            icon={ArrowLeftRight}
+            title="Meu elenco e trocas"
+            detail="Consulte o elenco da sua equipe, proponha trocas e responda às negociações em andamento."
+          />
+          <DraftWorkspace data={data} session={session} mode="public" focus="trades" />
+        </section>
+      ) : null}
       {section === "info" ? <ChampionshipInformation data={data} salary={salary} /> : null}
     </div>
   );
@@ -130,6 +146,7 @@ type PublicSection =
   | "bracket"
   | "statistics"
   | "draft"
+  | "roster-trades"
   | "honors"
   | "info";
 
@@ -188,12 +205,14 @@ function ChampionshipNavigation({
   section,
   onSelect,
   draft,
+  showRosterAndTrades,
   showStatistics,
   showHonors,
 }: {
   section: PublicSection;
   onSelect: (section: PublicSection) => void;
   draft: boolean;
+  showRosterAndTrades: boolean;
   showStatistics: boolean;
   showHonors: boolean;
 }) {
@@ -203,6 +222,9 @@ function ChampionshipNavigation({
     { key: "bracket", label: "Chaves e classificação", icon: Trophy },
     ...(showStatistics
       ? [{ key: "statistics" as const, label: "Estatísticas", icon: BarChart3 }]
+      : []),
+    ...(showRosterAndTrades
+      ? [{ key: "roster-trades" as const, label: "Meu elenco e trocas", icon: ArrowLeftRight }]
       : []),
     ...(draft ? [{ key: "draft" as const, label: "Draft", icon: Crown }] : []),
     ...(showHonors ? [{ key: "honors" as const, label: "Títulos e prêmios", icon: Medal }] : []),
