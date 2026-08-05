@@ -57,8 +57,15 @@ export function ChampionshipDetailPage({
   const [section, setSection] = useState<PublicSection>("overview");
   const isGeneralManager =
     session !== null &&
-    data.selfRegistration?.status === "active" &&
-    data.selfRegistration.activeMembership?.role === "gm";
+    (data.selfRegistration?.status === "active" &&
+    data.selfRegistration.activeMembership?.role === "gm"
+      ? true
+      : data.participants.items.some(
+          (participant) =>
+            participant.identity.kind === "account" &&
+            participant.identity.accountUuid === session.account.uuid &&
+            participant.activeMembership?.role === "gm",
+        ));
   const canAccessRosterAndTrades =
     isGeneralManager &&
     data.championship.tradeWindowState === "open" &&
