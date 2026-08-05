@@ -9,6 +9,7 @@ export const configureChampionshipDraftFn = unavailableInStorybook;
 export const createChampionshipTradeFn = unavailableInStorybook;
 export const endChampionshipDraftFn = unavailableInStorybook;
 export const getChampionshipDraftFn = unavailableInStorybook;
+export const getChampionshipTradesFn = unavailableInStorybook;
 export const makeChampionshipDraftPickFn = unavailableInStorybook;
 export const previewChampionshipDraftCorrectionFn = unavailableInStorybook;
 export const previewChampionshipRecordedDraftFn = unavailableInStorybook;
