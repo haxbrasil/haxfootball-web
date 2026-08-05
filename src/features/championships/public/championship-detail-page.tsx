@@ -108,6 +108,7 @@ export function ChampionshipDetailPage({
       {section === "matches" ? (
         <ChampionshipMatchViewer championshipUuid={championship.uuid} matches={matches} />
       ) : null}
+      {section === "rosters" ? <ChampionshipRosters data={data} /> : null}
       {section === "statistics" ? (
         <section className="space-y-5">
           <ChampionshipSectionHeading
@@ -124,7 +125,14 @@ export function ChampionshipDetailPage({
   );
 }
 
-type PublicSection = "overview" | "matches" | "bracket" | "statistics" | "honors" | "info";
+type PublicSection =
+  | "overview"
+  | "matches"
+  | "bracket"
+  | "rosters"
+  | "statistics"
+  | "honors"
+  | "info";
 
 function ChampionshipHero({
   data,
@@ -206,6 +214,7 @@ function ChampionshipNavigation({
     { key: "overview", label: "Visão geral", icon: LayoutDashboard },
     { key: "matches", label: "Jogos", icon: Swords },
     { key: "bracket", label: "Chaves e classificação", icon: Trophy },
+    { key: "rosters", label: "Elencos", icon: Users },
     ...(showStatistics
       ? [{ key: "statistics" as const, label: "Estatísticas", icon: BarChart3 }]
       : []),
@@ -246,6 +255,106 @@ function ChampionshipNavigation({
         ) : null}
       </div>
     </nav>
+  );
+}
+
+function ChampionshipRosters({ data }: { data: PublicChampionshipDetail }) {
+  const rosters = data.teams.items.map((team) => ({
+    team,
+    participants: data.participants.items
+      .filter((participant) => participant.activeMembership?.team.uuid === team.uuid)
+      .sort((left, right) => {
+        const leftRole = left.activeMembership?.role === "gm" ? 0 : 1;
+        const rightRole = right.activeMembership?.role === "gm" ? 0 : 1;
+
+        return leftRole - rightRole || left.displayName.localeCompare(right.displayName, "pt-BR");
+      }),
+  }));
+
+  return (
+    <section className="space-y-5">
+      <ChampionshipSectionHeading
+        icon={Users}
+        title="Elencos"
+        detail="Acompanhe a composição atual de cada equipe da edição."
+        action={<Badge variant="outline">{rosters.length} equipes</Badge>}
+      />
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        {rosters.map(({ team, participants }) => (
+          <section key={team.uuid} className="bfl-panel min-w-0 overflow-hidden rounded-xl border">
+            <div className="flex items-center justify-between gap-4 border-b px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <TeamRosterMark colors={team.colors} />
+                <div className="min-w-0">
+                  <h2 className="truncate font-semibold">{team.name}</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {participants.length === 1
+                      ? "1 pessoa no elenco"
+                      : `${participants.length} pessoas no elenco`}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="shrink-0 tabular-nums">
+                {participants.length}
+              </Badge>
+            </div>
+            {participants.length > 0 ? (
+              <ol className="divide-y">
+                {participants.map((participant, index) => {
+                  const generalManager = participant.activeMembership?.role === "gm";
+
+                  return (
+                    <li
+                      key={participant.uuid}
+                      className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3"
+                    >
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {index + 1}
+                      </span>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="grid size-8 shrink-0 place-items-center border bg-background text-[11px] font-semibold">
+                          {participant.displayName.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="truncate text-sm font-medium">
+                          {participant.displayName}
+                        </span>
+                      </div>
+                      {generalManager ? (
+                        <Badge
+                          variant="outline"
+                          className="border-primary/40 bg-primary/10 text-primary"
+                        >
+                          <Crown className="size-3" />
+                          General Manager
+                        </Badge>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+                Elenco em formação.
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TeamRosterMark({ colors }: { colors: string[] | null | undefined }) {
+  return (
+    <span
+      className="size-10 shrink-0 border"
+      style={{
+        background:
+          colors && colors.length > 1
+            ? `linear-gradient(135deg, ${colors[0]} 0 50%, ${colors[1]} 50%)`
+            : (colors?.[0] ?? "#64748b"),
+      }}
+    />
   );
 }
 
