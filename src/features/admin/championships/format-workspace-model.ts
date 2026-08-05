@@ -29,6 +29,7 @@ export type BracketLayout = {
   width: number;
   height: number;
   roundCount: number;
+  compact: boolean;
   sections: Array<{
     key: string;
     label: string;
@@ -61,10 +62,14 @@ export function buildBracketLayout(projection: FormatProjection, stageUuid: stri
   const roundCount = doubleElimination
     ? Math.max(winnersRoundCount, losersRoundCount) + (finals.length ? 1 : 0)
     : Math.max(0, ...matches.map((match) => numberValue(match.bracketRound)));
-  const winnersHeight = bracketBandHeight(winners);
+  const compact =
+    !doubleElimination && matches.length > 0 && matches.length <= 3 && roundCount <= 2;
+  const winnersHeight = bracketBandHeight(winners, compact ? 264 : 320);
   const losersHeight = doubleElimination ? bracketBandHeight(losers) : 0;
   const bandGap = doubleElimination ? 112 : 0;
-  const height = Math.max(420, winnersHeight + losersHeight + bandGap);
+  const height = doubleElimination
+    ? Math.max(420, winnersHeight + losersHeight + bandGap)
+    : winnersHeight;
   const nodes = matches.map((match) => {
     const round = numberValue(match.bracketRound);
     const position = numberValue(match.bracketPosition);
@@ -140,6 +145,7 @@ export function buildBracketLayout(projection: FormatProjection, stageUuid: stri
     width: Math.max(nodeWidth, roundCount * nodeWidth + Math.max(0, roundCount - 1) * columnGap),
     height,
     roundCount,
+    compact,
     sections: doubleElimination
       ? [
           { key: "winners", label: "Chave superior", x: 0, y: 0 },
@@ -171,13 +177,13 @@ export function buildBracketLayout(projection: FormatProjection, stageUuid: stri
   };
 }
 
-function bracketBandHeight(matches: FormatMatch[]): number {
+function bracketBandHeight(matches: FormatMatch[], minimumHeight = 320): number {
   const firstRoundCount = Math.max(
     1,
     matches.filter((match) => numberValue(match.bracketRound) === 1).length,
   );
 
-  return Math.max(320, firstRoundCount * (nodeHeight + minimumRowGap));
+  return Math.max(minimumHeight, firstRoundCount * (nodeHeight + minimumRowGap));
 }
 
 export function matchContainsTeam(match: FormatMatch, teamUuid: string | null): boolean {

@@ -480,89 +480,99 @@ function BracketCanvas({
           {admin ? <span>Arraste uma equipe para trocar um spot</span> : null}
         </div>
         <div
-          className="origin-top-left"
-          style={{
-            width: layout.width * scale + 48,
-            height: layout.height * scale + 48,
-          }}
+          className={
+            layout.compact
+              ? "flex min-h-[22rem] min-w-full items-center justify-center px-6 pb-6"
+              : "origin-top-left"
+          }
         >
           <div
-            className="relative m-6 origin-top-left"
+            className="origin-top-left"
             style={{
-              width: layout.width,
-              height: layout.height,
-              transform: `scale(${scale})`,
+              width: layout.width * scale + 48,
+              height: layout.height * scale + 48,
             }}
           >
-            <svg
-              className="pointer-events-none absolute inset-0 overflow-visible"
-              width={layout.width}
-              height={layout.height}
-              aria-hidden="true"
+            <div
+              className="relative m-6 origin-top-left"
+              style={{
+                width: layout.width,
+                height: layout.height,
+                transform: `scale(${scale})`,
+              }}
             >
-              {layout.edges.map((edge) => {
-                const focus = focusedMatches
-                  ? focusedMatches.has(edge.source.match.uuid) &&
-                    (!edge.destination || focusedMatches.has(edge.destination.match.uuid))
-                    ? "focused"
-                    : "muted"
-                  : focusedRoute(edge, null);
-
-                return (
-                  <path
-                    key={edge.route.uuid}
-                    d={edge.path}
-                    fill="none"
-                    stroke={
-                      focus === "muted"
-                        ? "hsl(var(--muted-foreground))"
-                        : edge.route.sourceOutcome === "loser"
-                          ? "#f59e0b"
-                          : edge.route.condition !== "always"
-                            ? "#22d3ee"
-                            : "#34d399"
-                    }
-                    strokeWidth={focus === "focused" ? 3 : 1.5}
-                    strokeDasharray={
-                      edge.route.sourceOutcome === "loser"
-                        ? "6 5"
-                        : edge.route.condition !== "always"
-                          ? "2 5"
-                          : undefined
-                    }
-                    opacity={edge.route.state === "disabled" ? 0.12 : focus === "muted" ? 0.2 : 0.8}
-                  />
-                );
-              })}
-            </svg>
-            {layout.sections.map((section) => (
-              <div
-                key={section.key}
-                className="absolute top-0 text-xs font-semibold uppercase text-muted-foreground"
-                style={{ left: section.x, top: section.y }}
+              <svg
+                className="pointer-events-none absolute inset-0 overflow-visible"
+                width={layout.width}
+                height={layout.height}
+                aria-hidden="true"
               >
-                {section.label}
-              </div>
-            ))}
-            {layout.nodes.map((node) => (
-              <BracketMatchNode
-                key={node.match.uuid}
-                data={data}
-                projection={projection}
-                match={node.match}
-                focused={focusedMatches?.has(node.match.uuid) ?? false}
-                muted={focusedMatches ? !focusedMatches.has(node.match.uuid) : false}
-                admin={admin}
-                style={{
-                  left: node.x,
-                  top: node.y + 24,
-                  width: node.width,
-                  height: node.height,
-                }}
-                onProjection={onProjection}
-                onSchedule={() => setSelectedMatch(node.match)}
-              />
-            ))}
+                {layout.edges.map((edge) => {
+                  const focus = focusedMatches
+                    ? focusedMatches.has(edge.source.match.uuid) &&
+                      (!edge.destination || focusedMatches.has(edge.destination.match.uuid))
+                      ? "focused"
+                      : "muted"
+                    : focusedRoute(edge, null);
+
+                  return (
+                    <path
+                      key={edge.route.uuid}
+                      d={edge.path}
+                      fill="none"
+                      stroke={
+                        focus === "muted"
+                          ? "hsl(var(--muted-foreground))"
+                          : edge.route.sourceOutcome === "loser"
+                            ? "#f59e0b"
+                            : edge.route.condition !== "always"
+                              ? "#22d3ee"
+                              : "#34d399"
+                      }
+                      strokeWidth={focus === "focused" ? 3 : 1.5}
+                      strokeDasharray={
+                        edge.route.sourceOutcome === "loser"
+                          ? "6 5"
+                          : edge.route.condition !== "always"
+                            ? "2 5"
+                            : undefined
+                      }
+                      opacity={
+                        edge.route.state === "disabled" ? 0.12 : focus === "muted" ? 0.2 : 0.8
+                      }
+                    />
+                  );
+                })}
+              </svg>
+              {layout.sections.map((section) => (
+                <div
+                  key={section.key}
+                  className="absolute top-0 text-xs font-semibold uppercase text-muted-foreground"
+                  style={{ left: section.x, top: section.y }}
+                >
+                  {section.label}
+                </div>
+              ))}
+              {layout.nodes.map((node) => (
+                <BracketMatchNode
+                  key={node.match.uuid}
+                  data={data}
+                  projection={projection}
+                  match={node.match}
+                  focused={focusedMatches?.has(node.match.uuid) ?? false}
+                  muted={focusedMatches ? !focusedMatches.has(node.match.uuid) : false}
+                  admin={admin}
+                  style={{
+                    left: node.x,
+                    top: node.y + 24,
+                    width: node.width,
+                    height: node.height,
+                  }}
+                  onProjection={onProjection}
+                  onSchedule={() => setSelectedMatch(node.match)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>

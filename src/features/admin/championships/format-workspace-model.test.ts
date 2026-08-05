@@ -20,7 +20,8 @@ describe("championship bracket layout", () => {
       expect(layout.nodes).toHaveLength(size - 1);
       expect(layout.roundCount).toBe(Math.log2(size));
       expect(layout.width).toBeGreaterThanOrEqual(264);
-      expect(layout.height).toBeGreaterThanOrEqual(420);
+      expect(layout.height).toBeGreaterThanOrEqual(size <= 4 ? 264 : 420);
+      expect(layout.compact).toBe(size <= 4);
       expect(
         layout.nodes.every(
           (node) =>
