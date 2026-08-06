@@ -447,7 +447,7 @@ function ChampionshipPointsLeaderboard({
                 participantUuid: player.participantUuid,
                 accountUuid: player.accountUuid,
                 displayName: player.displayName,
-                matchesPlayed: player.matchesPlayed,
+                matchesPlayed: Number(player.matchesPlayed),
                 points,
               },
             ]
