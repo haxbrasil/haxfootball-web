@@ -10,6 +10,7 @@ import {
   Crown,
   History,
   LayoutDashboard,
+  ListOrdered,
   Medal,
   Radio,
   Shield,
@@ -24,6 +25,13 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Progress } from "#/components/ui/progress";
 import { Separator } from "#/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "#/components/ui/dialog";
 import type { PublicChampionshipDetail } from "#/server/api/championship-api";
 import type { ApiAccountSession } from "#/server/auth/session";
 import { FormatWorkspace } from "#/features/admin/championships/format-workspace";
@@ -406,9 +414,166 @@ function ChampionshipOverview({
           <PublicRegistrationPanel data={data} session={session} />
         ) : null}
       </div>
+      <ChampionshipPointsLeaderboard statistics={data.statistics} />
       <VisualizationDashboardView items={data.visualizations.overview.items} />
     </div>
   );
+}
+
+type ChampionshipPointsRow = {
+  participantUuid: string | null;
+  accountUuid: string | null;
+  displayName: string;
+  matchesPlayed: number;
+  points: number;
+};
+
+function ChampionshipPointsLeaderboard({
+  statistics,
+}: {
+  statistics: PublicChampionshipDetail["statistics"];
+}) {
+  const [open, setOpen] = useState(false);
+  const metric = statistics.featuredMetrics.points;
+  const rows = useMemo<ChampionshipPointsRow[]>(() => {
+    if (!metric) return [];
+
+    return statistics.players.items
+      .flatMap((player) => {
+        const points = player.metrics[metric.key];
+        return typeof points === "number" && Number.isFinite(points) && points > 0
+          ? [
+              {
+                participantUuid: player.participantUuid,
+                accountUuid: player.accountUuid,
+                displayName: player.displayName,
+                matchesPlayed: player.matchesPlayed,
+                points,
+              },
+            ]
+          : [];
+      })
+      .sort(
+        (left, right) =>
+          right.points - left.points || left.displayName.localeCompare(right.displayName),
+      );
+  }, [metric, statistics.players.items]);
+
+  if (!metric || rows.length === 0) return null;
+
+  const visibleRows = rows.slice(0, 10);
+  const leaderPoints = visibleRows[0]?.points ?? 0;
+  const hasMore = rows.length > visibleRows.length;
+  const rankingCount = statistics.players.truncated
+    ? `${rows.length} de ${statistics.players.totalCount}`
+    : String(rows.length);
+
+  return (
+    <section className="bfl-panel overflow-hidden rounded-xl border">
+      <div className="flex flex-col gap-4 border-b px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center border bg-card text-primary">
+            <Trophy className="size-5" />
+          </span>
+          <div>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-normal text-primary">
+              Ranking
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">Pontos</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Destaques da edição em {metric.label.toLocaleLowerCase("pt-BR")}.
+            </p>
+          </div>
+        </div>
+        {hasMore ? (
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <ListOrdered />
+            Ver todos
+          </Button>
+        ) : null}
+      </div>
+      <ol className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        {visibleRows.map((row, index) => (
+          <ChampionshipPointsRowView
+            key={row.participantUuid ?? row.accountUuid ?? `${row.displayName}-${index}`}
+            row={row}
+            rank={index + 1}
+            leaderPoints={leaderPoints}
+            precision={metric.precision}
+          />
+        ))}
+      </ol>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="grid max-h-[90dvh] w-[min(94vw,48rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b px-5 py-5 sm:px-6">
+            <DialogTitle>Ranking de pontos</DialogTitle>
+            <DialogDescription>
+              {rankingCount} jogadores classificados por {metric.label.toLocaleLowerCase("pt-BR")}.
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="bfl-scrollbar divide-y overflow-y-auto">
+            {rows.map((row, index) => (
+              <ChampionshipPointsRowView
+                key={row.participantUuid ?? row.accountUuid ?? `${row.displayName}-${index}`}
+                row={row}
+                rank={index + 1}
+                leaderPoints={rows[0]?.points ?? 0}
+                precision={metric.precision}
+              />
+            ))}
+          </ol>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+function ChampionshipPointsRowView({
+  row,
+  rank,
+  leaderPoints,
+  precision,
+}: {
+  row: ChampionshipPointsRow;
+  rank: number;
+  leaderPoints: number;
+  precision: number | null;
+}) {
+  const ratio =
+    leaderPoints > 0 ? Math.max(7, Math.min(100, (row.points / leaderPoints) * 100)) : 0;
+
+  return (
+    <li className="relative min-w-0 overflow-hidden px-5 py-4 sm:px-6">
+      {rank > 1 ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 bg-primary/[0.08]"
+          style={{ width: `${ratio}%` }}
+        />
+      ) : null}
+      <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+        <span className="grid size-8 place-items-center rounded-md border bg-background text-sm font-semibold tabular-nums text-muted-foreground">
+          {rank === 1 ? <Crown className="size-4 text-primary" /> : rank}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-foreground">{row.displayName}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {row.matchesPlayed} {row.matchesPlayed === 1 ? "partida" : "partidas"}
+          </span>
+        </span>
+        <span className="text-right font-semibold tabular-nums text-foreground">
+          {formatChampionshipPoints(row.points, precision)}
+        </span>
+      </div>
+    </li>
+  );
+}
+
+function formatChampionshipPoints(value: number, precision: number | null) {
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: precision ?? 1,
+    minimumFractionDigits: precision ?? 0,
+  }).format(value);
 }
 
 function LiveDraftBanner({ data }: { data: PublicChampionshipDetail }) {

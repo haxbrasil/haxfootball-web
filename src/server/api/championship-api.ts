@@ -330,7 +330,7 @@ export async function getPublicChampionshipBySlug(
     ),
     requireResult(
       client.championships.statistics.get(summary.uuid, {
-        limit: 200,
+        limit: 500,
         offset: 0,
       }),
     ),
