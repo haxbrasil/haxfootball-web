@@ -51,22 +51,29 @@ const renderProfileSettings = z.object({
   formats: z.array(z.enum(["mp4", "webm", "gif"])).min(1),
   orientations: z.array(z.enum(["landscape", "vertical"])).min(1),
   scoreboards: z.array(z.string()).min(1),
-  camera: z.object({
-    zoom: z.number().positive().max(20),
-    hudZoom: z.number().positive().max(20),
-    scoreboardZoom: z.number().positive().max(20),
-    menuZoom: z.number().positive().max(20),
-    locationIndicatorZoom: z.number().positive().max(20),
-    gameMessageZoom: z.number().positive().max(20),
-    parameters: z.record(z.string(), z.number()),
-    rules: z.array(
+  cameras: z
+    .array(
       z.object({
-        when: z.string().min(1),
-        focus: z.object({ target: z.literal("players") }).optional(),
-        set: z.record(z.string(), z.number()).optional(),
+        id: z.string().min(1).max(80),
+        title: z.string().min(1).max(120),
+        description: z.string().max(500).nullable().optional(),
+        zoom: z.number().positive().max(20),
+        hudZoom: z.number().positive().max(20),
+        scoreboardZoom: z.number().positive().max(20),
+        menuZoom: z.number().positive().max(20),
+        locationIndicatorZoom: z.number().positive().max(20),
+        gameMessageZoom: z.number().positive().max(20),
+        parameters: z.record(z.string(), z.number()),
+        rules: z.array(
+          z.object({
+            when: z.string().min(1),
+            focus: z.object({ target: z.literal("players") }).optional(),
+            set: z.record(z.string(), z.number()).optional(),
+          }),
+        ),
       }),
-    ),
-  }),
+    )
+    .min(1),
 });
 
 export const previewVisualizationFn = createServerFn({ method: "POST" })
@@ -167,6 +174,7 @@ export const previewRenderProfileFn = createServerFn({ method: "POST" })
       format: z.enum(["mp4", "webm", "gif"]),
       orientation: z.enum(["landscape", "vertical"]),
       scoreboard: z.string(),
+      cameraId: z.string().min(1),
       settings: renderProfileSettings,
     }),
   )

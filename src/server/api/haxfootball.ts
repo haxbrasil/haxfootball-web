@@ -113,6 +113,7 @@ export type ClipExportProfile = {
   format: ClipExportFormat;
   orientation: ClipExportOrientation;
   scoreboard: ClipExportScoreboard;
+  cameraId: string;
   renderProfileVersionId: string;
 };
 export type ClipExport = {
@@ -140,6 +141,7 @@ export type ClipExportCapabilities = {
     formats: ClipExportFormat[];
     orientations: ClipExportOrientation[];
     scoreboards: ClipExportScoreboard[];
+    cameras: Array<{ id: string; title: string; description: string | null }>;
   }>;
 };
 

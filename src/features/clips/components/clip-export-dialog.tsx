@@ -66,6 +66,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
     format: "mp4",
     orientation: "landscape",
     scoreboard: "default",
+    cameraId: "",
     renderProfileVersionId: "",
   });
 
@@ -96,6 +97,9 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
           scoreboard: fallback.scoreboards.includes(current.scoreboard)
             ? current.scoreboard
             : fallback.scoreboards[0],
+          cameraId: fallback.cameras.some((camera) => camera.id === current.cameraId)
+            ? current.cameraId
+            : (fallback.cameras[0]?.id ?? ""),
         };
       });
     };
@@ -206,12 +210,27 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
                     scoreboard: option.scoreboards.includes(current.scoreboard)
                       ? current.scoreboard
                       : option.scoreboards[0],
+                    cameraId: option.cameras[0]?.id ?? "",
                   }))
                 }
               >
                 <Focus className="size-5 text-primary" />
                 <strong>{option.title}</strong>
                 <span>{option.description ?? `Versão ${option.version}`}</span>
+              </ChoiceCard>
+            ))}
+          </ExportChoiceGroup>
+          <ExportChoiceGroup title="Câmera">
+            {(selectedRenderProfile?.cameras ?? []).map((camera) => (
+              <ChoiceCard
+                key={camera.id}
+                selected={profile.cameraId === camera.id}
+                disabled={false}
+                onClick={() => setProfile((current) => ({ ...current, cameraId: camera.id }))}
+              >
+                <Focus className="size-5 text-primary" />
+                <strong>{camera.title}</strong>
+                <span>{camera.description ?? "Enquadramento configurado neste perfil."}</span>
               </ChoiceCard>
             ))}
           </ExportChoiceGroup>
@@ -251,7 +270,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
           </span>
           <Button
             onClick={() => void submit()}
-            disabled={submitting || !profile.renderProfileVersionId}
+            disabled={submitting || !profile.renderProfileVersionId || !profile.cameraId}
           >
             {submitting ? (
               <LoaderCircle className="size-4 animate-spin" />

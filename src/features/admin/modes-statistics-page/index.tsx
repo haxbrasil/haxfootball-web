@@ -113,7 +113,10 @@ type RenderProfileSettings = {
   formats: Array<"mp4" | "webm" | "gif">;
   orientations: Array<"landscape" | "vertical">;
   scoreboards: string[];
-  camera: {
+  cameras: Array<{
+    id: string;
+    title: string;
+    description?: string | null;
     zoom: number;
     hudZoom: number;
     scoreboardZoom: number;
@@ -122,7 +125,7 @@ type RenderProfileSettings = {
     gameMessageZoom: number;
     parameters: Record<string, number>;
     rules: Array<{ when: string; focus?: { target: "players" }; set?: Record<string, number> }>;
-  };
+  }>;
 };
 
 const defaultSpec: VisualizationSpecification = {
@@ -210,6 +213,7 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
     selected?.draft?.settings ?? selected?.latestVersion?.settings ?? null,
   );
   const [saving, setSaving] = useState<"draft" | "publish" | null>(null);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
   const [previewClipId, setPreviewClipId] = useState("");
   const [previewExport, setPreviewExport] = useState<{
     id: string;
@@ -222,6 +226,9 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
     setTitle(next?.title ?? "");
     setDescription(next?.description ?? "");
     setSettings(next?.draft?.settings ?? next?.latestVersion?.settings ?? null);
+    setSelectedCameraId(
+      (next?.draft?.settings ?? next?.latestVersion?.settings)?.cameras[0]?.id ?? "",
+    );
   }, [items, selectedId]);
 
   useEffect(() => {
@@ -252,9 +259,18 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
       return { ...current, [key]: next } as RenderProfileSettings;
     });
   };
-  const updateCamera = (key: keyof RenderProfileSettings["camera"], value: number) => {
+  const selectedCamera =
+    settings.cameras.find((camera) => camera.id === selectedCameraId) ?? settings.cameras[0];
+  const updateCamera = (key: keyof typeof selectedCamera, value: number) => {
     setSettings((current) =>
-      current ? { ...current, camera: { ...current.camera, [key]: value } } : current,
+      current
+        ? {
+            ...current,
+            cameras: current.cameras.map((camera) =>
+              camera.id === selectedCamera.id ? { ...camera, [key]: value } : camera,
+            ),
+          }
+        : current,
     );
   };
   const save = async (mode: "draft" | "publish") => {
@@ -293,6 +309,7 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
             ? "vertical"
             : settings.orientations[0],
           scoreboard: settings.scoreboards[0],
+          cameraId: selectedCamera.id,
           settings,
         },
       });
@@ -404,49 +421,158 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
                 versão escolhida.
               </p>
             </div>
+            <div className="flex flex-wrap gap-2">
+              {settings.cameras.map((camera) => (
+                <Button
+                  key={camera.id}
+                  type="button"
+                  size="sm"
+                  variant={camera.id === selectedCamera.id ? "default" : "outline"}
+                  onClick={() => setSelectedCameraId(camera.id)}
+                >
+                  {camera.title}
+                </Button>
+              ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const id = `camera_${settings.cameras.length + 1}`;
+                  setSettings((current) =>
+                    current
+                      ? {
+                          ...current,
+                          cameras: [
+                            ...current.cameras,
+                            {
+                              ...selectedCamera,
+                              id,
+                              title: `Câmera ${current.cameras.length + 1}`,
+                            },
+                          ],
+                        }
+                      : current,
+                  );
+                  setSelectedCameraId(id);
+                }}
+              >
+                <Plus /> Adicionar câmera
+              </Button>
+              {settings.cameras.length > 1 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    const remaining = settings.cameras.filter(
+                      (camera) => camera.id !== selectedCamera.id,
+                    );
+                    setSettings((current) =>
+                      current ? { ...current, cameras: remaining } : current,
+                    );
+                    setSelectedCameraId(remaining[0]?.id ?? "");
+                  }}
+                >
+                  <Trash2 /> Remover câmera
+                </Button>
+              ) : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                value={selectedCamera.title}
+                aria-label="Nome da câmera"
+                onChange={(event) =>
+                  setSettings((current) =>
+                    current
+                      ? {
+                          ...current,
+                          cameras: current.cameras.map((camera) =>
+                            camera.id === selectedCamera.id
+                              ? { ...camera, title: event.target.value }
+                              : camera,
+                          ),
+                        }
+                      : current,
+                  )
+                }
+              />
+              <Input
+                value={selectedCamera.id}
+                aria-label="Identificador da câmera"
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  setSettings((current) =>
+                    current
+                      ? {
+                          ...current,
+                          cameras: current.cameras.map((camera) =>
+                            camera.id === selectedCamera.id ? { ...camera, id: nextId } : camera,
+                          ),
+                        }
+                      : current,
+                  );
+                  setSelectedCameraId(nextId);
+                }}
+              />
+            </div>
             <CameraNumber
               label="Zoom da ação"
-              value={settings.camera.zoom}
+              value={selectedCamera.zoom}
               onChange={(value) => updateCamera("zoom", value)}
             />
             <CameraNumber
               label="Interface"
-              value={settings.camera.hudZoom}
+              value={selectedCamera.hudZoom}
               onChange={(value) => updateCamera("hudZoom", value)}
             />
             <CameraNumber
               label="Placar"
-              value={settings.camera.scoreboardZoom}
+              value={selectedCamera.scoreboardZoom}
               onChange={(value) => updateCamera("scoreboardZoom", value)}
             />
             <CameraNumber
               label="Menu"
-              value={settings.camera.menuZoom}
+              value={selectedCamera.menuZoom}
               onChange={(value) => updateCamera("menuZoom", value)}
             />
             <CameraNumber
               label="Indicador de posição"
-              value={settings.camera.locationIndicatorZoom}
+              value={selectedCamera.locationIndicatorZoom}
               onChange={(value) => updateCamera("locationIndicatorZoom", value)}
             />
             <CameraNumber
               label="Mensagens de jogo"
-              value={settings.camera.gameMessageZoom}
+              value={selectedCamera.gameMessageZoom}
               onChange={(value) => updateCamera("gameMessageZoom", value)}
             />
             <CameraParameters
-              value={settings.camera.parameters}
+              value={selectedCamera.parameters}
               onChange={(parameters) =>
                 setSettings((current) =>
-                  current ? { ...current, camera: { ...current.camera, parameters } } : current,
+                  current
+                    ? {
+                        ...current,
+                        cameras: current.cameras.map((camera) =>
+                          camera.id === selectedCamera.id ? { ...camera, parameters } : camera,
+                        ),
+                      }
+                    : current,
                 )
               }
             />
             <CameraRules
-              value={settings.camera.rules}
+              value={selectedCamera.rules}
               onChange={(rules) =>
                 setSettings((current) =>
-                  current ? { ...current, camera: { ...current.camera, rules } } : current,
+                  current
+                    ? {
+                        ...current,
+                        cameras: current.cameras.map((camera) =>
+                          camera.id === selectedCamera.id ? { ...camera, rules } : camera,
+                        ),
+                      }
+                    : current,
                 )
               }
             />
@@ -613,12 +739,12 @@ function CameraRules({
   value,
   onChange,
 }: {
-  value: RenderProfileSettings["camera"]["rules"];
-  onChange: (value: RenderProfileSettings["camera"]["rules"]) => void;
+  value: RenderProfileSettings["cameras"][number]["rules"];
+  onChange: (value: RenderProfileSettings["cameras"][number]["rules"]) => void;
 }) {
   const update = (
     index: number,
-    patch: Partial<RenderProfileSettings["camera"]["rules"][number]>,
+    patch: Partial<RenderProfileSettings["cameras"][number]["rules"][number]>,
   ) => onChange(value.map((rule, current) => (current === index ? { ...rule, ...patch } : rule)));
   return (
     <div className="space-y-3 border-t pt-5">

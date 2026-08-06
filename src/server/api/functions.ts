@@ -86,6 +86,7 @@ const clipExportInput = z.object({
     "floating-score-time-right",
     "none",
   ]),
+  cameraId: z.string().min(1),
   renderProfileVersionId: z.string().uuid(),
 });
 
