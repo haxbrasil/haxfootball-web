@@ -96,6 +96,43 @@ export type WebListClipsResponse = Omit<ListClipsResponse, "items"> & {
   items: WebClip[];
 };
 
+export type ClipExportFormat = "mp4" | "webm" | "gif";
+export type ClipExportOrientation = "landscape" | "vertical";
+export type ClipExportScoreboard =
+  | "default"
+  | "compact"
+  | "score-only"
+  | "time-only"
+  | "floating-default"
+  | "floating-compact"
+  | "floating-score-only"
+  | "floating-time-only"
+  | "floating-score-time-right"
+  | "none";
+export type ClipExportProfile = {
+  format: ClipExportFormat;
+  orientation: ClipExportOrientation;
+  scoreboard: ClipExportScoreboard;
+};
+export type ClipExport = {
+  id: string;
+  profile: ClipExportProfile;
+  status: "queued" | "running" | "ready" | "failed" | "expired";
+  url: string | null;
+  expiresAt: string | null;
+  width: number | null;
+  height: number | null;
+  sizeBytes: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type ClipExportCapabilities = {
+  ttlSeconds: number;
+  formats: ClipExportFormat[];
+  orientations: ClipExportOrientation[];
+  scoreboards: ClipExportScoreboard[];
+};
+
 export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];
 export type ListAccountLinkedSessionEntriesResponse = ListPlayersResponse;
 
@@ -494,6 +531,42 @@ export async function getClipConfiguration(): Promise<ClipConfig | null> {
   const client = getApiClient();
 
   return client ? await unwrap(client.clips.config()) : null;
+}
+
+export async function listClipExports(id: string): Promise<ClipExport[]> {
+  const client = getApiClient();
+  if (!client) return [];
+  const result = await client.request<{ items: ClipExport[] }>({
+    path: `/clips/${encodeURIComponent(id)}/exports`,
+  });
+  return result.ok ? result.data.items : [];
+}
+
+export async function getClipExportCapabilities(
+  id: string,
+): Promise<ClipExportCapabilities | null> {
+  const client = getApiClient();
+  if (!client) return null;
+  const result = await client.request<ClipExportCapabilities>({
+    path: `/clips/${encodeURIComponent(id)}/exports/capabilities`,
+  });
+  return result.ok ? result.data : null;
+}
+
+export async function createClipExport(
+  id: string,
+  profile: ClipExportProfile,
+): Promise<{ ok: true; export: ClipExport } | { ok: false; message: string }> {
+  const client = getApiClient();
+  if (!client) return { ok: false, message: "O serviço de exportação não está disponível." };
+  const result = await client.request<ClipExport>({
+    method: "POST",
+    path: `/clips/${encodeURIComponent(id)}/exports`,
+    body: profile,
+  });
+  return result.ok
+    ? { ok: true, export: result.data }
+    : { ok: false, message: result.error.message };
 }
 
 export async function createClip(input: CreateClipInput): Promise<ClipMutationResult> {

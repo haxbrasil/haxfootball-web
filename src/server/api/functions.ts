@@ -10,6 +10,9 @@ import {
   disableMatchEvent,
   getClip,
   getClipConfiguration,
+  getClipExportCapabilities,
+  listClipExports,
+  createClipExport,
   getRecording,
   getMatch,
   getMatchMetrics,
@@ -66,6 +69,23 @@ const updateClipInput = z.object({
   startTick: clipTickInput.optional(),
   endTick: clipTickInput.optional(),
   title: z.string().trim().max(120).nullable().optional(),
+});
+const clipExportInput = z.object({
+  id: z.string().min(1),
+  format: z.enum(["mp4", "webm", "gif"]),
+  orientation: z.enum(["landscape", "vertical"]),
+  scoreboard: z.enum([
+    "default",
+    "compact",
+    "score-only",
+    "time-only",
+    "floating-default",
+    "floating-compact",
+    "floating-score-only",
+    "floating-time-only",
+    "floating-score-time-right",
+    "none",
+  ]),
 });
 
 const paginationInput = z
@@ -163,6 +183,22 @@ export const getRecordingFn = createServerFn({ method: "GET" })
 export const getClipConfigurationFn = createServerFn({ method: "GET" }).handler(() =>
   getClipConfiguration(),
 );
+
+export const getClipExportCapabilitiesFn = createServerFn({ method: "GET" })
+  .inputValidator(idInput)
+  .handler(({ data }) => getClipExportCapabilities(data.id));
+
+export const listClipExportsFn = createServerFn({ method: "GET" })
+  .inputValidator(idInput)
+  .handler(({ data }) => listClipExports(data.id));
+
+export const createClipExportFn = createServerFn({ method: "POST" })
+  .inputValidator(clipExportInput)
+  .handler(async ({ data }) => {
+    await requireCurrentSession();
+    const { id, ...profile } = data;
+    return createClipExport(id, profile);
+  });
 
 export const createClipFn = createServerFn({ method: "POST" })
   .inputValidator(createClipInput)

@@ -17,6 +17,7 @@ import {
   clipTickNumber,
 } from "../utils/clip-formatting";
 import { ClipReplayPlayer } from "./clip-replay-player";
+import { ClipExportDialog } from "../components/clip-export-dialog";
 
 export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
   const getClip = useServerFn(getClipFn);
@@ -75,12 +76,15 @@ export function ClipDetailPage({ clip }: { clip: WebClip | null }) {
         eyebrow="Replay selecionado"
         description="Um recorte preciso da gravação original, com o placar e a dinâmica da partida preservados."
         action={
-          <Button asChild variant="outline">
-            <Link to="/clips">
-              <ArrowLeft className="size-4" />
-              Voltar para clipes
-            </Link>
-          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <ClipExportDialog clipId={currentClip.id} />
+            <Button asChild variant="outline">
+              <Link to="/clips">
+                <ArrowLeft className="size-4" />
+                Voltar para clipes
+              </Link>
+            </Button>
+          </div>
         }
       />
 
