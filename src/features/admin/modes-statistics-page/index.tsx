@@ -308,7 +308,7 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
     <section className="grid border lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="border-b lg:border-b-0 lg:border-r">
         <div className="border-b p-4">
-          <strong>Perfis de câmera</strong>
+          <strong>Perfis de exportação</strong>
         </div>
         {items.map((item) => (
           <button
@@ -330,7 +330,7 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
       <main className="min-w-0">
         <header className="flex flex-col gap-4 border-b p-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Perfil de renderização</h2>
+            <h2 className="text-xl font-semibold">Perfil de exportação</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Controle a câmera, as proporções, os placares e os formatos disponíveis para
               exportação.

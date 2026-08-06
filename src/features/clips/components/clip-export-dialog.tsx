@@ -187,7 +187,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
               );
             })}
           </ExportChoiceGroup>
-          <ExportChoiceGroup title="Câmera">
+          <ExportChoiceGroup title="Perfil de exportação">
             {(capabilities?.renderProfiles ?? []).map((option) => (
               <ChoiceCard
                 key={option.id}
@@ -330,7 +330,7 @@ function ExportHistory({
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {renderProfiles.find(
                   (profile) => profile.id === item.profile.renderProfileVersionId,
-                )?.title ?? "Perfil de câmera registrado"}
+                )?.title ?? "Perfil de exportação registrado"}
               </p>
             </div>
             {item.url ? (
