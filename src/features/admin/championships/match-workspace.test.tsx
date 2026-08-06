@@ -225,6 +225,40 @@ describe("championship match workspace", () => {
       }),
     );
   });
+
+  it("uses the first selected round's roster-backed orientation for a composition", async () => {
+    server.attach.mockResolvedValue({ ok: true, data: operations() });
+    const recommended = candidates();
+    recommended.items[0]!.orientationRecommendation = {
+      orientation: "swapped",
+      matchedPlayers: 5,
+      opposingPlayers: 0,
+    };
+
+    render(
+      <MatchWorkspace
+        data={workspace()}
+        selectedMatchUuid={matchUuid}
+        onSelectMatch={vi.fn()}
+        initialOperations={operations()}
+        initialCandidates={recommended}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Buscar evidência" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Adicionar tempo" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Adicionar tempo" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Compor e vincular" }));
+
+    await waitFor(() =>
+      expect(server.attach).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orientation: "swapped",
+          composition: expect.any(Object),
+        }),
+      }),
+    );
+  });
 });
 
 const championshipUuid = "10000000-0000-4000-8000-000000000001";

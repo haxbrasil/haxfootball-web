@@ -805,10 +805,22 @@ function EvidenceSearchDialog({
   }
 
   function toggleCompositionGame(candidate: EvidenceCandidate) {
-    setCompositionGames((current) => {
-      const selected = current.some((item) => item.candidate.evidence.id === candidate.evidence.id);
+    const selected = compositionGames.some(
+      (item) => item.candidate.evidence.id === candidate.evidence.id,
+    );
 
-      if (selected) {
+    if (!selected && compositionGames.length === 0) {
+      setOrientation(candidate.orientationRecommendation?.orientation ?? "aligned");
+    } else if (selected && compositionGames.length === 1) {
+      setOrientation("aligned");
+    }
+
+    setCompositionGames((current) => {
+      const isSelected = current.some(
+        (item) => item.candidate.evidence.id === candidate.evidence.id,
+      );
+
+      if (isSelected) {
         return normalizeCompositionGames(
           current.filter((item) => item.candidate.evidence.id !== candidate.evidence.id),
         );
