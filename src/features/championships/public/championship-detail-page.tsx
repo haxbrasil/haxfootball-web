@@ -482,9 +482,7 @@ function ChampionshipPointsLeaderboard({
               Ranking
             </p>
             <h2 className="mt-1 text-2xl font-semibold tracking-normal">Pontos</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Destaques da edição em {metric.label.toLocaleLowerCase("pt-BR")}.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Destaques da edição.</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
@@ -512,14 +510,19 @@ function ChampionshipPointsLeaderboard({
         ))}
       </ol>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="grid max-h-[90dvh] w-[min(94vw,48rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0">
-          <DialogHeader className="border-b px-5 py-5 sm:px-6">
-            <DialogTitle>Ranking de pontos</DialogTitle>
-            <DialogDescription>
-              {rankingCount} jogadores classificados por {metric.label.toLocaleLowerCase("pt-BR")}.
-            </DialogDescription>
+        <DialogContent className="grid max-h-[92dvh] w-[min(96vw,70rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden border-accent/30 bg-[linear-gradient(145deg,color-mix(in_oklch,var(--accent)_11%,transparent),var(--background)_34%)] p-0 shadow-[0_28px_100px_color-mix(in_oklch,black_56%,transparent)]">
+          <DialogHeader className="flex-row items-start gap-4 border-b border-accent/20 bg-card/60 px-6 py-6 pr-14 sm:px-8">
+            <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-accent/45 bg-accent/18 text-accent">
+              <Trophy className="size-5" />
+            </span>
+            <span className="min-w-0">
+              <DialogTitle className="text-2xl">Ranking de pontos</DialogTitle>
+              <DialogDescription className="mt-1">
+                {rankingCount} jogadores com pontuação na edição.
+              </DialogDescription>
+            </span>
           </DialogHeader>
-          <ol className="bfl-scrollbar divide-y overflow-y-auto">
+          <ol className="bfl-scrollbar grid content-start gap-3 overflow-y-auto p-5 sm:grid-cols-2 sm:p-6">
             {rows.map((row, index) => (
               <ChampionshipPointsRowView
                 key={row.participantUuid ?? row.accountUuid ?? `${row.displayName}-${index}`}
