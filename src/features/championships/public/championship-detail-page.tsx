@@ -14,6 +14,7 @@ import {
   Medal,
   Radio,
   Shield,
+  Sparkles,
   Swords,
   Trophy,
   UserRoundCheck,
@@ -469,30 +470,37 @@ function ChampionshipPointsLeaderboard({
     : String(rows.length);
 
   return (
-    <section className="bfl-panel overflow-hidden rounded-xl border">
-      <div className="flex flex-col gap-4 border-b px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center border bg-card text-primary">
+    <article className="bfl-panel relative overflow-hidden rounded-xl border border-accent/35 bg-[linear-gradient(145deg,color-mix(in_oklch,var(--accent)_14%,transparent),color-mix(in_oklch,var(--card)_96%,black)_42%,color-mix(in_oklch,var(--primary)_16%,transparent))] p-4 text-card-foreground shadow-[0_18px_58px_color-mix(in_oklch,black_34%,transparent)]">
+      <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(90deg,color-mix(in_oklch,var(--foreground)_7%,transparent)_1px,transparent_1px),linear-gradient(180deg,color-mix(in_oklch,var(--foreground)_5%,transparent)_1px,transparent_1px)] [background-size:68px_100%,100%_40px]" />
+      <div className="relative mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-accent/45 bg-accent/18 text-accent shadow-xs">
             <Trophy className="size-5" />
           </span>
-          <div>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-normal text-primary">
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-normal text-accent">
               Ranking
             </p>
-            <h2 className="mt-1 text-xl font-semibold">Pontos</h2>
+            <h2 className="mt-1 text-2xl font-semibold tracking-normal">Pontos</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Destaques da edição em {metric.label.toLocaleLowerCase("pt-BR")}.
             </p>
           </div>
         </div>
-        {hasMore ? (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <ListOrdered />
-            Ver todos
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/35 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+            <Sparkles className="size-3.5" />
+            {rankingCount}
+          </span>
+          {hasMore ? (
+            <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+              <ListOrdered />
+              Ver todos
+            </Button>
+          ) : null}
+        </div>
       </div>
-      <ol className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+      <ol className="relative grid gap-3">
         {visibleRows.map((row, index) => (
           <ChampionshipPointsRowView
             key={row.participantUuid ?? row.accountUuid ?? `${row.displayName}-${index}`}
@@ -524,7 +532,7 @@ function ChampionshipPointsLeaderboard({
           </ol>
         </DialogContent>
       </Dialog>
-    </section>
+    </article>
   );
 }
 
@@ -543,26 +551,51 @@ function ChampionshipPointsRowView({
     leaderPoints > 0 ? Math.max(7, Math.min(100, (row.points / leaderPoints) * 100)) : 0;
 
   return (
-    <li className="relative min-w-0 overflow-hidden px-5 py-4 sm:px-6">
+    <li
+      className={`relative overflow-hidden rounded-xl border p-3.5 transition ${
+        rank === 1
+          ? "border-accent/50 bg-[linear-gradient(135deg,color-mix(in_oklch,var(--accent)_20%,transparent),color-mix(in_oklch,var(--card)_94%,black)_48%,color-mix(in_oklch,var(--primary)_18%,transparent))] shadow-[0_18px_52px_color-mix(in_oklch,black_28%,transparent)]"
+          : "border-border/70 bg-background/40 hover:border-accent/45 hover:bg-muted/45"
+      }`}
+    >
       {rank > 1 ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 bg-primary/[0.08]"
+          className="pointer-events-none absolute inset-y-0 left-0 bg-[linear-gradient(90deg,color-mix(in_oklch,var(--accent)_16%,transparent),transparent)]"
           style={{ width: `${ratio}%` }}
         />
       ) : null}
       <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-        <span className="grid size-8 place-items-center rounded-md border bg-background text-sm font-semibold tabular-nums text-muted-foreground">
-          {rank === 1 ? <Crown className="size-4 text-primary" /> : rank}
+        <span
+          className={`grid size-9 place-items-center rounded-lg border text-sm font-semibold tabular-nums ${
+            rank === 1
+              ? "border-accent/50 bg-accent/20 text-accent"
+              : "border-border/80 bg-muted/60 text-muted-foreground"
+          }`}
+        >
+          {rank === 1 ? <Crown className="size-5" /> : rank}
         </span>
         <span className="min-w-0">
-          <span className="block truncate font-medium text-foreground">{row.displayName}</span>
+          <span
+            className={`block truncate font-medium text-foreground ${rank === 1 ? "text-lg font-semibold" : ""}`}
+          >
+            {row.displayName}
+          </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
-            {row.matchesPlayed} {row.matchesPlayed === 1 ? "partida" : "partidas"}
+            {rank === 1
+              ? `#1 na edição · ${row.matchesPlayed} ${row.matchesPlayed === 1 ? "partida" : "partidas"}`
+              : `${row.matchesPlayed} ${row.matchesPlayed === 1 ? "partida" : "partidas"}`}
           </span>
         </span>
-        <span className="text-right font-semibold tabular-nums text-foreground">
-          {formatChampionshipPoints(row.points, precision)}
+        <span className="text-right">
+          <span
+            className={`block font-semibold leading-none tabular-nums text-foreground ${rank === 1 ? "text-2xl" : "text-base"}`}
+          >
+            {formatChampionshipPoints(row.points, precision)}
+          </span>
+          <span className="mt-1 block text-[0.65rem] font-semibold uppercase tracking-normal text-muted-foreground">
+            Pontos
+          </span>
         </span>
       </div>
     </li>
