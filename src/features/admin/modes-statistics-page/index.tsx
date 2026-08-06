@@ -30,7 +30,11 @@ import {
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
+import {
+  NativeSelect,
+  NativeSelectOptGroup,
+  NativeSelectOption,
+} from "#/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { VisualizationChart } from "#/features/visualizations/visualization-chart";
 import type {
@@ -124,9 +128,303 @@ type RenderProfileSettings = {
     locationIndicatorZoom: number;
     gameMessageZoom: number;
     parameters: Record<string, number>;
-    rules: Array<{ when: string; focus?: { target: "players" }; set?: Record<string, number> }>;
+    rules: Array<{
+      when: string;
+      condition?: CameraCondition;
+      focus?: { target: "players" };
+      set?: Record<string, number>;
+    }>;
   }>;
 };
+type CameraCondition = {
+  combination: "all" | "any";
+  clauses: Array<{
+    field: string;
+    operator: "eq" | "neq" | "gt" | "gte" | "lt" | "lte";
+    value: string | number | boolean;
+  }>;
+};
+
+const cameraConditionFields = [
+  {
+    group: "Partida",
+    id: "game_active",
+    label: "Partida em andamento",
+    type: "boolean",
+    scope: "both",
+  },
+  { group: "Partida", id: "paused", label: "Partida pausada", type: "boolean", scope: "both" },
+  { group: "Partida", id: "goal_active", label: "Gol em exibição", type: "boolean", scope: "both" },
+  {
+    group: "Partida",
+    id: "victory_active",
+    label: "Resultado final em exibição",
+    type: "boolean",
+    scope: "both",
+  },
+  {
+    group: "Partida",
+    id: "time_seconds",
+    label: "Tempo da partida",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Partida",
+    id: "red_score",
+    label: "Pontuação do lado vermelho",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Partida",
+    id: "blue_score",
+    label: "Pontuação do lado azul",
+    type: "number",
+    scope: "both",
+  },
+  { group: "Bola", id: "has_ball", label: "Bola disponível", type: "boolean", scope: "both" },
+  { group: "Bola", id: "ball_speed", label: "Velocidade da bola", type: "number", scope: "both" },
+  {
+    group: "Bola",
+    id: "ball_x",
+    label: "Posição horizontal da bola",
+    type: "number",
+    scope: "both",
+  },
+  { group: "Bola", id: "ball_y", label: "Posição vertical da bola", type: "number", scope: "both" },
+  { group: "Bola", id: "ball_color", label: "Cor da bola", type: "color", scope: "both" },
+  {
+    group: "Jogadores",
+    id: "active_players",
+    label: "Jogadores ativos",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogadores",
+    id: "cluster_spread",
+    label: "Dispersão dos jogadores",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_active",
+    label: "Jogador ativo",
+    type: "boolean",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_avatar",
+    label: "Avatar do jogador",
+    type: "string",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_name",
+    label: "Nome do jogador",
+    type: "string",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_team",
+    label: "Equipe do jogador",
+    type: "number",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_has_disc",
+    label: "Jogador possui disco",
+    type: "boolean",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_is_kicking",
+    label: "Jogador está chutando",
+    type: "boolean",
+    scope: "focus",
+  },
+  { group: "Partida", id: "tick", label: "Quadro de simulação", type: "number", scope: "both" },
+  { group: "Partida", id: "frame_no", label: "Número do quadro", type: "number", scope: "both" },
+  {
+    group: "Bola",
+    id: "ball_speed_x",
+    label: "Velocidade horizontal da bola",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Bola",
+    id: "ball_speed_y",
+    label: "Velocidade vertical da bola",
+    type: "number",
+    scope: "both",
+  },
+  { group: "Bola", id: "ball_radius", label: "Raio da bola", type: "number", scope: "both" },
+  {
+    group: "Jogadores",
+    id: "red_players",
+    label: "Jogadores no lado vermelho",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogadores",
+    id: "blue_players",
+    label: "Jogadores no lado azul",
+    type: "number",
+    scope: "both",
+  },
+  { group: "Jogadores", id: "spectators", label: "Espectadores", type: "number", scope: "both" },
+  {
+    group: "Jogadores",
+    id: "cluster_x",
+    label: "Centro horizontal dos jogadores",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogadores",
+    id: "cluster_y",
+    label: "Centro vertical dos jogadores",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogadores",
+    id: "cluster_spread_x",
+    label: "Dispersão horizontal dos jogadores",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogadores",
+    id: "cluster_spread_y",
+    label: "Dispersão vertical dos jogadores",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogadores",
+    id: "outside_field_players",
+    label: "Jogadores fora do campo",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "stadium_name",
+    label: "Nome do estádio",
+    type: "string",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "background_type",
+    label: "Tipo de fundo",
+    type: "string",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "background_color",
+    label: "Cor do fundo",
+    type: "color",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "field_width",
+    label: "Largura do campo",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "field_height",
+    label: "Altura do campo",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "output_width",
+    label: "Largura da exportação",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "output_height",
+    label: "Altura da exportação",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Campo e saída",
+    id: "aspect_ratio",
+    label: "Proporção da exportação",
+    type: "number",
+    scope: "both",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_headless_avatar",
+    label: "Avatar headless do jogador",
+    type: "string",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_flag",
+    label: "Bandeira do jogador",
+    type: "string",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_id",
+    label: "Identificador do jogador",
+    type: "number",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_x",
+    label: "Posição horizontal do jogador",
+    type: "number",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_y",
+    label: "Posição vertical do jogador",
+    type: "number",
+    scope: "focus",
+  },
+  {
+    group: "Jogador focal",
+    id: "player_admin",
+    label: "Jogador é administrador",
+    type: "boolean",
+    scope: "focus",
+  },
+] as const;
+
+const conditionOperatorLabels = {
+  eq: "é igual a",
+  neq: "é diferente de",
+  gt: "é maior que",
+  gte: "é maior ou igual a",
+  lt: "é menor que",
+  lte: "é menor ou igual a",
+} as const;
 
 const defaultSpec: VisualizationSpecification = {
   datasets: [
@@ -563,6 +861,7 @@ function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
             />
             <CameraRules
               value={selectedCamera.rules}
+              parameters={selectedCamera.parameters}
               onChange={(rules) =>
                 setSettings((current) =>
                   current
@@ -737,72 +1036,129 @@ function CameraParameters({
 
 function CameraRules({
   value,
+  parameters,
   onChange,
 }: {
   value: RenderProfileSettings["cameras"][number]["rules"];
+  parameters: Record<string, number>;
   onChange: (value: RenderProfileSettings["cameras"][number]["rules"]) => void;
 }) {
   const update = (
     index: number,
     patch: Partial<RenderProfileSettings["cameras"][number]["rules"][number]>,
   ) => onChange(value.map((rule, current) => (current === index ? { ...rule, ...patch } : rule)));
+  const updateCondition = (index: number, condition: CameraCondition) =>
+    update(index, { condition, when: conditionToExpression(condition) });
   return (
     <div className="space-y-3 border-t pt-5">
       <div>
         <h3 className="font-semibold">Regras de foco</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Aplique uma condição e escolha quando a câmera deve priorizar os jogadores.
+          Combine condições disponíveis e escolha como a câmera deve reagir a elas.
         </p>
       </div>
       {value.map((rule, index) => (
-        <div key={`${rule.when}-${index}`} className="space-y-2 rounded-md border p-3">
-          <Input
-            value={rule.when}
-            aria-label="Condição da regra"
-            onChange={(event) => update(index, { when: event.target.value })}
-            placeholder="Condição"
-          />
-          <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)_7rem_auto] sm:items-center">
-            <Button
-              type="button"
-              size="sm"
-              variant={rule.focus?.target === "players" ? "default" : "outline"}
-              onClick={() =>
-                update(index, { focus: rule.focus ? undefined : { target: "players" } })
-              }
-            >
-              Focar jogadores
-            </Button>
-            <Input
-              value={Object.keys(rule.set ?? {})[0] ?? ""}
-              aria-label="Parâmetro ajustado pela regra"
-              placeholder="Parâmetro ajustado"
-              onChange={(event) => {
-                const current = Object.entries(rule.set ?? {})[0];
-                const key = event.target.value.trim();
-                update(index, { set: key ? { [key]: current?.[1] ?? 1 } : undefined });
-              }}
-            />
-            <Input
-              type="number"
-              step="0.01"
-              disabled={!Object.keys(rule.set ?? {}).length}
-              value={Object.values(rule.set ?? {})[0] ?? ""}
-              aria-label="Valor ajustado pela regra"
-              onChange={(event) => {
-                const key = Object.keys(rule.set ?? {})[0];
-                if (key) update(index, { set: { [key]: Number(event.target.value) } });
-              }}
-            />
+        <div key={`${rule.when}-${index}`} className="space-y-4 rounded-md border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <strong className="text-sm">Regra {index + 1}</strong>
             <Button
               type="button"
               size="icon"
               variant="ghost"
               onClick={() => onChange(value.filter((_, current) => current !== index))}
-              aria-label="Remover regra"
+              aria-label={`Remover regra ${index + 1}`}
             >
               <Trash2 />
             </Button>
+          </div>
+          {rule.condition ? (
+            <ConditionEditor
+              condition={rule.condition}
+              scope={rule.focus ? "focus" : "set"}
+              onChange={(condition) => updateCondition(index, condition)}
+            />
+          ) : (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              Esta regra usa uma condição de uma versão anterior. Recrie-a com os campos atuais.
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="ml-3"
+                onClick={() =>
+                  updateCondition(index, {
+                    combination: "all",
+                    clauses: [{ field: "game_active", operator: "eq", value: true }],
+                  })
+                }
+              >
+                Recriar condição
+              </Button>
+            </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Ação</Label>
+              <NativeSelect
+                className="mt-2 w-full"
+                value={rule.focus ? "focus" : "set"}
+                onChange={(event) =>
+                  update(
+                    index,
+                    event.target.value === "focus"
+                      ? { focus: { target: "players" }, set: undefined }
+                      : {
+                          focus: undefined,
+                          set: { [Object.keys(parameters)[0] ?? "ball_weight"]: 1 },
+                        },
+                  )
+                }
+              >
+                <NativeSelectOption value="focus">
+                  Priorizar jogadores correspondentes
+                </NativeSelectOption>
+                <NativeSelectOption value="set">Ajustar parâmetro da câmera</NativeSelectOption>
+              </NativeSelect>
+            </div>
+            {rule.set ? (
+              <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+                <div>
+                  <Label>Parâmetro</Label>
+                  <NativeSelect
+                    className="mt-2 w-full"
+                    value={Object.keys(rule.set)[0] ?? ""}
+                    onChange={(event) =>
+                      update(index, {
+                        set: { [event.target.value]: Object.values(rule.set ?? {})[0] ?? 1 },
+                      })
+                    }
+                  >
+                    {Object.keys(parameters).map((parameter) => (
+                      <NativeSelectOption key={parameter} value={parameter}>
+                        {parameter}
+                      </NativeSelectOption>
+                    ))}
+                    {!Object.keys(parameters).includes("ball_weight") ? (
+                      <NativeSelectOption value="ball_weight">Peso da bola</NativeSelectOption>
+                    ) : null}
+                  </NativeSelect>
+                </div>
+                <div>
+                  <Label>Valor</Label>
+                  <Input
+                    className="mt-2"
+                    type="number"
+                    step="0.01"
+                    value={Object.values(rule.set)[0] ?? ""}
+                    aria-label="Valor ajustado pela regra"
+                    onChange={(event) => {
+                      const key = Object.keys(rule.set ?? {})[0];
+                      if (key) update(index, { set: { [key]: Number(event.target.value) } });
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ))}
@@ -810,12 +1166,222 @@ function CameraRules({
         type="button"
         size="sm"
         variant="outline"
-        onClick={() => onChange([...value, { when: "game_active", focus: { target: "players" } }])}
+        onClick={() =>
+          onChange([
+            ...value,
+            {
+              when: "game_active == true",
+              condition: {
+                combination: "all",
+                clauses: [{ field: "game_active", operator: "eq", value: true }],
+              },
+              focus: { target: "players" },
+            },
+          ])
+        }
       >
         <Plus /> Adicionar regra
       </Button>
     </div>
   );
+}
+
+function ConditionEditor({
+  condition,
+  scope,
+  onChange,
+}: {
+  condition: CameraCondition;
+  scope: "focus" | "set";
+  onChange: (condition: CameraCondition) => void;
+}) {
+  const fields = cameraConditionFields.filter(
+    (field) => field.scope === "both" || (scope === "focus" && field.scope === "focus"),
+  );
+  const patchClause = (index: number, patch: Partial<CameraCondition["clauses"][number]>) =>
+    onChange({
+      ...condition,
+      clauses: condition.clauses.map((clause, current) =>
+        current === index ? { ...clause, ...patch } : clause,
+      ),
+    });
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Label>Quando</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant={condition.combination === "all" ? "default" : "outline"}
+          onClick={() => onChange({ ...condition, combination: "all" })}
+        >
+          Todas as condições
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={condition.combination === "any" ? "default" : "outline"}
+          onClick={() => onChange({ ...condition, combination: "any" })}
+        >
+          Qualquer condição
+        </Button>
+      </div>
+      {condition.clauses.map((clause, index) => {
+        const field = fields.find((candidate) => candidate.id === clause.field) ?? fields[0];
+        const operators =
+          field.type === "boolean" || field.type === "string" || field.type === "color"
+            ? (["eq", "neq"] as const)
+            : (["eq", "neq", "gt", "gte", "lt", "lte"] as const);
+        return (
+          <div
+            key={`${clause.field}-${index}`}
+            className="grid gap-2 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(8rem,1fr)_auto]"
+          >
+            <NativeSelect
+              className="w-full"
+              value={clause.field}
+              onChange={(event) => {
+                const next = fields.find((candidate) => candidate.id === event.target.value)!;
+                patchClause(index, {
+                  field: next.id,
+                  operator: "eq",
+                  value:
+                    next.type === "boolean"
+                      ? true
+                      : next.type === "number"
+                        ? 0
+                        : next.type === "color"
+                          ? "#000000"
+                          : "",
+                });
+              }}
+            >
+              {Array.from(new Set(fields.map((item) => item.group))).map((group) => (
+                <NativeSelectOptGroup key={group} label={group}>
+                  {fields
+                    .filter((item) => item.group === group)
+                    .map((item) => (
+                      <NativeSelectOption key={item.id} value={item.id}>
+                        {item.label}
+                      </NativeSelectOption>
+                    ))}
+                </NativeSelectOptGroup>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              className="w-full"
+              value={clause.operator}
+              onChange={(event) =>
+                patchClause(index, {
+                  operator: event.target.value as CameraCondition["clauses"][number]["operator"],
+                })
+              }
+            >
+              {operators.map((operator) => (
+                <NativeSelectOption key={operator} value={operator}>
+                  {conditionOperatorLabels[operator]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <ConditionValueInput
+              field={field}
+              value={clause.value}
+              onChange={(value) => patchClause(index, { value })}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              disabled={condition.clauses.length === 1}
+              onClick={() =>
+                onChange({
+                  ...condition,
+                  clauses: condition.clauses.filter((_, current) => current !== index),
+                })
+              }
+              aria-label={`Remover condição ${index + 1}`}
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        );
+      })}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() =>
+          onChange({
+            ...condition,
+            clauses: [...condition.clauses, { field: "game_active", operator: "eq", value: true }],
+          })
+        }
+      >
+        <Plus /> Adicionar condição
+      </Button>
+    </div>
+  );
+}
+
+function ConditionValueInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: (typeof cameraConditionFields)[number];
+  value: string | number | boolean;
+  onChange: (value: string | number | boolean) => void;
+}) {
+  if (field.type === "boolean") {
+    return (
+      <NativeSelect
+        className="w-full"
+        value={String(value)}
+        onChange={(event) => onChange(event.target.value === "true")}
+      >
+        <NativeSelectOption value="true">Sim</NativeSelectOption>
+        <NativeSelectOption value="false">Não</NativeSelectOption>
+      </NativeSelect>
+    );
+  }
+  if (field.type === "color") {
+    return (
+      <Input
+        className="h-9 w-full p-1"
+        type="color"
+        value={String(value)}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={`Valor de ${field.label}`}
+      />
+    );
+  }
+  return (
+    <Input
+      className="h-9"
+      type={field.type === "number" ? "number" : "text"}
+      step={field.type === "number" ? "0.01" : undefined}
+      value={String(value)}
+      onChange={(event) =>
+        onChange(field.type === "number" ? Number(event.target.value) : event.target.value)
+      }
+      aria-label={`Valor de ${field.label}`}
+    />
+  );
+}
+
+function conditionToExpression(condition: CameraCondition) {
+  const operators = { eq: "==", neq: "!=", gt: ">", gte: ">=", lt: "<", lte: "<=" } as const;
+  return condition.clauses
+    .map((clause) => {
+      const value =
+        typeof clause.value === "string"
+          ? clause.value.startsWith("#")
+            ? clause.value
+            : JSON.stringify(clause.value)
+          : String(clause.value);
+      return `${clause.field} ${operators[clause.operator]} ${value}`;
+    })
+    .join(condition.combination === "all" ? " && " : " || ");
 }
 
 function ModesCatalog({ items }: { items: GameMode[] }) {

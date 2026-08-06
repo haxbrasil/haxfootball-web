@@ -67,6 +67,20 @@ const renderProfileSettings = z.object({
         rules: z.array(
           z.object({
             when: z.string().min(1),
+            condition: z
+              .object({
+                combination: z.enum(["all", "any"]),
+                clauses: z
+                  .array(
+                    z.object({
+                      field: z.string().min(1).max(80),
+                      operator: z.enum(["eq", "neq", "gt", "gte", "lt", "lte"]),
+                      value: z.union([z.string(), z.number(), z.boolean()]),
+                    }),
+                  )
+                  .min(1),
+              })
+              .optional(),
             focus: z.object({ target: z.literal("players") }).optional(),
             set: z.record(z.string(), z.number()).optional(),
           }),
