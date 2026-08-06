@@ -86,6 +86,7 @@ const clipExportInput = z.object({
     "floating-score-time-right",
     "none",
   ]),
+  renderProfileVersionId: z.string().uuid(),
 });
 
 const paginationInput = z

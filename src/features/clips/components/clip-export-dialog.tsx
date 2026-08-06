@@ -1,4 +1,4 @@
-import { Check, Download, Film, LoaderCircle, Monitor, Smartphone } from "lucide-react";
+import { Check, Download, Film, Focus, LoaderCircle, Monitor, Smartphone } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -66,6 +66,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
     format: "mp4",
     orientation: "landscape",
     scoreboard: "default",
+    renderProfileVersionId: "",
   });
 
   useEffect(() => {
@@ -79,6 +80,24 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
       if (!active) return;
       setCapabilities(nextCapabilities);
       setExports(nextExports);
+      setProfile((current) => {
+        const selected = nextCapabilities?.renderProfiles.find(
+          (candidate) => candidate.id === current.renderProfileVersionId,
+        );
+        const fallback = selected ?? nextCapabilities?.renderProfiles[0];
+        if (!fallback) return current;
+        return {
+          ...current,
+          renderProfileVersionId: fallback.id,
+          format: fallback.formats.includes(current.format) ? current.format : fallback.formats[0],
+          orientation: fallback.orientations.includes(current.orientation)
+            ? current.orientation
+            : fallback.orientations[0],
+          scoreboard: fallback.scoreboards.includes(current.scoreboard)
+            ? current.scoreboard
+            : fallback.scoreboards[0],
+        };
+      });
     };
     void refresh();
     const interval = window.setInterval(() => void refresh(), 3_000);
@@ -88,6 +107,9 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
     };
   }, [clipId, getCapabilities, listExports, open]);
 
+  const selectedRenderProfile = capabilities?.renderProfiles.find(
+    (candidate) => candidate.id === profile.renderProfileVersionId,
+  );
   const allowed = (value: string, list: readonly string[]) => !capabilities || list.includes(value);
   const queued = exports.some((item) => item.status === "queued" || item.status === "running");
 
@@ -138,7 +160,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
               <ChoiceCard
                 key={option.value}
                 selected={profile.format === option.value}
-                disabled={!allowed(option.value, capabilities?.formats ?? [])}
+                disabled={!allowed(option.value, selectedRenderProfile?.formats ?? [])}
                 onClick={() => setProfile((current) => ({ ...current, format: option.value }))}
               >
                 <strong>{option.title}</strong>
@@ -153,7 +175,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
                 <ChoiceCard
                   key={option.value}
                   selected={profile.orientation === option.value}
-                  disabled={!allowed(option.value, capabilities?.orientations ?? [])}
+                  disabled={!allowed(option.value, selectedRenderProfile?.orientations ?? [])}
                   onClick={() =>
                     setProfile((current) => ({ ...current, orientation: option.value }))
                   }
@@ -165,6 +187,34 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
               );
             })}
           </ExportChoiceGroup>
+          <ExportChoiceGroup title="Câmera">
+            {(capabilities?.renderProfiles ?? []).map((option) => (
+              <ChoiceCard
+                key={option.id}
+                selected={profile.renderProfileVersionId === option.id}
+                disabled={false}
+                onClick={() =>
+                  setProfile((current) => ({
+                    ...current,
+                    renderProfileVersionId: option.id,
+                    format: option.formats.includes(current.format)
+                      ? current.format
+                      : option.formats[0],
+                    orientation: option.orientations.includes(current.orientation)
+                      ? current.orientation
+                      : option.orientations[0],
+                    scoreboard: option.scoreboards.includes(current.scoreboard)
+                      ? current.scoreboard
+                      : option.scoreboards[0],
+                  }))
+                }
+              >
+                <Focus className="size-5 text-primary" />
+                <strong>{option.title}</strong>
+                <span>{option.description ?? `Versão ${option.version}`}</span>
+              </ChoiceCard>
+            ))}
+          </ExportChoiceGroup>
           <div>
             <h3 className="text-sm font-semibold">Placar</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -175,7 +225,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
                 <button
                   key={option.value}
                   type="button"
-                  disabled={!allowed(option.value, capabilities?.scoreboards ?? [])}
+                  disabled={!allowed(option.value, selectedRenderProfile?.scoreboards ?? [])}
                   onClick={() =>
                     setProfile((current) => ({ ...current, scoreboard: option.value }))
                   }
@@ -191,7 +241,7 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
               ))}
             </div>
           </div>
-          <ExportHistory exports={exports} />
+          <ExportHistory exports={exports} renderProfiles={capabilities?.renderProfiles ?? []} />
         </div>
         <DialogFooter className="sticky bottom-0 border-t bg-background px-6 py-4 sm:justify-between">
           <span className="text-sm text-muted-foreground">
@@ -199,7 +249,10 @@ export function ClipExportDialog({ clipId }: { clipId: string }) {
               ? "A renderização continua em segundo plano."
               : "A preparação pode levar alguns instantes."}
           </span>
-          <Button onClick={() => void submit()} disabled={submitting}>
+          <Button
+            onClick={() => void submit()}
+            disabled={submitting || !profile.renderProfileVersionId}
+          >
             {submitting ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
@@ -251,7 +304,13 @@ function ChoiceCard({
   );
 }
 
-function ExportHistory({ exports }: { exports: ClipExport[] }) {
+function ExportHistory({
+  exports,
+  renderProfiles,
+}: {
+  exports: ClipExport[];
+  renderProfiles: ClipExportCapabilities["renderProfiles"];
+}) {
   if (!exports.length) return null;
   return (
     <div className="border-t pt-5">
@@ -268,6 +327,11 @@ function ExportHistory({ exports }: { exports: ClipExport[] }) {
                 {item.profile.orientation === "vertical" ? "Vertical" : "Horizontal"}
               </strong>
               <p className="mt-0.5 text-muted-foreground">{statusLabel(item.status)}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {renderProfiles.find(
+                  (profile) => profile.id === item.profile.renderProfileVersionId,
+                )?.title ?? "Perfil de câmera registrado"}
+              </p>
             </div>
             {item.url ? (
               <Button asChild size="sm">

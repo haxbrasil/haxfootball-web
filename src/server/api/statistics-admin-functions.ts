@@ -45,6 +45,29 @@ const specification = z.object({
     .optional(),
 });
 const access = ["game-mode:admin", "event-schema:admin", "visualization:admin"];
+const renderProfileAccess = "visualization:admin";
+
+const renderProfileSettings = z.object({
+  formats: z.array(z.enum(["mp4", "webm", "gif"])).min(1),
+  orientations: z.array(z.enum(["landscape", "vertical"])).min(1),
+  scoreboards: z.array(z.string()).min(1),
+  camera: z.object({
+    zoom: z.number().positive().max(20),
+    hudZoom: z.number().positive().max(20),
+    scoreboardZoom: z.number().positive().max(20),
+    menuZoom: z.number().positive().max(20),
+    locationIndicatorZoom: z.number().positive().max(20),
+    gameMessageZoom: z.number().positive().max(20),
+    parameters: z.record(z.string(), z.number()),
+    rules: z.array(
+      z.object({
+        when: z.string().min(1),
+        focus: z.object({ target: z.literal("players") }).optional(),
+        set: z.record(z.string(), z.number()).optional(),
+      }),
+    ),
+  }),
+});
 
 export const previewVisualizationFn = createServerFn({ method: "POST" })
   .inputValidator(
@@ -79,20 +102,91 @@ export const listStatisticsAdminResourcesFn = createServerFn({ method: "GET" }).
         eventSchemas: { items: [] },
         templates: { items: [], totalCount: 0, truncated: false },
       };
-    const [gameModes, eventSchemas, templates] = await Promise.all([
+    const [gameModes, eventSchemas, templates, renderProfiles] = await Promise.all([
       unwrap(client.gameModes.list({ visibility: "all", limit: 100 })),
       unwrap(client.eventSchemas.list({ limit: 100 })),
       unwrap(
         client.request({ path: "/visualizations/templates", query: { includeArchived: true } }),
       ),
+      unwrap(client.request({ path: "/render-profiles" })),
     ]);
     return {
       gameModes: gameModes ?? { items: [] },
       eventSchemas: eventSchemas ?? { items: [] },
       templates: templates ?? { items: [], totalCount: 0, truncated: false },
+      renderProfiles: renderProfiles ?? [],
     } as never;
   },
 );
+
+export const saveRenderProfileDraftFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      id: z.string().uuid(),
+      title: z.string().trim().min(1).max(120),
+      description: z.string().trim().max(1000).nullable().optional(),
+      settings: renderProfileSettings,
+      expectedRevision: z.number().int().min(0),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { requireApiPermission } = await import("#/server/auth/session");
+    const { getApiClient } = await import("#/server/api/haxfootball");
+    await requireApiPermission(renderProfileAccess);
+    const result = await getApiClient()!.request({
+      method: "PUT",
+      path: `/render-profiles/${encodeURIComponent(data.id)}/draft`,
+      body: data,
+    });
+    return result.ok
+      ? { ok: true as const }
+      : { ok: false as const, message: result.error.message };
+  });
+
+export const publishRenderProfileFn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ id: z.string().uuid(), expectedRevision: z.number().int().min(0) }))
+  .handler(async ({ data }) => {
+    const { requireApiPermission } = await import("#/server/auth/session");
+    const { getApiClient } = await import("#/server/api/haxfootball");
+    await requireApiPermission(renderProfileAccess);
+    const result = await getApiClient()!.request({
+      method: "POST",
+      path: `/render-profiles/${encodeURIComponent(data.id)}/publish`,
+      body: { expectedRevision: data.expectedRevision },
+    });
+    return result.ok
+      ? { ok: true as const }
+      : { ok: false as const, message: result.error.message };
+  });
+
+export const previewRenderProfileFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      id: z.string().uuid(),
+      clipId: z.string().uuid(),
+      format: z.enum(["mp4", "webm", "gif"]),
+      orientation: z.enum(["landscape", "vertical"]),
+      scoreboard: z.string(),
+      settings: renderProfileSettings,
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { requireApiPermission } = await import("#/server/auth/session");
+    const { getApiClient } = await import("#/server/api/haxfootball");
+    await requireApiPermission(renderProfileAccess);
+    const { id, ...body } = data;
+    const result = await getApiClient()!.request({
+      method: "POST",
+      path: `/render-profiles/${encodeURIComponent(id)}/preview`,
+      body,
+    });
+    return result.ok
+      ? {
+          ok: true as const,
+          preview: result.data as { id: string; status: string; url: string | null },
+        }
+      : { ok: false as const, message: result.error.message };
+  });
 
 export const createVisualizationTemplateFn = createServerFn({ method: "POST" })
   .inputValidator(

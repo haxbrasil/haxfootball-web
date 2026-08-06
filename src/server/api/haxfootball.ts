@@ -113,6 +113,7 @@ export type ClipExportProfile = {
   format: ClipExportFormat;
   orientation: ClipExportOrientation;
   scoreboard: ClipExportScoreboard;
+  renderProfileVersionId: string;
 };
 export type ClipExport = {
   id: string;
@@ -131,6 +132,15 @@ export type ClipExportCapabilities = {
   formats: ClipExportFormat[];
   orientations: ClipExportOrientation[];
   scoreboards: ClipExportScoreboard[];
+  renderProfiles: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    version: number;
+    formats: ClipExportFormat[];
+    orientations: ClipExportOrientation[];
+    scoreboards: ClipExportScoreboard[];
+  }>;
 };
 
 export type AccountLinkedSessionEntry = ListPlayersResponse["items"][number];

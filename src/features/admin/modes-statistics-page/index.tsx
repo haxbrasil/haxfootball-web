@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   ChartNoAxesCombined,
   Copy,
@@ -14,6 +15,7 @@ import {
   Send,
   Trash2,
   LoaderCircle,
+  Focus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "#/components/ds/app-shell/page-header";
@@ -44,8 +46,12 @@ import {
   createVisualizationTemplateFn,
   previewVisualizationFn,
   publishVisualizationTemplateFn,
+  publishRenderProfileFn,
+  previewRenderProfileFn,
+  saveRenderProfileDraftFn,
   saveVisualizationDraftFn,
 } from "#/server/api/statistics-admin-functions";
+import { listClipExportsFn } from "#/server/api/functions";
 import {
   SchemaDerivedMetrics,
   SchemaEvents,
@@ -58,6 +64,7 @@ import {
   type VisualizationFieldCatalog,
 } from "./chart-configurator";
 import { VisualizationFieldPicker } from "./visualization-field-picker";
+import { cn } from "#/lib/utils";
 
 type GameMode = {
   id: string;
@@ -91,6 +98,31 @@ type Resources = {
   gameModes: { items: GameMode[] };
   eventSchemas: { items: EventSchema[] };
   templates: { items: Template[] };
+  renderProfiles: RenderProfile[];
+};
+type RenderProfile = {
+  uuid: string;
+  title: string;
+  description: string | null;
+  revision: number;
+  state: "active" | "archived";
+  draft: { settings: RenderProfileSettings } | null;
+  latestVersion: { uuid: string; version: number; settings: RenderProfileSettings } | null;
+};
+type RenderProfileSettings = {
+  formats: Array<"mp4" | "webm" | "gif">;
+  orientations: Array<"landscape" | "vertical">;
+  scoreboards: string[];
+  camera: {
+    zoom: number;
+    hudZoom: number;
+    scoreboardZoom: number;
+    menuZoom: number;
+    locationIndicatorZoom: number;
+    gameMessageZoom: number;
+    parameters: Record<string, number>;
+    rules: Array<{ when: string; focus?: { target: "players" }; set?: Record<string, number> }>;
+  };
 };
 
 const defaultSpec: VisualizationSpecification = {
@@ -145,6 +177,9 @@ export function ModesStatisticsPage({ resources }: { resources: Resources }) {
           <TabsTrigger value="charts">
             <ChartNoAxesCombined /> Visualizações
           </TabsTrigger>
+          <TabsTrigger value="rendering">
+            <Focus /> Renderização de clipes
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="modes">
           <ModesCatalog items={resources.gameModes.items} />
@@ -155,8 +190,505 @@ export function ModesStatisticsPage({ resources }: { resources: Resources }) {
         <TabsContent value="charts">
           <ChartStudio items={resources.templates.items} schemas={resources.eventSchemas.items} />
         </TabsContent>
+        <TabsContent value="rendering">
+          <RenderProfilesStudio items={resources.renderProfiles} />
+        </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+function RenderProfilesStudio({ items }: { items: RenderProfile[] }) {
+  const router = useRouter();
+  const previewRenderProfile = useServerFn(previewRenderProfileFn);
+  const listClipExports = useServerFn(listClipExportsFn);
+  const [selectedId, setSelectedId] = useState(items[0]?.uuid ?? "");
+  const selected = items.find((item) => item.uuid === selectedId) ?? items[0];
+  const [title, setTitle] = useState(selected?.title ?? "");
+  const [description, setDescription] = useState(selected?.description ?? "");
+  const [settings, setSettings] = useState<RenderProfileSettings | null>(
+    selected?.draft?.settings ?? selected?.latestVersion?.settings ?? null,
+  );
+  const [saving, setSaving] = useState<"draft" | "publish" | null>(null);
+  const [previewClipId, setPreviewClipId] = useState("");
+  const [previewExport, setPreviewExport] = useState<{
+    id: string;
+    status: string;
+    url: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    const next = items.find((item) => item.uuid === selectedId) ?? items[0];
+    setTitle(next?.title ?? "");
+    setDescription(next?.description ?? "");
+    setSettings(next?.draft?.settings ?? next?.latestVersion?.settings ?? null);
+  }, [items, selectedId]);
+
+  useEffect(() => {
+    if (!previewExport || previewExport.url || !previewClipId) return;
+    const interval = window.setInterval(async () => {
+      const exports = await listClipExports({ data: { id: previewClipId } });
+      const current = exports.find((item) => item.id === previewExport.id);
+      if (current) setPreviewExport(current);
+    }, 2_500);
+    return () => window.clearInterval(interval);
+  }, [listClipExports, previewClipId, previewExport]);
+
+  if (!selected || !settings) {
+    return (
+      <section className="border p-6 text-sm text-muted-foreground">
+        Nenhum perfil de renderização disponível.
+      </section>
+    );
+  }
+
+  const toggle = <T extends string>(key: "formats" | "orientations" | "scoreboards", value: T) => {
+    setSettings((current) => {
+      if (!current) return current;
+      const values = current[key] as T[];
+      const next = values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value];
+      return { ...current, [key]: next } as RenderProfileSettings;
+    });
+  };
+  const updateCamera = (key: keyof RenderProfileSettings["camera"], value: number) => {
+    setSettings((current) =>
+      current ? { ...current, camera: { ...current.camera, [key]: value } } : current,
+    );
+  };
+  const save = async (mode: "draft" | "publish") => {
+    setSaving(mode);
+    try {
+      const payload = {
+        id: selected.uuid,
+        title,
+        description: description || null,
+        settings,
+        expectedRevision: selected.revision,
+      };
+      const result =
+        mode === "draft"
+          ? await saveRenderProfileDraftFn({ data: payload })
+          : await publishRenderProfileFn({
+              data: { id: selected.uuid, expectedRevision: selected.revision },
+            });
+      if (!result.ok) return toast.error(result.message);
+      toast.success(mode === "draft" ? "Rascunho salvo." : "Nova versão publicada.");
+      await router.invalidate();
+    } finally {
+      setSaving(null);
+    }
+  };
+  const preview = async () => {
+    if (!previewClipId) return toast.error("Informe o código de um clipe para a prévia.");
+    setSaving("draft");
+    try {
+      const result = await previewRenderProfile({
+        data: {
+          id: selected.uuid,
+          clipId: previewClipId,
+          format: settings.formats[0],
+          orientation: settings.orientations.includes("vertical")
+            ? "vertical"
+            : settings.orientations[0],
+          scoreboard: settings.scoreboards[0],
+          settings,
+        },
+      });
+      if (!result.ok) return toast.error(result.message);
+      setPreviewExport(result.preview);
+      toast.success("Prévia adicionada à fila.");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <section className="grid border lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="border-b lg:border-b-0 lg:border-r">
+        <div className="border-b p-4">
+          <strong>Perfis de câmera</strong>
+        </div>
+        {items.map((item) => (
+          <button
+            key={item.uuid}
+            type="button"
+            onClick={() => setSelectedId(item.uuid)}
+            className={cn(
+              "w-full border-b px-4 py-4 text-left transition hover:bg-muted/50",
+              item.uuid === selected.uuid && "bg-muted",
+            )}
+          >
+            <span className="block font-medium">{item.title}</span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              v{item.latestVersion?.version ?? 0} publicada
+            </span>
+          </button>
+        ))}
+      </aside>
+      <main className="min-w-0">
+        <header className="flex flex-col gap-4 border-b p-5 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Perfil de renderização</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Controle a câmera, as proporções, os placares e os formatos disponíveis para
+              exportação.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" disabled={saving !== null} onClick={() => void save("draft")}>
+              {saving === "draft" ? <LoaderCircle className="animate-spin" /> : <Save />} Salvar
+              rascunho
+            </Button>
+            <Button disabled={saving !== null} onClick={() => void save("publish")}>
+              {saving === "publish" ? <LoaderCircle className="animate-spin" /> : <Send />} Publicar
+              versão
+            </Button>
+          </div>
+        </header>
+        <div className="grid gap-6 p-5 xl:grid-cols-2">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="render-title">Nome</Label>
+              <Input
+                id="render-title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="render-description">Descrição</Label>
+              <Input
+                id="render-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+            <RenderToggleGroup
+              label="Formatos"
+              values={["mp4", "webm", "gif"]}
+              selected={settings.formats}
+              onToggle={(value) => toggle("formats", value)}
+            />
+            <RenderToggleGroup
+              label="Orientações"
+              values={["landscape", "vertical"]}
+              selected={settings.orientations}
+              onToggle={(value) => toggle("orientations", value)}
+              labels={{ landscape: "Horizontal", vertical: "Vertical" }}
+            />
+            <RenderToggleGroup
+              label="Placares"
+              values={[
+                "default",
+                "compact",
+                "score-only",
+                "time-only",
+                "floating-default",
+                "floating-compact",
+                "floating-score-only",
+                "floating-time-only",
+                "floating-score-time-right",
+                "none",
+              ]}
+              selected={settings.scoreboards}
+              onToggle={(value) => toggle("scoreboards", value)}
+            />
+          </div>
+          <div className="space-y-4 border-t pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+            <div>
+              <h3 className="font-semibold">Enquadramento</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                O enquadramento é aplicado pelo conversor a cada exportação e fica registrado na
+                versão escolhida.
+              </p>
+            </div>
+            <CameraNumber
+              label="Zoom da ação"
+              value={settings.camera.zoom}
+              onChange={(value) => updateCamera("zoom", value)}
+            />
+            <CameraNumber
+              label="Interface"
+              value={settings.camera.hudZoom}
+              onChange={(value) => updateCamera("hudZoom", value)}
+            />
+            <CameraNumber
+              label="Placar"
+              value={settings.camera.scoreboardZoom}
+              onChange={(value) => updateCamera("scoreboardZoom", value)}
+            />
+            <CameraNumber
+              label="Menu"
+              value={settings.camera.menuZoom}
+              onChange={(value) => updateCamera("menuZoom", value)}
+            />
+            <CameraNumber
+              label="Indicador de posição"
+              value={settings.camera.locationIndicatorZoom}
+              onChange={(value) => updateCamera("locationIndicatorZoom", value)}
+            />
+            <CameraNumber
+              label="Mensagens de jogo"
+              value={settings.camera.gameMessageZoom}
+              onChange={(value) => updateCamera("gameMessageZoom", value)}
+            />
+            <CameraParameters
+              value={settings.camera.parameters}
+              onChange={(parameters) =>
+                setSettings((current) =>
+                  current ? { ...current, camera: { ...current.camera, parameters } } : current,
+                )
+              }
+            />
+            <CameraRules
+              value={settings.camera.rules}
+              onChange={(rules) =>
+                setSettings((current) =>
+                  current ? { ...current, camera: { ...current.camera, rules } } : current,
+                )
+              }
+            />
+            <div className="space-y-3 border-t pt-5">
+              <div>
+                <h3 className="font-semibold">Prévia da câmera</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Renderize as alterações atuais em um clipe antes de salvar ou publicar a versão.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={previewClipId}
+                  onChange={(event) => setPreviewClipId(event.target.value)}
+                  placeholder="Código do clipe"
+                  aria-label="Código do clipe para prévia"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving !== null}
+                  onClick={() => void preview()}
+                >
+                  {saving === "draft" ? <LoaderCircle className="animate-spin" /> : <Eye />} Gerar
+                  prévia
+                </Button>
+              </div>
+              {previewExport?.url ? (
+                <video
+                  className="aspect-video w-full rounded-md border bg-black"
+                  controls
+                  autoPlay
+                  loop
+                  src={previewExport.url}
+                />
+              ) : previewExport ? (
+                <p className="text-sm text-muted-foreground">A prévia está sendo renderizada.</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </main>
+    </section>
+  );
+}
+
+function RenderToggleGroup({
+  label,
+  values,
+  selected,
+  onToggle,
+  labels = {},
+}: {
+  label: string;
+  values: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+  labels?: Record<string, string>;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {values.map((value) => (
+          <Button
+            key={value}
+            type="button"
+            variant={selected.includes(value) ? "default" : "outline"}
+            size="sm"
+            onClick={() => onToggle(value)}
+          >
+            {labels[value] ?? value}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CameraNumber({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-4">
+      <Label>{label}</Label>
+      <Input
+        type="number"
+        min="0.1"
+        max="20"
+        step="0.1"
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </div>
+  );
+}
+
+function CameraParameters({
+  value,
+  onChange,
+}: {
+  value: Record<string, number>;
+  onChange: (value: Record<string, number>) => void;
+}) {
+  const entries = Object.entries(value);
+  const update = (key: string, nextKey: string, nextValue: number) => {
+    const next = { ...value };
+    delete next[key];
+    if (nextKey.trim()) next[nextKey.trim()] = nextValue;
+    onChange(next);
+  };
+  return (
+    <div className="space-y-3 border-t pt-5">
+      <div>
+        <h3 className="font-semibold">Parâmetros avançados</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Ajustes próprios do motor de câmera deste perfil.
+        </p>
+      </div>
+      {entries.map(([key, number]) => (
+        <div key={key} className="grid grid-cols-[minmax(0,1fr)_8rem_auto] gap-2">
+          <Input
+            value={key}
+            aria-label="Nome do parâmetro"
+            onChange={(event) => update(key, event.target.value, number)}
+          />
+          <Input
+            type="number"
+            step="0.01"
+            value={number}
+            aria-label={`Valor de ${key}`}
+            onChange={(event) => update(key, key, Number(event.target.value))}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => update(key, "", number)}
+            aria-label={`Remover ${key}`}
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => onChange({ ...value, [`novo_parametro_${entries.length + 1}`]: 1 })}
+      >
+        <Plus /> Adicionar parâmetro
+      </Button>
+    </div>
+  );
+}
+
+function CameraRules({
+  value,
+  onChange,
+}: {
+  value: RenderProfileSettings["camera"]["rules"];
+  onChange: (value: RenderProfileSettings["camera"]["rules"]) => void;
+}) {
+  const update = (
+    index: number,
+    patch: Partial<RenderProfileSettings["camera"]["rules"][number]>,
+  ) => onChange(value.map((rule, current) => (current === index ? { ...rule, ...patch } : rule)));
+  return (
+    <div className="space-y-3 border-t pt-5">
+      <div>
+        <h3 className="font-semibold">Regras de foco</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Aplique uma condição e escolha quando a câmera deve priorizar os jogadores.
+        </p>
+      </div>
+      {value.map((rule, index) => (
+        <div key={`${rule.when}-${index}`} className="space-y-2 rounded-md border p-3">
+          <Input
+            value={rule.when}
+            aria-label="Condição da regra"
+            onChange={(event) => update(index, { when: event.target.value })}
+            placeholder="Condição"
+          />
+          <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)_7rem_auto] sm:items-center">
+            <Button
+              type="button"
+              size="sm"
+              variant={rule.focus?.target === "players" ? "default" : "outline"}
+              onClick={() =>
+                update(index, { focus: rule.focus ? undefined : { target: "players" } })
+              }
+            >
+              Focar jogadores
+            </Button>
+            <Input
+              value={Object.keys(rule.set ?? {})[0] ?? ""}
+              aria-label="Parâmetro ajustado pela regra"
+              placeholder="Parâmetro ajustado"
+              onChange={(event) => {
+                const current = Object.entries(rule.set ?? {})[0];
+                const key = event.target.value.trim();
+                update(index, { set: key ? { [key]: current?.[1] ?? 1 } : undefined });
+              }}
+            />
+            <Input
+              type="number"
+              step="0.01"
+              disabled={!Object.keys(rule.set ?? {}).length}
+              value={Object.values(rule.set ?? {})[0] ?? ""}
+              aria-label="Valor ajustado pela regra"
+              onChange={(event) => {
+                const key = Object.keys(rule.set ?? {})[0];
+                if (key) update(index, { set: { [key]: Number(event.target.value) } });
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => onChange(value.filter((_, current) => current !== index))}
+              aria-label="Remover regra"
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => onChange([...value, { when: "game_active", focus: { target: "players" } }])}
+      >
+        <Plus /> Adicionar regra
+      </Button>
+    </div>
   );
 }
 
