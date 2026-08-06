@@ -1,4 +1,4 @@
-import type { WebPhysicalMatch } from "#/server/api/haxfootball";
+import type { WebComposedMatch, WebPhysicalMatch } from "#/server/api/haxfootball";
 
 type MatchParticipation = WebPhysicalMatch["participations"][number];
 
@@ -33,6 +33,28 @@ export function createMatchTeamGroups(participations: MatchParticipation[]): Mat
   groups.blue.sort(comparePlayerName);
 
   return groups;
+}
+
+export function createComposedMatchTeamGroups(rounds: WebComposedMatch["rounds"]): MatchTeamGroups {
+  const composedParticipations = rounds.flatMap((round, roundIndex) =>
+    round.match.participations.map((participation) => ({
+      ...participation,
+      // Each round restarts elapsed time. Offset it so the later physical round
+      // remains the player's current logical side while earlier-only players stay listed.
+      joinedElapsedSeconds:
+        (roundIndex + 1) * 1_000_000 + (participation.joinedElapsedSeconds ?? 0),
+      team:
+        round.orientation === "swapped"
+          ? participation.team === "red"
+            ? "blue"
+            : participation.team === "blue"
+              ? "red"
+              : participation.team
+          : participation.team,
+    })),
+  );
+
+  return createMatchTeamGroups(composedParticipations);
 }
 
 function participationOrder(participation: MatchParticipation) {

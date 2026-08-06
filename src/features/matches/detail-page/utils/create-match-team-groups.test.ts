@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { WebPhysicalMatch } from "#/server/api/haxfootball";
-import { createMatchTeamGroups } from "./create-match-team-groups";
+import type { WebComposedMatch, WebPhysicalMatch } from "#/server/api/haxfootball";
+import { createComposedMatchTeamGroups, createMatchTeamGroups } from "./create-match-team-groups";
 
 type MatchParticipation = WebPhysicalMatch["participations"][number];
 
@@ -50,5 +50,34 @@ describe("createMatchTeamGroups", () => {
 
     expect(groups.red.map((item) => item.player.name)).toEqual(["Bia"]);
     expect(groups.blue.map((item) => item.player.name)).toEqual(["Ana"]);
+  });
+
+  it("normalizes switched rounds before grouping a composed match roster", () => {
+    const rounds = [
+      {
+        orientation: "aligned",
+        match: {
+          participations: [
+            participation({ player: { id: "dragon", name: "Dragon" }, team: "red" }),
+            participation({ player: { id: "brushi", name: "Brushi" }, team: "blue" }),
+            participation({ player: { id: "vortex", name: "Vortex" }, team: "blue" }),
+          ],
+        },
+      },
+      {
+        orientation: "swapped",
+        match: {
+          participations: [
+            participation({ player: { id: "dragon", name: "Dragon" }, team: "blue" }),
+            participation({ player: { id: "brushi", name: "Brushi" }, team: "red" }),
+          ],
+        },
+      },
+    ] as unknown as WebComposedMatch["rounds"];
+
+    const groups = createComposedMatchTeamGroups(rounds);
+
+    expect(groups.red.map((item) => item.player.name)).toEqual(["Dragon"]);
+    expect(groups.blue.map((item) => item.player.name)).toEqual(["Brushi", "Vortex"]);
   });
 });

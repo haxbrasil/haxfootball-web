@@ -2,7 +2,11 @@ import { Swords, Trophy, Users } from "lucide-react";
 import { MatchStatusBadge } from "#/components/ds/match-status-badge";
 import { cn } from "#/lib/utils";
 import type { MatchDetail } from "#/server/api/haxfootball";
-import { createMatchTeamGroups, type MatchTeamGroups } from "../utils/create-match-team-groups";
+import {
+  createComposedMatchTeamGroups,
+  createMatchTeamGroups,
+  type MatchTeamGroups,
+} from "../utils/create-match-team-groups";
 
 export function MatchTeamsPanel({ detail }: { detail: MatchDetail }) {
   const { match } = detail;
@@ -11,11 +15,10 @@ export function MatchTeamsPanel({ detail }: { detail: MatchDetail }) {
     return null;
   }
 
-  const participations =
+  const teams =
     match.kind === "single"
-      ? match.participations
-      : match.rounds.flatMap((round) => round.match.participations);
-  const teams = createMatchTeamGroups(participations);
+      ? createMatchTeamGroups(match.participations)
+      : createComposedMatchTeamGroups(match.rounds);
   const hasScore =
     match.score?.red !== null &&
     match.score?.red !== undefined &&
